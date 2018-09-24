@@ -26,6 +26,12 @@ Heuristic::Heuristic(const Options &opts)
 Heuristic::~Heuristic() {
 }
 
+void Heuristic::set_abstract_task(std::shared_ptr<AbstractTask> t){
+    cout << "Update abstract task" << endl;
+    task = t;
+    task_proxy = TaskProxy(*t.get());
+}
+
 void Heuristic::set_preferred(const OperatorProxy &op) {
     preferred_operators.insert(op.get_global_operator_id());
 }

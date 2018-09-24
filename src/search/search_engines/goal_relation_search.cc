@@ -6,6 +6,7 @@
 #include "../tasks/modified_goals_task.h"
 #include "../tasks/root_task.h"
 #include "../task_utils/successor_generator.h"
+#include "../heuristic.h"
 
 #include <iostream>
 
@@ -26,10 +27,11 @@ GoalRelationSearch::GoalRelationSearch(const Options &opts)
       iterated_found_solution(false),
       relation_tree(task_proxy.get_goals()) {
 
-      current_node = relation_tree.get_root();
+      //current_node = relation_tree.get_root();
       //cout << "Current Node: " << endl;
       //current_node->print(); 
-      tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), current_node->get_goals());
+      //tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), current_node->get_goals());
+
 }
 
 shared_ptr<SearchEngine> GoalRelationSearch::get_search_engine(int engine_configs_index) {
@@ -40,7 +42,7 @@ shared_ptr<SearchEngine> GoalRelationSearch::get_search_engine(int engine_config
     tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), current_node->get_goals());
     //TODO find an other way
     //not necessary if only the goal is changed
-    g_successor_generator = new successor_generator::SuccessorGenerator(TaskProxy(*(tasks::g_root_task).get()));
+    //g_successor_generator = new successor_generator::SuccessorGenerator(TaskProxy(*(tasks::g_root_task).get()));
     
 
     OptionParser parser(engine_configs[engine_configs_index], false);

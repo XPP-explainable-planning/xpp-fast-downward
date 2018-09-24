@@ -31,6 +31,7 @@ protected:
 public:
     HSPMaxHeuristic(const options::Options &options);
     ~HSPMaxHeuristic();
+
 };
 }
 

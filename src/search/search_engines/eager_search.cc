@@ -9,6 +9,8 @@
 
 #include "../algorithms/ordered_set.h"
 #include "../task_utils/successor_generator.h"
+#include "../heuristic.h"
+#include "../evaluators/combining_evaluator.h"
 
 #include <cassert>
 #include <cstdlib>
@@ -68,6 +70,10 @@ void EagerSearch::initialize() {
     */
     if (f_evaluator) {
         f_evaluator->get_path_dependent_evaluators(evals);
+        //cout << typeid(f_evaluator).name() << endl;
+        cout << "Cast f_evaluator to heuristic: " << (((combining_evaluator::CombiningEvaluator *) f_evaluator)->get_evals()).size() << endl;
+        ((Heuristic*) (((combining_evaluator::CombiningEvaluator *) f_evaluator)->get_evals())[1])->set_abstract_task(task);
+        cout << "Cast f_evaluator to heuristic" << endl;
     }
 
     /*

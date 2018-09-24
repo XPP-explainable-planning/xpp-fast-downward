@@ -17,6 +17,7 @@ public:
     explicit SumEvaluator(const options::Options &opts);
     explicit SumEvaluator(const std::vector<Evaluator *> &evals);
     virtual ~SumEvaluator() override;
+
 };
 }
 

@@ -41,6 +41,10 @@ public:
 
     virtual void get_path_dependent_evaluators(
         std::set<Evaluator *> &evals) override;
+
+    std::vector<Evaluator *> get_evals(){
+        return subevaluators;
+    }
 };
 }
 
