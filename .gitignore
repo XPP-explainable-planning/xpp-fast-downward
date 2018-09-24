@@ -9,3 +9,4 @@ builds/
 src/CMakeLists.txt.user
 .vscode
 experiments/
+output.sas

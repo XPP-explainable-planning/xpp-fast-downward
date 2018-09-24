@@ -15,9 +15,11 @@ class StateMinimizationNoGoods : public NoGoodFormula
 {
 protected:
     UBTreeFormula<unsigned> m_formula;
+
     std::vector<unsigned> m_clause;
     std::vector<unsigned> m_new_facts;
     std::vector<unsigned> m_reachable_conjunctions;
+
     virtual bool evaluate(const std::vector<unsigned> &conjunction_ids) override;
     virtual void refine(const PartialState &state) override;
 public:

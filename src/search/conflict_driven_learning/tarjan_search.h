@@ -58,7 +58,7 @@ protected:
     bool c_compute_recognized_neighbors;
 
     int m_cached_h_value;
-    std::shared_ptr<Evaluator> m_guidance;
+    Evaluator* m_guidance;
     std::shared_ptr<Evaluator> m_dead_end_identifier;
     std::shared_ptr<ConflictLearner> m_learner;
 

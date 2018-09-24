@@ -8,9 +8,12 @@ namespace conflict_driven_learning
 namespace hc_heuristic
 {
 
+template<typename T>
+void noop_delete(T* ) {}
+
 HCConflictLearner::HCConflictLearner(const options::Options &opts)
     : c_x_limit(opts.get<double>("x")),
-      m_hc(dynamic_cast<HCHeuristic *>(opts.get<Evaluator *>("hc")))
+      m_hc(dynamic_cast<HCHeuristic *>(opts.get<Evaluator *>("hc")), noop_delete<HCHeuristic>)
 {
     if (c_x_limit < 0) {
         c_counter_limit = std::numeric_limits<size_t>::max();
