@@ -452,7 +452,7 @@ HCHeuristic::insert_conjunction_and_update_data_structures(
             // create new counter
             unsigned counterid = m_counters.size();
             m_counters.push_back(Counter(counterid,
-                                         1, //get_adjusted_cost(action.cost),
+                                         action.cost, //get_adjusted_cost(action.cost),
                                          0,
                                          &new_conjdata));
             m_counter_precondition.push_back(std::vector<unsigned>());
@@ -801,6 +801,18 @@ int HCHeuristic::evaluate(const GlobalState& state)
 void HCHeuristic::set_abstract_task(std::shared_ptr<AbstractTask> task)
 {
     Heuristic::set_abstract_task(task);
+
+    //std::cout << "before: ";
+    //for (auto i : strips::get_task().get_goal()) {
+    //    std::cout << " " << i;
+    //}
+    //std::cout << std::endl;
+    for (auto g : strips::get_task().get_goal()) {
+        auto& refs = m_counters_with_fact_precondition[g];
+        auto it = std::find(refs.begin(), refs.end(), m_goal_counter);
+        assert(it != refs.end());
+        refs.erase(it);
+    }
     std::vector<unsigned> goal_conjunctions;
     get_satisfied_conjunctions(strips::get_task().get_goal(), goal_conjunctions);
     for (const unsigned& id : goal_conjunctions) {
@@ -811,8 +823,40 @@ void HCHeuristic::set_abstract_task(std::shared_ptr<AbstractTask> task)
         }
     }
     goal_conjunctions.clear();
+
     strips::update_goal_set(*task);
+    for (auto g : strips::get_task().get_goal()) {
+        m_counters_with_fact_precondition[g].push_back(m_goal_counter);
+    }
+    //std::cout << "after: ";
+    //for (auto i : strips::get_task().get_goal()) {
+    //    std::cout << " " << i;
+    //}
+    //std::cout << std::endl;
     get_satisfied_conjunctions(strips::get_task().get_goal(), goal_conjunctions);
+    std::vector<bool> pruned(goal_conjunctions.size(), false);
+    if (c_prune_subsumed_preconditions) {
+        std::vector<std::pair<unsigned, unsigned> > gs; gs.reserve(goal_conjunctions.size());
+        for (unsigned i : goal_conjunctions) {
+            gs.emplace_back(m_conjunctions[i].size(), i);
+        }
+        std::sort(gs.begin(), gs.end());
+        for (unsigned i = gs.size() - 1; i < gs.size(); i--) {
+            goal_conjunctions[i] = gs[i].second;
+            const std::vector<unsigned> &conj_i = m_conjunctions[gs[i].second];
+            for (unsigned j = 0; j < i
+                    && gs[j].first < gs[i].first; j++) {
+                if (pruned[j]) {
+                    continue;
+                }
+                const std::vector<unsigned> &conj_j =
+                    m_conjunctions[gs[j].second];
+                if (std::includes(conj_i.begin(), conj_i.end(), conj_j.begin(), conj_j.end())) {
+                    pruned[j] = true;
+                }
+            }
+        }
+    }
     for (const unsigned& id : goal_conjunctions) {
         std::vector<Counter*>& counters = m_conjunction_data[id].pre_of;
         counters.push_back(&m_counters[m_goal_counter]);
@@ -823,7 +867,7 @@ void HCHeuristic::set_abstract_task(std::shared_ptr<AbstractTask> task)
 void HCHeuristic::add_options_to_parser(options::OptionParser &parser)
 {
     Heuristic::add_options_to_parser(parser);
-    parser.add_option<bool>("prune_subsumed_preconditions", "", "true");
+    parser.add_option<bool>("prune_subsumed_preconditions", "", "false");
     parser.add_option<bool>("nogoods", "", "true");
     // parser.add_option<NoGoodFormula *>("nogoods", "", options::OptionParser::NONE);
 }

@@ -33,7 +33,7 @@ protected:
     static const unsigned UNASSIGNED;
 
     const strips::Task *m_strips_task;
-    const std::shared_ptr<AbstractTask> m_task;
+     // const std::shared_ptr<AbstractTask> m_task;
 
     // staticly initialized in each refinement
     // (but do not change within one refinement)

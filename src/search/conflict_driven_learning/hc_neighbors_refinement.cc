@@ -39,7 +39,7 @@ constexpr const unsigned HCNeighborsRefinement::UNASSIGNED = -1;
 
 HCNeighborsRefinement::HCNeighborsRefinement(const Options &opts)
     : HCConflictLearner(opts)
-    , m_task(tasks::g_root_task)
+    // , m_task(tasks::g_root_task)
 {
     m_num_refinements = 0;
 }
@@ -54,6 +54,8 @@ bool HCNeighborsRefinement::learn_from_dead_end_component(
     StateComponent &component,
     StateComponent &neighbors)
 {
+    std::shared_ptr<AbstractTask> m_task = tasks::g_root_task;
+
     m_hc->set_early_termination_and_nogoods(false);
 
     m_num_conjunctions_before_refinement = m_hc->num_conjunctions();
@@ -181,19 +183,56 @@ bool HCNeighborsRefinement::learn_from_dead_end_component(
 
     m_hc->set_early_termination_and_nogoods(true);
 
-// #ifndef NDEBUG
-//     if (result) {
-//         std::cout << "test =[" << std::flush;
-//         component.reset();
-//         while (!component.end()) {
-//             assert(m_hc->evaluate(component.current()) == HCHeuristic::DEAD_END);
-//             std::cout << " " << component.current().get_id();
-//             component.next();
-//         }
-//         std::cout << " ] passed -> "
-//             << (m_hc.get())<< std::endl;
-//     }
-// #endif
+//#ifndef NDEBUG
+//    if (result) {
+//
+//    std::cout << "goal: ";
+//    for (auto i : m_strips_task->get_goal()) {
+//        std::cout << " " << i;
+//    }
+//    std::cout << std::endl;
+//
+//    std::vector<unsigned> ids;
+//    m_hc->get_satisfied_conjunctions(strips::get_task().get_goal(),
+//                                     ids);
+//    for (unsigned id : ids) {
+//        for (unsigned g : m_hc->get_conjunction(id)) {
+//            std::cout << " " << g;
+//        }
+//        std::cout << std::endl;
+//        assert(std::count(m_hc->get_conjunction_data(id).pre_of.begin(),
+//                          m_hc->get_conjunction_data(id).pre_of.end(),
+//                          &m_hc->get_goal_counter()));
+//    }
+//    assert(m_hc->get_goal_counter().preconditions == ids.size());
+//
+//    std::cout << "component = " << std::endl;
+//    component.reset();
+//    while (!component.end()) {
+//        std::cout << "  " << component.current().get_id() << ":";
+//        for (int var = 0; var < m_task->get_num_variables(); var++) {
+//            std::cout << " " << strips::get_fact_id(var, component.current()[var]);
+//        }
+//        std::cout << std::endl;
+//        component.next();
+//    }
+//
+//
+//        std::cout << "test =[" << std::flush;
+//        component.reset();
+//        while (!component.end()) {
+//            int res = m_hc->evaluate(component.current());
+//            if (res != HCHeuristic::DEAD_END){
+//                std::cout << "(" << res << "!=inf)" << std::flush;
+//            }
+//            std::cout << " " << component.current().get_id() << std::flush;
+//            assert(res == HCHeuristic::DEAD_END);
+//            component.next();
+//        }
+//        std::cout << " ] passed -> "
+//            << (m_hc.get())<< std::endl;
+//    }
+//#endif
 
     return result;
 }
