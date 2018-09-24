@@ -20,6 +20,7 @@ GoalRelationSearch::GoalRelationSearch(const Options &opts)
       repeat_last_phase(opts.get<bool>("repeat_last")),
       continue_on_fail(opts.get<bool>("continue_on_fail")),
       continue_on_solve(opts.get<bool>("continue_on_solve")),
+      heuristic(opts.get<Evaluator*>("heu")),
       phase(0),
       algo_phase(1),
       last_phase_found_solution(false),
@@ -40,6 +41,7 @@ shared_ptr<SearchEngine> GoalRelationSearch::get_search_engine(int engine_config
     //cout << "Current Node: " << endl;
     //current_node->print();
     tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), current_node->get_goals());
+    ((Heuristic*) heuristic)->set_abstract_task(tasks::g_root_task);
     //TODO find an other way
     //not necessary if only the goal is changed
     //g_successor_generator = new successor_generator::SuccessorGenerator(TaskProxy(*(tasks::g_root_task).get()));
@@ -158,6 +160,7 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
     parser.add_option<bool>("continue_on_solve",
                             "continue search after solution found",
                             "true");
+    parser.add_option<Evaluator*>("heu", "TODO");
     SearchEngine::add_options_to_parser(parser);
     Options opts = parser.parse();
 

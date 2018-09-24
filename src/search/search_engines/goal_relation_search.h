@@ -15,6 +15,7 @@ class GoalRelationSearch : public SearchEngine {
     bool repeat_last_phase;
     bool continue_on_fail;
     bool continue_on_solve;
+    Evaluator * heuristic;
 
     int phase;
     int algo_phase;
