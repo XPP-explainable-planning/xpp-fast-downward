@@ -109,7 +109,10 @@ bool HCNeighborsRefinement::learn_from_dead_end_component(
         m_conjunction_to_successors.resize(m_hc->num_conjunctions());
         while (!neighbors.end()) {
             const GlobalState &state = neighbors.current();
-            int res = m_hc->evaluate(state);
+#ifndef NDEBUG
+            int res =
+#endif
+            m_hc->evaluate(state);
             assert(res == HCHeuristic::DEAD_END);
             m_successor_to_conjunctions.emplace_back();
             for (unsigned cid = 0; cid < m_conjunction_to_successors.size(); cid++) {
