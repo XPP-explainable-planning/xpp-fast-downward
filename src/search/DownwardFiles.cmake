@@ -755,6 +755,24 @@ fast_downward_plugin(
     DEPENDENCY_ONLY
 )
 
+fast_downward_plugin(
+    NAME "CONFLICT_LEARNING"
+    SOURCES
+        conflict_driven_learning/conflict_learner
+        conflict_driven_learning/state_component
+        conflict_driven_learning/layered_map
+        conflict_driven_learning/search_node_info
+        conflict_driven_learning/search_node
+        conflict_driven_learning/search_space
+        conflict_driven_learning/tarjan_search
+        conflict_driven_learning/strips_compilation
+        conflict_driven_learning/hc_heuristic
+        conflict_driven_learning/formula
+        conflict_driven_learning/state_minimization_nogoods
+        conflict_driven_learning/hc_conflict_learner
+        conflict_driven_learning/hc_neighbors_refinement
+    )
+
 fast_downward_add_plugin_sources(PLANNER_SOURCES)
 
 # The order in PLANNER_SOURCES influences the order in which object
