@@ -97,6 +97,7 @@ public:
     NoGoodFormula(const AbstractTask& task,
                   HCHeuristic *hc);
     virtual void initialize() {}
+    virtual void synchronize_goal() { }
     bool evaluate_formula(const std::vector<unsigned> &conjunction_ids);
     void refine_formula(const PartialState &state);
     const utils::Timer &get_refinement_timer() const;

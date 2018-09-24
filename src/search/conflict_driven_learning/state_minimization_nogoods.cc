@@ -42,10 +42,45 @@ void StateMinimizationNoGoods::refine(
         m_new_facts.clear();
         m_reachable_conjunctions.clear();
     }
+
+    unsigned id = m_clauses.size();
     std::sort(m_clause.begin(), m_clause.end());
     m_formula.insert(m_clause);
-    m_clause.clear();
+    unsigned i = 0;
+    unsigned j = 0;
+    const auto& goal = strips::get_task().get_goal();
+    while (i < m_clause.size() && j < goal.size()) {
+        if (m_clause[i] < goal[j]) {
+            i++;
+        } else if (m_clause[i] == goal[j]) {
+            m_goal_fact_to_clause[m_clause[i]].push_back(id);
+            i++;
+            j++;
+        } else {
+            j++;
+        }
+    }
+    m_clauses.push_back(std::vector<unsigned>());
+    m_clause.swap(m_clauses[id]);
+
+
     m_hc->set_early_termination(term);
+}
+
+void StateMinimizationNoGoods::synchronize_goal()
+{
+    m_formula.clear();
+    static std::vector<bool> x;
+    x.resize(m_clauses.size());
+    std::fill(x.begin(), x.end(), false);
+    for (const unsigned& g : strips::get_task().get_goal()) {
+        for (const auto& id : m_goal_fact_to_clause[g]) {
+            if (!x[id]) {
+                x[id] = true;
+                m_formula.insert(m_clauses[id]);
+            }
+        }
+    }
 }
 
 void StateMinimizationNoGoods::print_statistics() const

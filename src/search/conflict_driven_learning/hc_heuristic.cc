@@ -862,6 +862,10 @@ void HCHeuristic::set_abstract_task(std::shared_ptr<AbstractTask> task)
         counters.push_back(&m_counters[m_goal_counter]);
     }
     m_counters[m_goal_counter].preconditions = goal_conjunctions.size();
+
+    if (m_nogood_formula != nullptr) {
+        m_nogood_formula->synchronize_goal();
+    }
 }
 
 void HCHeuristic::add_options_to_parser(options::OptionParser &parser)

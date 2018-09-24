@@ -3,6 +3,7 @@
 
 #include "hc_heuristic.h"
 #include "formula.h"
+#include "../algorithms/segmented_vector.h"
 
 #include <vector>
 
@@ -20,10 +21,15 @@ protected:
     std::vector<unsigned> m_new_facts;
     std::vector<unsigned> m_reachable_conjunctions;
 
+    /* multiple goal sets support */
+    segmented_vector::SegmentedVector<std::vector<unsigned> > m_clauses;
+    std::map<unsigned, std::vector<unsigned> > m_goal_fact_to_clause;
+
     virtual bool evaluate(const std::vector<unsigned> &conjunction_ids) override;
     virtual void refine(const PartialState &state) override;
 public:
     using NoGoodFormula::NoGoodFormula;
+    virtual void synchronize_goal() override;
     virtual void print_statistics() const override;
 };
 

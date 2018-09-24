@@ -176,6 +176,7 @@ public:
 
     void resize(size_t) {}
     void print() const;
+    void clear();
 };
 
 template<typename K>
@@ -192,10 +193,16 @@ UBTreeFormula<K>::~UBTreeFormula()
 }
 
 template<typename K>
+void UBTreeFormula<K>::clear()
+{
+    clear_node(m_root);
+}
+
+template<typename K>
 void UBTreeFormula<K>::clear_node(Node *node) const
 {
     for (unsigned i = 0; i < node->size(); i++) {
-        node->at(i).second->clear();
+        clear_node(node->at(i).second);
         delete(node->at(i).second);
     }
     node->clear();
