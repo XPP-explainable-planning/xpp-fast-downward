@@ -3,7 +3,7 @@
 #include "../globals.h"
 #include "../option_parser.h"
 #include "../plugin.h"
-#include "../tasks/modified_disjunctive_goal_task.h"
+#include "../tasks/modified_goals_task.h"
 #include "../tasks/root_task.h"
 #include "../task_utils/successor_generator.h"
 
@@ -28,26 +28,19 @@ GoalRelationSearch::GoalRelationSearch(const Options &opts)
 
       current_node = relation_tree.get_root();
       //cout << "Current Node: " << endl;
-      //current_node->print();
-      //shared_ptr<AbstractTask> mod_task = 
-      tasks::g_root_task =
-      make_shared<extra_tasks::ModifiedDisjunctiveGoalTask>(getTask(), current_node->get_constraining_goals(), current_node->get_constrained_goals());
-      //tasks::g_root_task = mod_task;
-      //cout << "Num operators: " << tasks::g_root_task->get_num_operators() << endl;
+      //current_node->print(); 
+      tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), current_node->get_goals());
 }
 
 shared_ptr<SearchEngine> GoalRelationSearch::get_search_engine(int engine_configs_index) {
-    //adapt goals of current task according to the current goals relation node
-    
+    //adapt goals of current task according to the current goals relation node   
     current_node = relation_tree.get_next_node();
     //cout << "Current Node: " << endl;
     //current_node->print();
-    shared_ptr<AbstractTask> mod_task = 
-    make_shared<extra_tasks::ModifiedDisjunctiveGoalTask>(getTask(), current_node->get_constraining_goals(), current_node->get_constrained_goals());
-    tasks::g_root_task = mod_task;
-
-    //TODO find a nicer way
-    g_successor_generator = new successor_generator::SuccessorGenerator(TaskProxy(*mod_task.get()));
+    tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), current_node->get_goals());
+    //TODO find an other way
+    //not necessary if only the goal is changed
+    g_successor_generator = new successor_generator::SuccessorGenerator(TaskProxy(*(tasks::g_root_task).get()));
     
 
     OptionParser parser(engine_configs[engine_configs_index], false);
@@ -56,14 +49,6 @@ shared_ptr<SearchEngine> GoalRelationSearch::get_search_engine(int engine_config
     cout << "Starting search: ";
     kptree::print_tree_bracketed(engine_configs[engine_configs_index], cout);
     cout << endl;
-
-    /*
-    current_node = relation_tree.get_next_node();
-    current_node->print();
-    shared_ptr<AbstractTask> mod_task = 
-    make_shared<extra_tasks::ModifiedDisjunctiveGoalTask>(getTask(), current_node->get_constraining_goals(), current_node->get_constrained_goals());
-    engine->setTask(mod_task);
-    */
 
     return engine;
 }
@@ -85,25 +70,20 @@ SearchStatus GoalRelationSearch::step() {
     current_search->search();
 
     //Plan found_plan;
-    //int plan_cost = 0;
     last_phase_found_solution = current_search->found_solution();
 
     //stop search in this branch
     if (last_phase_found_solution) {
         cout << "++++++++ SOLUTION +++++++"  << endl;
         iterated_found_solution = true;
-        //found_plan = current_search->get_plan();
-        //plan_cost = calculate_plan_cost(found_plan, task_proxy);
-
         current_node->solved();
-        relation_tree.addSolvedNode(current_node);
     }
     else{
         cout << "-------- FAILS ----------"  << endl;
-        relation_tree.expand(current_node, algo_phase);
+        relation_tree.expand(current_node);
     }
 
-    current_search->print_statistics();
+    //current_search->print_statistics();
 
     const SearchStatistics &current_stats = current_search->get_statistics();
     statistics.inc_expanded(current_stats.get_expanded());
@@ -117,19 +97,11 @@ SearchStatus GoalRelationSearch::step() {
 }
 
 SearchStatus GoalRelationSearch::step_return_value() {
-    bool continue_search = relation_tree.continue_search();
-    if(continue_search){
+    if(relation_tree.continue_search()){
         return IN_PROGRESS;
     }
-    if((! continue_search) && algo_phase == 1){
-        relation_tree.print_ppd1();
-        return SOLVED;
-        //relation_tree.init_phase_2();
-        //algo_phase += 1;
-        //return IN_PROGRESS;
-    }
-    if((! continue_search) && algo_phase == 2){
-        relation_tree.print_ppd2();
+    else{
+        relation_tree.print();
         return SOLVED;
     }
 
