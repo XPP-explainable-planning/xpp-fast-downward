@@ -106,7 +106,7 @@ SearchStatus GoalRelationSearch::step_return_value() {
         return IN_PROGRESS;
     }
     else{
-        relation_tree.print();
+        relation_tree.print(task_proxy);
         return SOLVED;
     }
 

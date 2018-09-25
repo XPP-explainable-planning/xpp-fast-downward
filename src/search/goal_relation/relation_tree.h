@@ -37,7 +37,7 @@ public:
 
     void expand(Node* node);
     Node* get_next_node();
-    void print();
+    void print(TaskProxy proxy);
 };
 
 
@@ -88,7 +88,7 @@ public:
     }
 
     void print();
-    void print_relation();
+    void print_relation(TaskProxy proxy);
     std::vector<Node*> expand();
 
 };

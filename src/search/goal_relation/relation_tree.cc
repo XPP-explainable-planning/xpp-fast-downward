@@ -33,7 +33,7 @@ void Node::print(){
         cout << ".........................." << endl;
     }
 
-void Node::print_relation(){
+void Node::print_relation(TaskProxy p){
     if(printed){
         return;
     }
@@ -46,18 +46,19 @@ void Node::print_relation(){
     //if((c_solved || constrained_goals.size() == 0) && ! isSolvable()){
     if((c_solved) && ! isSolvable()){
         cout << ".........................." << endl;
-        bool solved = isSolvable();
-        cout << "Solved: " << solved << endl;
+        //bool solved = isSolvable();
+        //cout << "Solved: " << solved << endl;
         cout << "G:"  << endl;
         for(FactPair l : goals){
-            cout << "var" << l.var << " = " << l.value << ", ";
+            //cout << "var" << l.var << " = " << l.value << ", ";
+            cout << p.get_variables()[l.var].get_fact(l.value).get_name() << "|";
         }
         cout << endl;
         //cout << ".........................." << endl;
     }
     
     for(Node* c : children){
-        c->print_relation();
+        c->print_relation(p);
     }
     
 }
@@ -170,10 +171,10 @@ Node* RelationTree::get_next_node(){
     return next_node;
 }
 
-void RelationTree::print(){
+void RelationTree::print(TaskProxy p){
     cout << "*********************************"  << endl;
     cout << "Size of tree: " << nodes.size() << endl;
-    root->print_relation();
+    root->print_relation(p);
     cout << "*********************************"  << endl;
 }
 
