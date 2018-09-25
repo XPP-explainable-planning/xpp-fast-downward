@@ -6,9 +6,15 @@
 using namespace std;
 using namespace options;
 
+#define _GOALREL_SLEEP_SETS 1
+
 namespace goalre {
-Node::Node(vector<FactPair> g)
-    : goals(g){
+Node::Node(const vector<FactPair>& g)
+    : sleep_set_i(0), goals(g){
+}
+
+Node::Node(unsigned sleep_set_i, const vector<FactPair>& g)
+    : sleep_set_i(sleep_set_i), goals(g){
 }
 
 Node::~Node() {
@@ -65,9 +71,14 @@ void printList(vector<FactPair> list){
 
 //generate all possible children nodes
 std::vector<Node*> Node::expand(){
+    /*
+        cout << "Expanding node (sleep=" << sleep_set_i << ")" << endl << "  ";
+        printList(goals);
+        */
+
     vector<Node*> new_nodes;
 
-    if(goals.size() == 1){
+    if(sleep_set_i >= goals.size() || goals.size() == 1){
         return new_nodes;
     }
 
@@ -77,23 +88,33 @@ std::vector<Node*> Node::expand(){
     */
 
     //take g in A and put it into F, B stays unchanged
-    for(uint i = 0; i < goals.size(); i++){
+    vector<FactPair> new_goals;
+    for (uint i = 0; i < sleep_set_i; i++) {
+        new_goals.push_back(goals[i]);
+    }
+    for(uint i = sleep_set_i; i < goals.size(); i++){
+        while (new_goals.size() > sleep_set_i) new_goals.pop_back();
 
-        vector<FactPair> new_goals;
-        for(uint j = 0; j < goals.size(); j++){
+        for(uint j = sleep_set_i; j < goals.size(); j++){
             if(j != i)
                 new_goals.push_back(goals[j]);
         }
 
         //sort lists
-        std::sort(new_goals.begin(), new_goals.end());
+        //    should remain sorted, no need to call sort again
+        // std::sort(new_goals.begin(), new_goals.end());
 
          /*
-        cout << "Expand next node in relation tree" << endl;
+        // cout << "Expand next node in relation tree" << endl;
+        cout << "Successor node in relation tree (i=" << i << "):" << endl << "  ";
         printList(new_goals);
         */
 
+#if _GOALREL_SLEEP_SETS
+        new_nodes.push_back(new Node(i, new_goals));
+#else
         new_nodes.push_back(new Node(new_goals));
+#endif
     }
 
     return new_nodes;
@@ -104,6 +125,7 @@ RelationTree::RelationTree(GoalsProxy goals){
     for(uint i = 0; i < goals.size(); i++){
         goal_list.push_back(goals[i].get_pair());
     }
+    std::sort(goal_list.begin(), goal_list.end());
     root = new Node(goal_list);
     open_list.push_back(root);
     nodes.push_back(root);
@@ -117,6 +139,9 @@ void RelationTree::expand(Node* node){
         //new_node->print();
         bool found = false;
         //Node* found_node = NULL;
+#if _GOALREL_SLEEP_SETS
+        // sleep set method guarantees that no goal subset is generated twice
+#else
         for(Node* comp_node : nodes){
             if(new_node->get_goals() == comp_node->get_goals()){
                 found = true;
@@ -124,6 +149,7 @@ void RelationTree::expand(Node* node){
                 break;
             }
         }
+#endif
         if(! found){
             node->addChild(new_node);
             open_list.push_back(new_node);
