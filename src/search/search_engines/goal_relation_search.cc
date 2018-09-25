@@ -38,9 +38,11 @@ GoalRelationSearch::GoalRelationSearch(const Options &opts)
 shared_ptr<SearchEngine> GoalRelationSearch::get_search_engine(int engine_configs_index) {
     //adapt goals of current task according to the current goals relation node   
     current_node = relation_tree.get_next_node();
-    cout << "Current Node: " << endl;
-    current_node->print();
-    tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), current_node->get_goals());
+
+    //cout << "Current Node: " << endl;
+    //current_node->print();
+    tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), relation_tree.get_goals(current_node)); // current_node->get_goals());
+
     ((Heuristic*) heuristic)->set_abstract_task(tasks::g_root_task);
     //TODO find an other way
     //not necessary if only the goal is changed
@@ -106,7 +108,7 @@ SearchStatus GoalRelationSearch::step_return_value() {
         return IN_PROGRESS;
     }
     else{
-        relation_tree.print(task_proxy);
+        relation_tree.print();
         return SOLVED;
     }
 

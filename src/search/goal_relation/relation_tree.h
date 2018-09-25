@@ -8,6 +8,8 @@
 #include "../task_proxy.h"
 #include "../abstract_task.h"
 
+#include <deque>
+
 class State;
 
 namespace goalre {
@@ -16,8 +18,9 @@ class Node;
 
 class RelationTree {
     Node* root;
-    std::vector<Node*> nodes;
-    std::vector<Node*> open_list;
+    std::vector<FactPair> goal_list;
+    std::vector<Node> nodes;
+    std::deque<Node*> open_list;
 
 public:
     RelationTree(GoalsProxy goals);
@@ -35,31 +38,34 @@ public:
         return ! open_list.empty();
     }
 
+    std::vector<FactPair> get_goals(const Node* node) const;
     void expand(Node* node);
     Node* get_next_node();
-    void print(TaskProxy proxy);
+    void print();
 };
 
 
 class Node {
 private:
     std::vector<Node*> children;
-
     uint sleep_set_i;
-    std::vector<FactPair> goals;
-
+    uint goals;
     bool solvable = false;
     bool printed = false;
-
 public:
-    Node(const std::vector<FactPair>& goals);
-    Node(unsigned sleep_set_i, const std::vector<FactPair>& goals);
+    Node();
     ~Node();
 
-    Node(const Node &) = delete;
-    Node &operator=(const Node &) = delete;
+    // Node(const Node &) = delete;
+    // Node &operator=(const Node &) = delete;
 
-    std::vector<FactPair> get_goals(){
+    std::vector<FactPair>  get_goals(const std::vector<FactPair>& all_goals) const;
+
+    void set_goals(uint goals){
+        this->goals = goals;
+    }
+
+    uint id(){
         return goals;
     }
 
@@ -87,9 +93,10 @@ public:
         printed = false;
     }
 
-    void print();
-    void print_relation(TaskProxy proxy);
-    std::vector<Node*> expand();
+    void print(const std::vector<FactPair>& all_goals);
+    void print_relation(const std::vector<FactPair>& all_goals);
+    std::vector<Node*> expand(std::vector<Node>& nodes);
+
 
 };
 }
