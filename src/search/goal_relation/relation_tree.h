@@ -45,13 +45,15 @@ class Node {
 private:
     std::vector<Node*> children;
 
+    uint sleep_set_i;
     std::vector<FactPair> goals;
 
     bool solvable = false;
     bool printed = false;
 
 public:
-    Node(std::vector<FactPair> goals);
+    Node(const std::vector<FactPair>& goals);
+    Node(unsigned sleep_set_i, const std::vector<FactPair>& goals);
     ~Node();
 
     Node(const Node &) = delete;
