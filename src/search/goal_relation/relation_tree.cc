@@ -40,8 +40,8 @@ void Node::print_relation(){
     //if((c_solved || constrained_goals.size() == 0) && ! isSolvable()){
     if((c_solved) && ! isSolvable()){
         cout << ".........................." << endl;
-        //bool solved = isSolvable();
-        //cout << "Solved: " << solved << endl;
+        bool solved = isSolvable();
+        cout << "Solved: " << solved << endl;
         cout << "G:"  << endl;
         for(FactPair l : goals){
             cout << "var" << l.var << " = " << l.value << ", ";

@@ -38,8 +38,8 @@ GoalRelationSearch::GoalRelationSearch(const Options &opts)
 shared_ptr<SearchEngine> GoalRelationSearch::get_search_engine(int engine_configs_index) {
     //adapt goals of current task according to the current goals relation node   
     current_node = relation_tree.get_next_node();
-    //cout << "Current Node: " << endl;
-    //current_node->print();
+    cout << "Current Node: " << endl;
+    current_node->print();
     tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), current_node->get_goals());
     ((Heuristic*) heuristic)->set_abstract_task(tasks::g_root_task);
     //TODO find an other way
@@ -85,6 +85,7 @@ SearchStatus GoalRelationSearch::step() {
     else{
         cout << "-------- FAILS ----------"  << endl;
         relation_tree.expand(current_node);
+        current_node->not_solved();
     }
 
     //current_search->print_statistics();
@@ -160,7 +161,7 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
     parser.add_option<bool>("continue_on_solve",
                             "continue search after solution found",
                             "true");
-    parser.add_option<Evaluator*>("heu", "TODO");
+    parser.add_option<Evaluator*>("heu", "reference to heuristic to update abstract task");
     SearchEngine::add_options_to_parser(parser);
     Options opts = parser.parse();
 
