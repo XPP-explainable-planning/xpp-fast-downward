@@ -110,7 +110,7 @@ std::vector<Node*> Node::expand(){
         printList(new_goals);
         */
 
-#ifdef _GOALREL_SLEEP_SETS
+#if _GOALREL_SLEEP_SETS
         new_nodes.push_back(new Node(i, new_goals));
 #else
         new_nodes.push_back(new Node(new_goals));
