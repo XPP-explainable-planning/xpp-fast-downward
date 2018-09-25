@@ -6,7 +6,7 @@
 using namespace std;
 using namespace options;
 
-#define _GOALREL_SLEEP_SETS 1
+#define _GOALREL_SLEEP_SETS 0
 
 namespace goalre {
 Node::Node(const vector<FactPair>& g)
