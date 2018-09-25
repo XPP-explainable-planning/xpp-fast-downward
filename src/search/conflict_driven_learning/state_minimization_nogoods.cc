@@ -18,22 +18,29 @@ bool StateMinimizationNoGoods::evaluate(
     return m_formula.contains_subset_of(conjunction_ids);
 }
 
+void StateMinimizationNoGoods::initialize()
+{
+    assert(m_full_goal.empty());
+    const auto& goal = strips::get_task().get_goal();
+    m_full_goal.insert(m_full_goal.end(),
+                       goal.begin(),
+                       goal.end());
+}
+
 void StateMinimizationNoGoods::refine(
     const PartialState &state)
 {
+    static std::vector<unsigned> goal_conjunctions;
+
     bool term = m_hc->set_early_termination(false);
-    int res;
-    //for (int var = g_variable_domain.size() - 1; var >= 0; var--) {
     for (int var = m_task.get_num_variables() - 1; var >= 0; var--) {
-        if (!state.is_defined(var)) {
-            continue;
-        }
         for (int val = 0; val < m_task.get_variable_domain_size(var); val++) {
-            if (val != state[var]) {
+            if (!state.is_defined(var) || val != state[var]) {
                 m_new_facts.push_back(strips::get_fact_id(var, val));
             }
         }
-        res = m_hc->compute_heuristic_incremental(m_new_facts,
+        int res = m_hc->compute_heuristic_incremental(
+                m_new_facts,
                 m_reachable_conjunctions);
         if (res != HCHeuristic::DEAD_END) {
             m_hc->revert_incremental_computation(m_new_facts, m_reachable_conjunctions);
@@ -42,45 +49,43 @@ void StateMinimizationNoGoods::refine(
         m_new_facts.clear();
         m_reachable_conjunctions.clear();
     }
+    m_hc->set_early_termination(term);
 
-    unsigned id = m_clauses.size();
     std::sort(m_clause.begin(), m_clause.end());
     m_formula.insert(m_clause);
-    unsigned i = 0;
-    unsigned j = 0;
-    const auto& goal = strips::get_task().get_goal();
-    while (i < m_clause.size() && j < goal.size()) {
-        if (m_clause[i] < goal[j]) {
-            i++;
-        } else if (m_clause[i] == goal[j]) {
-            m_goal_fact_to_clause[m_clause[i]].push_back(id);
-            i++;
-            j++;
-        } else {
-            j++;
-        }
-    }
+
+    unsigned id = m_clauses.size();
     m_clauses.push_back(std::vector<unsigned>());
     m_clause.swap(m_clauses[id]);
 
-
-    m_hc->set_early_termination(term);
+    m_hc->get_satisfied_conjunctions(m_full_goal, goal_conjunctions);
+    for (const auto& conj_id : goal_conjunctions) {
+        if (!m_hc->get_conjunction_data(conj_id).achieved()) {
+            m_conjs_to_clauses[conj_id].push_back(id);
+        }
+    }
+    goal_conjunctions.clear();
 }
 
 void StateMinimizationNoGoods::synchronize_goal()
 {
-    m_formula.clear();
     static std::vector<bool> x;
+    static std::vector<unsigned> goal_conjunctions;
     x.resize(m_clauses.size());
     std::fill(x.begin(), x.end(), false);
-    for (const unsigned& g : strips::get_task().get_goal()) {
-        for (const auto& id : m_goal_fact_to_clause[g]) {
+
+    m_formula.clear();
+    m_hc->get_satisfied_conjunctions(strips::get_task().get_goal(),
+                                     goal_conjunctions);
+    for (const unsigned& conj_id : goal_conjunctions) {
+        for (const auto& id : m_conjs_to_clauses[conj_id]) {
             if (!x[id]) {
                 x[id] = true;
                 m_formula.insert(m_clauses[id]);
             }
         }
     }
+    goal_conjunctions.clear();
 }
 
 void StateMinimizationNoGoods::print_statistics() const

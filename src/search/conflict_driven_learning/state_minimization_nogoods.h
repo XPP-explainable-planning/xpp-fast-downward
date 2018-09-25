@@ -22,13 +22,15 @@ protected:
     std::vector<unsigned> m_reachable_conjunctions;
 
     /* multiple goal sets support */
+    std::vector<unsigned> m_full_goal;
     segmented_vector::SegmentedVector<std::vector<unsigned> > m_clauses;
-    std::map<unsigned, std::vector<unsigned> > m_goal_fact_to_clause;
+    std::map<unsigned, std::vector<unsigned> > m_conjs_to_clauses;
 
     virtual bool evaluate(const std::vector<unsigned> &conjunction_ids) override;
     virtual void refine(const PartialState &state) override;
 public:
     using NoGoodFormula::NoGoodFormula;
+    virtual void initialize() override;
     virtual void synchronize_goal() override;
     virtual void print_statistics() const override;
 };
