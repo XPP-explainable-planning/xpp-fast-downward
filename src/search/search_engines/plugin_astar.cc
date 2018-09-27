@@ -32,6 +32,8 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
         "lazy_evaluator",
         "An evaluator that re-evaluates a state before it is expanded.",
         OptionParser::NONE);
+    parser.add_option<bool>("prune_by_f",
+                            "", "false");
 
     SearchEngine::add_pruning_option(parser);
     SearchEngine::add_options_to_parser(parser);
