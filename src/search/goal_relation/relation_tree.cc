@@ -56,9 +56,13 @@ void Node::print_relation(const std::vector<FactPair>& all_goals){
         //cout << "Solved: " << solved << endl;
         cout << "G:"  << endl;
 
-        for(FactPair l : get_goals(all_goals)){
+        for(uint i = 0; i < get_goals(all_goals).size(); i++){
+            FactPair g = get_goals(all_goals)[i];
             //cout << "var" << l.var << " = " << l.value << ", ";
-            cout << taskproxy.get_variables()[l.var].get_fact(l.value).get_name() << "|";
+            cout << taskproxy.get_variables()[g.var].get_fact(g.value).get_name();
+            if(i < get_goals(all_goals).size()-1){
+                cout << "|";
+            }
 
         }
         cout << endl;
