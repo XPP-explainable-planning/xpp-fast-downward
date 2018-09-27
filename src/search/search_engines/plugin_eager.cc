@@ -13,6 +13,8 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
     parser.add_option<shared_ptr<OpenListFactory>>("open", "open list");
     parser.add_option<bool>("reopen_closed",
                             "reopen closed nodes", "false");
+    parser.add_option<bool>("prune_by_f",
+                            "", "false");
     parser.add_option<Evaluator *>(
         "f_eval",
         "set evaluator for jump statistics. "

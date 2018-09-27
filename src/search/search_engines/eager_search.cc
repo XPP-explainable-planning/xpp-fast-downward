@@ -23,6 +23,7 @@ namespace eager_search {
 EagerSearch::EagerSearch(const Options &opts)
     : SearchEngine(opts),
       reopen_closed_nodes(opts.get<bool>("reopen_closed")),
+      prune_by_f(opts.get<bool>("prune_by_f")),
       open_list(opts.get<shared_ptr<OpenListFactory>>("open")->
                 create_state_open_list()),
       f_evaluator(opts.get<Evaluator *>("f_eval", nullptr)),
@@ -144,107 +145,116 @@ SearchStatus EagerSearch::step() {
     cout << "-------------------------" << endl;
     */
 
-    vector<OperatorID> applicable_ops;
-    g_successor_generator->generate_applicable_ops(s, applicable_ops);
+    bool expand = true;
+    if (prune_by_f && f_evaluator->does_cache_estimates()) {
+        EvaluationContext eval_context(s, node.get_real_g(), false, &statistics, true);
+        EvaluationResult res = f_evaluator->compute_result(eval_context);
+        expand = res.get_evaluator_value() < bound;
+    }
 
-    /*
-      TODO: When preferred operators are in use, a preferred operator will be
-      considered by the preferred operator queues even when it is pruned.
-    */
-    pruning_method->prune_operators(s, applicable_ops);
-
-    // This evaluates the expanded state (again) to get preferred ops
-    EvaluationContext eval_context(s, node.get_g(), false, &statistics, true);
-    ordered_set::OrderedSet<OperatorID> preferred_operators =
-        collect_preferred_operators(eval_context, preferred_operator_evaluators);
-
-    for (OperatorID op_id : applicable_ops) {
-        OperatorProxy op = task_proxy.get_operators()[op_id];
-        if ((node.get_real_g() + op.get_cost()) >= bound)
-            continue;
-
-        //cout << op.get_name() << endl;
-
-        GlobalState succ_state = state_registry.get_successor_state(s, op);
-        statistics.inc_generated();
-        bool is_preferred = preferred_operators.contains(op_id);
-
-        SearchNode succ_node = search_space.get_node(succ_state);
-
-        for (Evaluator *evaluator : path_dependent_evaluators) {
-            evaluator->notify_state_transition(s, op_id, succ_state);
-        }
-
-        // Previously encountered dead end. Don't re-evaluate.
-        if (succ_node.is_dead_end())
-            continue;
-
-        if (succ_node.is_new()) {
-            // We have not seen this state before.
-            // Evaluate and create a new node.
-
-            // Careful: succ_node.get_g() is not available here yet,
-            // hence the stupid computation of succ_g.
-            // TODO: Make this less fragile.
-            int succ_g = node.get_g() + get_adjusted_cost(op);
-
-            EvaluationContext eval_context(
-                succ_state, succ_g, is_preferred, &statistics);
-            statistics.inc_evaluated_states();
-
-            if (open_list->is_dead_end(eval_context)) {
-                succ_node.mark_as_dead_end();
-                statistics.inc_dead_ends();
+    if (expand) {
+        vector<OperatorID> applicable_ops;
+        g_successor_generator->generate_applicable_ops(s, applicable_ops);
+    
+        /*
+          TODO: When preferred operators are in use, a preferred operator will be
+          considered by the preferred operator queues even when it is pruned.
+        */
+        pruning_method->prune_operators(s, applicable_ops);
+    
+        // This evaluates the expanded state (again) to get preferred ops
+        EvaluationContext eval_context(s, node.get_g(), false, &statistics, true);
+        ordered_set::OrderedSet<OperatorID> preferred_operators =
+            collect_preferred_operators(eval_context, preferred_operator_evaluators);
+    
+        for (OperatorID op_id : applicable_ops) {
+            OperatorProxy op = task_proxy.get_operators()[op_id];
+            if ((node.get_real_g() + op.get_cost()) >= bound)
                 continue;
+    
+            //cout << op.get_name() << endl;
+    
+            GlobalState succ_state = state_registry.get_successor_state(s, op);
+            statistics.inc_generated();
+            bool is_preferred = preferred_operators.contains(op_id);
+    
+            SearchNode succ_node = search_space.get_node(succ_state);
+    
+            for (Evaluator *evaluator : path_dependent_evaluators) {
+                evaluator->notify_state_transition(s, op_id, succ_state);
             }
-            succ_node.open(node, op);
-
-            open_list->insert(eval_context, succ_state.get_id());
-            if (search_progress.check_progress(eval_context)) {
-                print_checkpoint_line(succ_node.get_g());
-                reward_progress();
-            }
-        } else if (succ_node.get_g() > node.get_g() + get_adjusted_cost(op)) {
-            // We found a new cheapest path to an open or closed state.
-            if (reopen_closed_nodes) {
-                if (succ_node.is_closed()) {
-                    /*
-                      TODO: It would be nice if we had a way to test
-                      that reopening is expected behaviour, i.e., exit
-                      with an error when this is something where
-                      reopening should not occur (e.g. A* with a
-                      consistent heuristic).
-                    */
-                    statistics.inc_reopened();
-                }
-                succ_node.reopen(node, op);
-
+    
+            // Previously encountered dead end. Don't re-evaluate.
+            if (succ_node.is_dead_end())
+                continue;
+    
+            if (succ_node.is_new()) {
+                // We have not seen this state before.
+                // Evaluate and create a new node.
+    
+                // Careful: succ_node.get_g() is not available here yet,
+                // hence the stupid computation of succ_g.
+                // TODO: Make this less fragile.
+                int succ_g = node.get_g() + get_adjusted_cost(op);
+    
                 EvaluationContext eval_context(
-                    succ_state, succ_node.get_g(), is_preferred, &statistics);
-
-                /*
-                  Note: our old code used to retrieve the h value from
-                  the search node here. Our new code recomputes it as
-                  necessary, thus avoiding the incredible ugliness of
-                  the old "set_evaluator_value" approach, which also
-                  did not generalize properly to settings with more
-                  than one evaluator.
-
-                  Reopening should not happen all that frequently, so
-                  the performance impact of this is hopefully not that
-                  large. In the medium term, we want the evaluators to
-                  remember evaluator values for states themselves if
-                  desired by the user, so that such recomputations
-                  will just involve a look-up by the Evaluator object
-                  rather than a recomputation of the evaluator value
-                  from scratch.
-                */
+                    succ_state, succ_g, is_preferred, &statistics);
+                statistics.inc_evaluated_states();
+    
+                if (open_list->is_dead_end(eval_context)) {
+                    succ_node.mark_as_dead_end();
+                    statistics.inc_dead_ends();
+                    continue;
+                }
+                succ_node.open(node, op);
+    
                 open_list->insert(eval_context, succ_state.get_id());
-            } else {
-                // If we do not reopen closed nodes, we just update the parent pointers.
-                // Note that this could cause an incompatibility between
-                // the g-value and the actual path that is traced back.
-                succ_node.update_parent(node, op);
+                if (search_progress.check_progress(eval_context)) {
+                    print_checkpoint_line(succ_node.get_g());
+                    reward_progress();
+                }
+            } else if (succ_node.get_g() > node.get_g() + get_adjusted_cost(op)) {
+                // We found a new cheapest path to an open or closed state.
+                if (reopen_closed_nodes) {
+                    if (succ_node.is_closed()) {
+                        /*
+                          TODO: It would be nice if we had a way to test
+                          that reopening is expected behaviour, i.e., exit
+                          with an error when this is something where
+                          reopening should not occur (e.g. A* with a
+                          consistent heuristic).
+                        */
+                        statistics.inc_reopened();
+                    }
+                    succ_node.reopen(node, op);
+    
+                    EvaluationContext eval_context(
+                        succ_state, succ_node.get_g(), is_preferred, &statistics);
+    
+                    /*
+                      Note: our old code used to retrieve the h value from
+                      the search node here. Our new code recomputes it as
+                      necessary, thus avoiding the incredible ugliness of
+                      the old "set_evaluator_value" approach, which also
+                      did not generalize properly to settings with more
+                      than one evaluator.
+    
+                      Reopening should not happen all that frequently, so
+                      the performance impact of this is hopefully not that
+                      large. In the medium term, we want the evaluators to
+                      remember evaluator values for states themselves if
+                      desired by the user, so that such recomputations
+                      will just involve a look-up by the Evaluator object
+                      rather than a recomputation of the evaluator value
+                      from scratch.
+                    */
+                    open_list->insert(eval_context, succ_state.get_id());
+                } else {
+                    // If we do not reopen closed nodes, we just update the parent pointers.
+                    // Note that this could cause an incompatibility between
+                    // the g-value and the actual path that is traced back.
+                    succ_node.update_parent(node, op);
+                }
             }
         }
     }

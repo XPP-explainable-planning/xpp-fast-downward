@@ -17,6 +17,7 @@ class Options;
 namespace eager_search {
 class EagerSearch : public SearchEngine {
     const bool reopen_closed_nodes;
+    const bool prune_by_f;
 
     std::unique_ptr<StateOpenList> open_list;
     Evaluator *f_evaluator;
