@@ -13,6 +13,18 @@ struct StateComponent {
     virtual void reset() = 0;
 };
 
+struct SingleStateComponent : public StateComponent {
+private:
+    bool ended;
+    GlobalState state;
+public:
+    SingleStateComponent(const GlobalState& state);
+    virtual const GlobalState &current() override;
+    virtual void next(unsigned) override;
+    virtual void reset() override;
+    virtual bool end() override;
+};
+
 template<typename Iterator>
 struct StateComponentIterator : public StateComponent {
 private:
