@@ -2,7 +2,7 @@
 #define HC_HEURISTIC_H
 
 #include "../algorithms/segmented_vector.h"
-/* #include "../algorithms/priority_queues.h" */
+#include "../algorithms/priority_queues.h"
 #include "../heuristic.h"
 #include "../global_state.h"
 #include "../utils/timer.h"
@@ -220,6 +220,11 @@ public:
     std::vector<unsigned> &get_counters_with_fact_precondition(unsigned p);
     std::vector<unsigned> &get_counter_precondition(unsigned id);
 
+    void dump_conjunction(const std::vector<unsigned>& conjunction) const;
+    void dump_conjunction(std::ostream& out,
+                          const std::vector<unsigned>& conjunction) const;
+    void dump_conjunctions(std::ostream& out = std::cout) const;
+
     virtual void print_statistics() const;
     virtual void print_options() const;
 
@@ -275,6 +280,22 @@ public:
         std::vector<unsigned> &reachable_conjunctions)
     override;
 };
+
+class HCHeuristicGeneralCost : public HCHeuristic
+{
+protected:
+    priority_queues::AdaptiveQueue<ConjunctionData *> m_open;
+    bool enqueue_if_necessary(ConjunctionData *conj, const int &cost);
+public:
+    using HCHeuristic::HCHeuristic;
+    virtual void cleanup_previous_computation() override;
+    virtual int compute_heuristic(const std::vector<unsigned> &conjunction_ids)
+    override;
+    virtual int compute_heuristic_get_reachable_conjunctions(
+        std::vector<unsigned> &reachable_conjunctions)
+    override;
+};
+
 
 }
 }

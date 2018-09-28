@@ -23,7 +23,7 @@ void HeuristicRefiner::print_statistics() const
 bool HeuristicRefiner::notify(
         int bound,
         StateComponent &component,
-        StateComponent &recognized_neighbors)
+        const std::vector<std::pair<int, GlobalState> >& recognized_neighbors)
 {
     if (!m_initialized) {
         m_initialized = true;
@@ -35,13 +35,13 @@ bool HeuristicRefiner::notify(
     return res;
 }
 
-bool HeuristicRefiner::notify(
-        int bound,
-        StateComponent &&component,
-        StateComponent &&recognized_neighbors)
-{
-    return notify(bound, component, recognized_neighbors);
-}
+//bool HeuristicRefiner::notify(
+//        int bound,
+//        StateComponent &&component,
+//        std::vector<std::pair<int, GlobalState> > &recognized_neighbors)
+//{
+//    return notify(bound, component, recognized_neighbors);
+//}
 
 const utils::Timer& HeuristicRefiner::get_refinement_timer() const
 {

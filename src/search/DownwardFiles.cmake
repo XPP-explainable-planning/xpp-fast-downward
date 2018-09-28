@@ -770,10 +770,12 @@ fast_downward_plugin(
         conflict_driven_learning/formula
         conflict_driven_learning/state_minimization_nogoods
         conflict_driven_learning/hc_conflict_learner
-        conflict_driven_learning/hc_neighbors_refinement
+        conflict_driven_learning/uc_neighbors_refinement
 
         conflict_driven_learning/heuristic_refiner
         conflict_driven_learning/bounded_cost_depth_first_search
+        conflict_driven_learning/hc_heuristic_refiner
+        conflict_driven_learning/hc_neighbors_refinement
     )
 
 fast_downward_add_plugin_sources(PLANNER_SOURCES)

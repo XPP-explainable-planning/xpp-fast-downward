@@ -10,6 +10,8 @@
 #include "../plugin.h"
 #include "../utils/timer.h"
 
+#include "../task_utils/task_properties.h"
+
 #include <cassert>
 #include <iostream>
 #include <cstdio>
@@ -868,6 +870,35 @@ void HCHeuristic::set_abstract_task(std::shared_ptr<AbstractTask> task)
     }
 }
 
+void
+HCHeuristic::dump_conjunction(const std::vector<unsigned>& conjunction) const
+{
+    dump_conjunction(std::cout, conjunction);
+}
+
+void
+HCHeuristic::dump_conjunction(std::ostream& out,
+                              const std::vector<unsigned>& conjunction) const
+{
+    bool sep = false;
+    out << "[";
+    for (const auto& fact_id : conjunction) {
+        auto fact = strips::get_variable_assignment(fact_id);
+        out << (sep ? ", " : "")
+            << task->get_fact_name(FactPair(fact.first, fact.second));
+        sep = true;
+    }
+    out << "]";
+}
+
+void HCHeuristic::dump_conjunctions(std::ostream& out) const
+{
+    for (unsigned i = 0; i < m_conjunctions.size(); i++) {
+        dump_conjunction(out, m_conjunctions[i]);
+        out << std::endl;
+    }
+}
+
 void HCHeuristic::add_options_to_parser(options::OptionParser &parser)
 {
     Heuristic::add_options_to_parser(parser);
@@ -960,7 +991,6 @@ int HCHeuristicUnitCost::compute_heuristic_get_reachable_conjunctions(
     return m_goal_conjunction.achieved() ? m_goal_conjunction.cost - 1 : DEAD_END;
 }
 
-#if 0
 bool HCHeuristicGeneralCost::enqueue_if_necessary(
     ConjunctionData *eff,
     const int &cost)
@@ -1043,7 +1073,6 @@ int HCHeuristicGeneralCost::compute_heuristic_get_reachable_conjunctions(
     }
     return m_goal_conjunction.achieved() ? m_goal_conjunction.cost : DEAD_END;
 }
-#endif
 
 }
 }
@@ -1054,7 +1083,12 @@ _parse(options::OptionParser& parser)
     conflict_driven_learning::hc_heuristic::HCHeuristic::add_options_to_parser(parser);
     options::Options opts = parser.parse();
     if (!parser.dry_run()) {
-        return new conflict_driven_learning::hc_heuristic::HCHeuristicUnitCost(opts);
+        TaskProxy proxy(*opts.get<std::shared_ptr<AbstractTask>>("transform"));
+        if (task_properties::is_unit_cost(proxy)) {
+            return new conflict_driven_learning::hc_heuristic::HCHeuristicUnitCost(opts);
+        } else {
+            return new conflict_driven_learning::hc_heuristic::HCHeuristicGeneralCost(opts);
+        }
     }
     return NULL;
 }

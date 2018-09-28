@@ -1,13 +1,12 @@
-#ifndef HC_NEIGHBORS_REFINEMENT_H
-#define HC_NEIGHBORS_REFINEMENT_H
+#ifndef UC_NEIGHBORS_REFINEMENT_H
+#define UC_NEIGHBORS_REFINEMENT_H
 
 #include "hc_heuristic.h"
-#include "hc_heuristic_refiner.h"
+#include "hc_conflict_learner.h"
 #include "../abstract_task.h"
 #include "../option_parser.h"
 
 #include <vector>
-#include <map>
 #include <deque>
 
 namespace conflict_driven_learning
@@ -19,7 +18,7 @@ namespace strips {
     class Task;
 }
 
-class HCNeighborsRefinement : public HCHeuristicRefiner
+class UCNeighborsRefinement : public HCConflictLearner
 {
     size_t m_num_refinements;
 protected:
@@ -27,11 +26,9 @@ protected:
         const std::vector<unsigned> &conj;
         const std::vector<unsigned> &achievers;
         unsigned i;
-        int bound;
         OpenElement(const std::vector<unsigned> &conj,
-                    const std::vector<unsigned> &achievers,
-                    int bound)
-            : conj(conj), achievers(achievers), i(0), bound(bound) {}
+                    const std::vector<unsigned> &achievers)
+            : conj(conj), achievers(achievers), i(0) {}
     };
     static const unsigned UNASSIGNED;
 
@@ -44,11 +41,11 @@ protected:
     unsigned m_component_size;
     unsigned m_num_successors;
 
-    std::vector<int> m_current_state_cost;
+    std::vector<bool> m_current_state_unreached;
     std::vector<std::vector<unsigned> > m_fact_to_negated_component;
     std::vector<std::vector<unsigned> > m_negated_component_to_facts;
-    std::vector<std::map<int, std::vector<unsigned> > > m_conjunction_to_successors;
-    std::vector<std::map<int, std::vector<unsigned> > > m_successor_to_conjunctions;
+    std::vector<std::vector<unsigned> > m_conjunction_to_successors;
+    std::vector<std::vector<unsigned> > m_successor_to_conjunctions;
     //// end (static)
 
     // dynamic data (chaning within each refinement)
@@ -65,40 +62,27 @@ protected:
         const std::vector<unsigned> &subgoal,
         std::vector<unsigned> &satisfied);
 
-    // unsigned get_successor_not_covers(const std::vector<unsigned> &conflict);
-    // bool is_subgoal_covered_by_all_successors(const std::vector<unsigned> &subgoal);
-    // bool is_contained_in_component(const std::vector<unsigned> &conflict);
-
-    int get_conjunction_value(unsigned cid);
-    int get_cost(const std::vector<unsigned>& subgoal);
-
-    unsigned collect_greedy_minimal(
-        const std::vector<unsigned> &superset,
-        std::vector<unsigned> &num_covered,
-        const std::vector<std::map<int, std::vector<unsigned> > > &covers,
-        const std::vector<std::map<int, std::vector<unsigned> > > &covered_by,
-        std::vector<unsigned> &chosen,
-        int bound);
-
+    unsigned get_successor_not_covers(const std::vector<unsigned> &conflict);
+    bool is_subgoal_covered_by_all_successors(const std::vector<unsigned> &subgoal);
+    bool is_contained_in_component(const std::vector<unsigned> &conflict);
     unsigned collect_greedy_minimal(
         const std::vector<unsigned> &superset,
         std::vector<unsigned> &num_covered,
         const std::vector<std::vector<unsigned> > &covers,
         const std::vector<std::vector<unsigned> > &covered_by,
         std::vector<unsigned> &chosen);
-
     void compute_conflict(const std::vector<unsigned> &subgoal,
-                          std::vector<unsigned> &conflict,
-                          int bound);
-    void push_conflict_for(const std::vector<unsigned> &subgoal, int bound);
+                          std::vector<unsigned> &conflict);
 
-    virtual bool refine_heuristic(
-            int bound,
+    void push_conflict_for(const std::vector<unsigned> &subgoal);
+
+    virtual bool learn_from_dead_end_component(
             StateComponent &component,
-            const std::vector<std::pair<int, GlobalState> >& rn) override;
+            StateComponent &rn) override;
     virtual void initialize() override;
 public:
-    HCNeighborsRefinement(const options::Options &opts);
+    UCNeighborsRefinement(const options::Options &opts);
+    virtual bool requires_recognized_neighbors() const;
     virtual void print_statistics() const;
     static void add_options_to_parser(options::OptionParser &parser);
 };

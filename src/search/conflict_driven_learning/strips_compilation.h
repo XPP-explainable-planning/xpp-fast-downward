@@ -80,6 +80,7 @@ unsigned get_fact_id(const std::pair<t_var, t_val> &assignment)
     return get_fact_id(assignment.first, assignment.second);
 }
 unsigned get_fact_id(const int &var, const int &val);
+std::pair<int, int> get_variable_assignment(const unsigned& fact_id);
 std::size_t num_facts();
 
 }

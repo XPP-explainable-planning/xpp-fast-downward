@@ -20,6 +20,18 @@ static size_t _num_facts = -1;
 static Task strips_task;
 static std::vector<unsigned> variable_offset;
 
+std::pair<int, int> get_variable_assignment(const unsigned& fact_id)
+{
+    std::pair<int, int> res(0, fact_id);
+    while (res.first < (int) variable_offset.size()
+            && (res.second - (int) variable_offset[res.first]) >= 0) {
+        res.first++;
+    }
+    res.first--;
+    res.second = res.second - variable_offset[res.first];
+    return res;
+}
+
 unsigned get_fact_id(const int &var, const int &val)
 {
     assert(_initialized);

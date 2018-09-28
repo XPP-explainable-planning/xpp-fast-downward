@@ -33,11 +33,14 @@ protected:
         GlobalState state;
         OperatorID successor_op;
         std::map<int, std::deque<std::pair<OperatorID, StateID> > > open;
-        std::vector<GlobalState> successors;
+        std::vector<std::pair<int, GlobalState> > successors;
         Locals(const GlobalState& state);
     };
 
     bool c_refinement_toggle;
+
+    std::shared_ptr<AbstractTask> m_task;
+    TaskProxy m_task_proxy;
 
     Evaluator* m_expansion_evaluator;
     Evaluator* m_pruning_evaluator;

@@ -10,9 +10,19 @@
 #include "../task_utils/successor_generator.h"
 #include "../task_utils/task_properties.h"
 #include "../utils/system.h"
+#include "../operator_cost.h"
+#include "../tasks/cost_adapted_task.h"
+
+
+#include "hc_heuristic.h"
 
 #include <limits>
 #include <algorithm>
+
+#ifndef NDEBUG
+#define DEBUG_BOUNDED_COST_DFS_ASSERT_LEARNING 1
+#define DEBUG_BOUNDED_COST_DFS_ASSERT_NEIGHBORS 1
+#endif
 
 namespace conflict_driven_learning {
 namespace bounded_cost {
@@ -26,6 +36,8 @@ BoundedCostDepthFirstSearch::Locals::Locals(const GlobalState& state)
 BoundedCostDepthFirstSearch::BoundedCostDepthFirstSearch(const options::Options& opts)
     : SearchEngine(opts)
     , c_refinement_toggle(false)
+    , m_task(OperatorCost(opts.get_enum("cost_type")) != OperatorCost::NORMAL ? std::make_shared<tasks::CostAdaptedTask>(opts) : task)
+    , m_task_proxy(*m_task)
     , m_expansion_evaluator(opts.get<Evaluator *>("eval"))
     , m_pruning_evaluator(NULL)
     , m_refiner(opts.contains("learn") ? opts.get<std::shared_ptr<HeuristicRefiner> >("learn") : nullptr)
@@ -42,8 +54,8 @@ BoundedCostDepthFirstSearch::BoundedCostDepthFirstSearch(const options::Options&
                     << std::endl;
         utils::exit_with(utils::ExitCode::SEARCH_CRITICAL_ERROR);
     }
-    for (int op = 0; op < task->get_num_operators(); op++) {
-        if (task->get_operator_cost(op, false) == 0) {
+    for (int op = 0; op < m_task->get_num_operators(); op++) {
+        if (m_task->get_operator_cost(op, false) == 0) {
             std::cerr << "bounded cost depth first search does not support 0-cost actions"
                         << std::endl;
             utils::exit_with(utils::ExitCode::SEARCH_CRITICAL_ERROR);
@@ -56,7 +68,7 @@ void
 BoundedCostDepthFirstSearch::initialize()
 {
     GlobalState istate = state_registry.get_initial_state();
-    if (task_properties::is_goal_state(task_proxy, istate)) {
+    if (task_properties::is_goal_state(m_task_proxy, istate)) {
         std::cout << "Initial state satisfies goal condition!" << std::endl;
         m_solved = true;
     } else if (!evaluate(istate, m_expansion_evaluator) 
@@ -108,11 +120,13 @@ BoundedCostDepthFirstSearch::expand(const GlobalState& state)
     for (unsigned i = 0; i < aops.size(); i++) {
         GlobalState succ = state_registry.get_successor_state(
                 state,
-                task_proxy.get_operators()[aops[i]]);
+                m_task_proxy.get_operators()[aops[i]]);
         if (evaluate(succ, m_expansion_evaluator)) {
             locals.open[m_cached_h].emplace_back(aops[i], succ.get_id());
         } else {
-            locals.successors.push_back(succ);
+            locals.successors.emplace_back(
+                    m_task->get_operator_cost(aops[i].get_index(), false),
+                    succ);
         }
     }
     aops.clear();
@@ -143,7 +157,7 @@ BoundedCostDepthFirstSearch::step()
     Locals& locals = m_call_stack.back();
 
     if (locals.successor_op != OperatorID::no_operator) {
-        m_current_g -= task->get_operator_cost(locals.successor_op.get_index(), false);
+        m_current_g -= m_task->get_operator_cost(locals.successor_op.get_index(), false);
     }
 
     bool expanded = true;
@@ -156,28 +170,44 @@ BoundedCostDepthFirstSearch::step()
         }
         locals.successor_op = succ.first;
         GlobalState succ_state = state_registry.lookup_state(succ.second);
-        if (task_properties::is_goal_state(task_proxy, succ_state)) {
+        if (task_properties::is_goal_state(m_task_proxy, succ_state)) {
             m_solved = true;
             return SearchStatus::IN_PROGRESS;
         }
-        locals.successors.push_back(succ_state);
-        int cost = task->get_operator_cost(succ.first.get_index(), false);
+        int cost = m_task->get_operator_cost(locals.successor_op.get_index(), false);
+        locals.successors.emplace_back(cost, succ_state);
         m_current_g += cost;
         if (expand(succ_state)) {
             expanded = false;
-            break;    
+            break;
         }
         m_current_g -= cost;
     }
 
     if (expanded) {
         if (c_refinement_toggle) {
+            SingleStateComponent comp(locals.state);
+#if DEBUG_BOUNDED_COST_DFS_ASSERT_NEIGHBORS
+            for (const auto& succ : locals.successors) {
+                bool dead = !evaluate(succ.second, m_pruning_evaluator);
+                // std::cout << "successor " << succ.second.get_id()
+                //     << " -> cost=" << succ.first << " dead=" << dead << " h=" << m_cached_h << " bound=" << m_bounds[succ.second] << std::endl;
+                assert(m_bounds[succ.second] + m_current_g + succ.first >= bound);
+                assert(dead || m_bounds[succ.second] <= m_cached_h);
+            }
+#endif
             c_refinement_toggle = 
-                m_refiner->notify(bound - m_current_g,
-                                SingleStateComponent(locals.state),
-                                StateComponentIterator<std::vector<GlobalState>::iterator>(
-                                    locals.successors.begin(),
-                                    locals.successors.end()));
+                m_refiner->notify(
+                        bound - m_current_g,
+                        comp,
+                        locals.successors);
+#if DEBUG_BOUNDED_COST_DFS_ASSERT_LEARNING
+            if (c_refinement_toggle) {
+                bool dead = !evaluate(locals.state, m_pruning_evaluator);
+                // std::cout << "refinement result => dead=" << dead << " h=" << m_cached_h << std::endl;
+                assert(dead || m_current_g + m_cached_h >= bound);
+            }
+#endif
         }
         assert(m_bounds[locals.state] < bound - m_current_g);
         m_bounds[locals.state] = bound - m_current_g;
@@ -192,6 +222,13 @@ void BoundedCostDepthFirstSearch::print_statistics() const
     SearchEngine::print_statistics();
     std::cout << "Registered: " << state_registry.size() << " state(s)" << std::endl;
     statistics.print_detailed_statistics();
+    
+#ifndef NDEBUG
+    hc_heuristic::HCHeuristic* h = dynamic_cast<hc_heuristic::HCHeuristic*>(m_pruning_evaluator);
+    if (h != NULL) {
+        h->dump_conjunctions();
+    }
+#endif
 }
 
 void
@@ -199,6 +236,7 @@ BoundedCostDepthFirstSearch::add_options_to_parser(options::OptionParser& parser
 {
     parser.add_option<Evaluator *>("eval");
     parser.add_option<std::shared_ptr<HeuristicRefiner> >("learn", "", options::OptionParser::NONE);
+    add_cost_type_option_to_parser(parser);
     SearchEngine::add_options_to_parser(parser);
 }
 
