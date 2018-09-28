@@ -293,6 +293,9 @@ void HCNeighborsRefinement::push_conflict_for(
     m_conflict.clear();
     if (res.second) {
         m_current_state_cost.push_back(bound);
+    } else {
+        assert(m_current_state_cost[res.first] < bound);
+        m_current_state_cost[res.first] = bound;
     }
     // m_hc->mark_unachieved(res.first);
     m_open.emplace_back(m_hc->get_conjunction(res.first),

@@ -76,13 +76,6 @@ BoundedCostTarjanSearch::BoundedCostTarjanSearch(const options::Options& opts)
                     << std::endl;
         utils::exit_with(utils::ExitCode::SEARCH_CRITICAL_ERROR);
     }
-    for (int op = 0; op < m_task->get_num_operators(); op++) {
-        if (m_task->get_operator_cost(op, false) == 0) {
-            std::cerr << "bounded cost depth first search does not support 0-cost actions"
-                        << std::endl;
-            utils::exit_with(utils::ExitCode::SEARCH_CRITICAL_ERROR);
-        }
-    }
     m_current_g = 0;
 }
 
@@ -363,6 +356,7 @@ BoundedCostTarjanSearch::step()
                     m_last_layer = m_layers.empty() ? NULL : &m_layers.back();
                 }
             }
+            component_neighbors.clear();
 // #if DEBUG_BOUNDED_COST_DFS_ASSERT_NEIGHBORS
 //                 for (const auto& succ : locals.successors) {
 //                     bool dead = !evaluate(succ.second, m_pruning_evaluator);
