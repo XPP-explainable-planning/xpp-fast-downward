@@ -66,7 +66,7 @@ void HCNeighborsRefinement::initialize()
 bool HCNeighborsRefinement::refine_heuristic(
         int bound,
     StateComponent &component,
-    const std::vector<std::pair<int, GlobalState> >& neighbors)
+    SuccessorComponent& neighbors)
 {
     std::shared_ptr<AbstractTask> m_task = tasks::g_root_task;
 
@@ -129,7 +129,8 @@ bool HCNeighborsRefinement::refine_heuristic(
     if (!terminate) {
         m_num_successors = 0;
         m_conjunction_to_successors.resize(m_hc->num_conjunctions());
-        for (const auto& succ : neighbors) {
+        while (!neighbors.end()) {
+            const auto& succ = neighbors.current();
 #ifndef NDEBUG
             int res =
 #endif
@@ -145,6 +146,7 @@ bool HCNeighborsRefinement::refine_heuristic(
                 m_successor_to_conjunctions[m_num_successors][value].push_back(cid);
             }
             m_num_successors++;
+            neighbors.next();
         }
 
         m_num_refinements++;

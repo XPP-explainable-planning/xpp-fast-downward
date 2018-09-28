@@ -27,7 +27,7 @@
 namespace conflict_driven_learning {
 namespace bounded_cost {
 
-static const int INF = std::numeric_limits<int>::infinity();
+static const int INF = std::numeric_limits<int>::max();
 
 BoundedCostDepthFirstSearch::Locals::Locals(const GlobalState& state)
     : state(state), successor_op(OperatorID::no_operator)
@@ -68,6 +68,7 @@ void
 BoundedCostDepthFirstSearch::initialize()
 {
     GlobalState istate = state_registry.get_initial_state();
+    m_bounds[istate] = 0;
     if (task_properties::is_goal_state(m_task_proxy, istate)) {
         std::cout << "Initial state satisfies goal condition!" << std::endl;
         m_solved = true;
@@ -100,15 +101,23 @@ BoundedCostDepthFirstSearch::expand(const GlobalState& state)
     static std::vector<OperatorID> aops;
 
     int& state_bound = m_bounds[state];
+    assert(state_bound >= 0);
+
+    if (m_current_g + state_bound >= bound) {
+        return false;
+    }
 
     if (state_bound == INF || !evaluate(state, m_pruning_evaluator)) {
+        std::cout << state_bound << ": " <<  (state_bound == INF) << std::endl;
         state_bound = INF;
         return false;
     }
 
-    state_bound = std::max(state_bound, m_cached_h);
-    if (m_current_g + state_bound >= bound) {
-        return false;
+    if (m_cached_h > state_bound) {
+        state_bound = m_cached_h;
+        if (m_current_g + state_bound >= bound) {
+            return false;
+        }
     }
 
     statistics.inc_expanded();
@@ -169,38 +178,45 @@ BoundedCostDepthFirstSearch::step()
             locals.open.erase(it);
         }
         locals.successor_op = succ.first;
-        GlobalState succ_state = state_registry.lookup_state(succ.second);
-        if (task_properties::is_goal_state(m_task_proxy, succ_state)) {
-            m_solved = true;
-            return SearchStatus::IN_PROGRESS;
-        }
         int cost = m_task->get_operator_cost(locals.successor_op.get_index(), false);
-        locals.successors.emplace_back(cost, succ_state);
         m_current_g += cost;
-        if (expand(succ_state)) {
-            expanded = false;
-            break;
+        if (m_current_g < bound) {
+            GlobalState succ_state = state_registry.lookup_state(succ.second);
+            int& succ_bound = m_bounds[succ_state];
+            if (succ_bound == -1) {
+                succ_bound = 0;
+                if (task_properties::is_goal_state(m_task_proxy, succ_state)) {
+                    m_solved = true;
+                    return SearchStatus::IN_PROGRESS;
+                }
+            }
+            locals.successors.emplace_back(cost, succ_state);
+            if (expand(succ_state)) {
+                expanded = false;
+                break;
+            }
         }
         m_current_g -= cost;
     }
 
     if (expanded) {
         if (c_refinement_toggle) {
-            SingleStateComponent comp(locals.state);
 #if DEBUG_BOUNDED_COST_DFS_ASSERT_NEIGHBORS
             for (const auto& succ : locals.successors) {
                 bool dead = !evaluate(succ.second, m_pruning_evaluator);
                 // std::cout << "successor " << succ.second.get_id()
                 //     << " -> cost=" << succ.first << " dead=" << dead << " h=" << m_cached_h << " bound=" << m_bounds[succ.second] << std::endl;
-                assert(m_bounds[succ.second] + m_current_g + succ.first >= bound);
                 assert(dead || m_bounds[succ.second] <= m_cached_h);
+                assert(m_bounds[succ.second] == INF ||
+                        (m_bounds[succ.second] + m_current_g + succ.first) >= bound);
             }
 #endif
             c_refinement_toggle = 
                 m_refiner->notify(
                         bound - m_current_g,
-                        comp,
-                        locals.successors);
+                        SingletonComponent<GlobalState>(locals.state),
+                        SuccessorComponentIterator<std::vector<std::pair<int, GlobalState> >::iterator>(
+                            locals.successors.begin(), locals.successors.end()));
 #if DEBUG_BOUNDED_COST_DFS_ASSERT_LEARNING
             if (c_refinement_toggle) {
                 bool dead = !evaluate(locals.state, m_pruning_evaluator);

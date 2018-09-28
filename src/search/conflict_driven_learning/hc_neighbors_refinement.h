@@ -95,7 +95,7 @@ protected:
     virtual bool refine_heuristic(
             int bound,
             StateComponent &component,
-            const std::vector<std::pair<int, GlobalState> >& rn) override;
+            SuccessorComponent& rn) override;
     virtual void initialize() override;
 public:
     HCNeighborsRefinement(const options::Options &opts);
