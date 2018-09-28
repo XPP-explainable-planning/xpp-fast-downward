@@ -54,13 +54,6 @@ BoundedCostDepthFirstSearch::BoundedCostDepthFirstSearch(const options::Options&
                     << std::endl;
         utils::exit_with(utils::ExitCode::SEARCH_CRITICAL_ERROR);
     }
-    for (int op = 0; op < m_task->get_num_operators(); op++) {
-        if (m_task->get_operator_cost(op, false) == 0) {
-            std::cerr << "bounded cost depth first search does not support 0-cost actions"
-                        << std::endl;
-            utils::exit_with(utils::ExitCode::SEARCH_CRITICAL_ERROR);
-        }
-    }
     m_current_g = 0;
 }
 
