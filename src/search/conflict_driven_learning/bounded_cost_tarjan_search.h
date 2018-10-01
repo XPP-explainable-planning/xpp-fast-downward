@@ -67,6 +67,8 @@ protected:
     bool c_refinement_toggle;
     bool c_compute_neighbors;
     const bool c_make_neighbors_unique;
+    // const int c_learning_belt;
+    bool c_reexpand;
 
     std::shared_ptr<AbstractTask> m_task;
     TaskProxy m_task_proxy;
@@ -76,7 +78,7 @@ protected:
     std::shared_ptr<HeuristicRefiner> m_refiner;
 
     // PerStateInformation<PerStateInfo> m_state_infos;
-    PerStateInformation<int> m_bounds;
+    PerStateInformation<int> m_state_information;
     std::deque<PerLayerData> m_layers;
     PerLayerData* m_last_layer;
     std::deque<std::pair<int, GlobalState> > m_neighbors;

@@ -16,6 +16,11 @@ void HeuristicRefiner::initialize()
 {
 }
 
+bool HeuristicRefiner::requires_neighbors()
+{
+    return false;
+}
+
 void HeuristicRefiner::print_statistics() const
 {
 }

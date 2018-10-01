@@ -57,6 +57,11 @@ int HCNeighborsRefinement::get_conjunction_value(unsigned id)
     return data.achieved() ? data.cost : INF;
 }
 
+bool HCNeighborsRefinement::requires_neighbors()
+{
+    return true;
+}
+
 void HCNeighborsRefinement::initialize()
 {
     HCHeuristicRefiner::initialize();

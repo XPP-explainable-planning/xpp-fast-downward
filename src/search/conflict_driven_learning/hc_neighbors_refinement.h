@@ -99,6 +99,7 @@ protected:
     virtual void initialize() override;
 public:
     HCNeighborsRefinement(const options::Options &opts);
+    virtual bool requires_neighbors() override;
     virtual void print_statistics() const;
     static void add_options_to_parser(options::OptionParser &parser);
 };

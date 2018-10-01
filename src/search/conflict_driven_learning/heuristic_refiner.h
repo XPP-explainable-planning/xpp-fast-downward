@@ -24,7 +24,7 @@ public:
     virtual ~HeuristicRefiner() = default;
 
     virtual std::shared_ptr<Evaluator> get_underlying_heuristic() = 0;
-
+    virtual bool requires_neighbors(); 
     virtual void print_statistics() const;
 
     bool notify(int bound,
