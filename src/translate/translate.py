@@ -19,6 +19,11 @@ from collections import defaultdict
 from copy import deepcopy
 from itertools import product
 
+sys.path.append("/home/rebecca/Uni/XAI/plan_prop/planPropertyChecker")
+import predicate_dict_generator
+from predicate_dict_generator import literalDict
+from automata import *
+from xxp_framework.action_set_property import addActionSetPropertiesToTask
 import axiom_rules
 import fact_groups
 import instantiate
@@ -32,6 +37,7 @@ import simplify
 import timers
 import tools
 import variable_order
+
 
 # TODO: The translator may generate trivial derived variables which are always
 # true, for example if there ia a derived predicate in the input that only
@@ -677,6 +683,7 @@ def dump_statistics(sas_task):
 
 
 def main():
+    options.setup()
     timer = timers.Timer()
     with timers.timing("Parsing", True):
         task = pddl_parser.open(
@@ -692,13 +699,61 @@ def main():
                 if effect.literal.negated:
                     del action.effects[index]
 
+    print("----------- PDDL-------------")
+    task.dump()
+    print("----------- PDDL-------------")
+
+
+    predicate_dict_generator.generateDictFromTask(task)
+
     sas_task = pddl_to_sas(task)
+
+    for v in sas_task.variables.value_names:
+        print(v)
+
+    if options.plan_property:
+        addPlanProperties(task, sas_task)
+
+    #take a look
+    print("------------------------------------")
+    for v in sas_task.variables.value_names:
+        print(v)
+
+    print("Operators:")
+    for o in sas_task.operators:
+        print(o.name)
+        print(o.pre_post)
+        print(o.cost)
+
+    print("Init:")
+    print(sas_task.init.values)
+
+    print("Goal:")
+    print(sas_task.goal.pairs)
+    
+
+
     dump_statistics(sas_task)
 
     with timers.timing("Writing output"):
         with open("output.sas", "w") as output_file:
             sas_task.output(output_file)
     print("Done! %s" % timer)
+
+def addPlanProperties(task, sas_task):
+    #automata = parseNFA(options.plan_property)
+    #automata.pprint()
+    #automata.addFluents(sas_task)
+    #automata.addSyncPrecondition(sas_task)
+    #automata.addTransitions(sas_task)
+
+    #action set properties
+    path = options.plan_property
+    if path == "None":
+        return
+    
+    addActionSetPropertiesToTask(path, task, sas_task, options)
+    #print("No property")
 
 
 def handle_sigxcpu(signum, stackframe):
@@ -711,10 +766,10 @@ def handle_sigxcpu(signum, stackframe):
 
 if __name__ == "__main__":
     signal.signal(signal.SIGXCPU, handle_sigxcpu)
+    # Reserve about 10 MB (in Python 2) of emergency memory.
+    # https://stackoverflow.com/questions/19469608/
+    emergency_memory = "x" * 10**7
     try:
-        # Reserve about 10 MB (in Python 2) of emergency memory.
-        # https://stackoverflow.com/questions/19469608/
-        emergency_memory = "x" * 10**7
         main()
     except MemoryError:
         emergency_memory = ""

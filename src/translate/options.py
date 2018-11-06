@@ -3,6 +3,7 @@
 import argparse
 import sys
 
+done_setup = False
 
 def parse_args():
     argparser = argparse.ArgumentParser()
@@ -10,6 +11,10 @@ def parse_args():
         "domain", help="path to domain pddl file")
     argparser.add_argument(
         "task", help="path to task pddl file")
+    argparser.add_argument(
+        "plan_property", help="path to plan property file")
+    argparser.add_argument(
+        "--properties_folder", dest="properties_folder", type=str, help="folder to store the generated property files")
     argparser.add_argument(
         "--relaxed", dest="generate_relaxed_task", action="store_true",
         help="output relaxed task (no delete effects)")
@@ -51,6 +56,9 @@ def parse_args():
     argparser.add_argument(
         "--dump-task", action="store_true",
         help="dump human-readable SAS+ representation of the task")
+    argparser.add_argument(
+        "--property_compilation_type", default=0, type=int,
+        help="who to compile the properties: \n\t0: add all properties as goals \n\t1: generate property dependency files")
     return argparser.parse_args()
 
 
@@ -61,8 +69,11 @@ def copy_args_to_module(args):
 
 
 def setup():
-    args = parse_args()
-    copy_args_to_module(args)
+    global done_setup
+    if not done_setup:
+        args = parse_args()
+        copy_args_to_module(args)
+        done_setup = True
 
-
-setup()
+if __name__ == "__main__":
+    setup()

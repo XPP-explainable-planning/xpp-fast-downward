@@ -66,8 +66,12 @@ def run_translate(args):
         args.translate_memory_limit, args.overall_memory_limit)
     translate = get_executable(args.build, REL_TRANSLATE_PATH)
     assert sys.executable, "Path to interpreter could not be found"
-    cmd = [sys.executable] + [translate] + args.translate_inputs + args.translate_options
-
+    if args.translate_plan_properties:
+        cmd = [sys.executable] + [translate] + args.translate_inputs + [args.translate_plan_properties] +  args.translate_options
+    else:
+        cmd = [sys.executable] + [translate] + args.translate_inputs + ["None"] +  args.translate_options
+    print("++++++++++++++++++++++++++++++++++++++++")
+    print(args.translate_plan_properties)
     stderr, returncode = call.get_error_output_and_returncode(
         "translator",
         cmd,
@@ -112,10 +116,7 @@ def run_search(args):
         args.search_memory_limit, args.overall_memory_limit)
     executable = get_executable(args.build, REL_SEARCH_PATH)
 
-    plan_manager = PlanManager(
-        args.plan_file,
-        portfolio_bound=args.portfolio_bound,
-        single_plan=args.portfolio_single_plan)
+    plan_manager = PlanManager(args.plan_file, portfolio_bound=args.portfolio_bound)
     plan_manager.delete_existing_plans()
 
     if args.portfolio:

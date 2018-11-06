@@ -34,6 +34,10 @@ public:
         return root;
     }
 
+    std::vector<FactPair> getGoals() {
+        return goal_list;
+    }
+
     bool continue_search(){
         return ! open_list.empty();
     }

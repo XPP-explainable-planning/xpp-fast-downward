@@ -234,8 +234,13 @@ def _set_components_and_inputs(parser, args):
             task_file, = args.filenames
             domain_file = util.find_domain_filename(task_file)
             args.translate_inputs = [domain_file, task_file]
+            args.translate_plan_properties = util.find_property_filename(task_file)
         elif num_files == 2:
-            args.translate_inputs = args.filenames
+            #args.translate_inputs = args.filenames
+            task_file = args.filenames[0]
+            domain_file = args.filenames[1]
+            args.translate_inputs = [domain_file, task_file]
+            args.translate_plan_properties = util.find_property_filename(task_file)
         else:
             parser.error("translator needs one or two input files")
     elif first == "search":
@@ -286,6 +291,7 @@ def parse_args():
     components.add_argument(
         "--search", action="store_true",
         help="run search component")
+    
 
     limits = parser.add_argument_group(
         title="time and memory limits", description=LIMITS_HELP)
@@ -327,14 +333,15 @@ def parse_args():
     driver_other.add_argument(
         "--portfolio-bound", metavar="VALUE", default=None, type=int,
         help="exclusive bound on plan costs (only supported for satisficing portfolios)")
-    driver_other.add_argument(
-        "--portfolio-single-plan", action="store_true",
-        help="abort satisficing portfolio after finding the first plan")
 
     driver_other.add_argument(
         "--cleanup", action="store_true",
         help="clean up temporary files (output.sas, sas_plan, sas_plan.*) and exit")
 
+    #TODO right way to do ?
+    driver_other.add_argument(
+        "--property_compilation_type", default=0, type=int,
+        help="who to compile the properties: \n\t0: add all properties as goals \n\t1: generate property dependency files")
 
     parser.add_argument(
         "planner_args", nargs=argparse.REMAINDER,
@@ -377,8 +384,6 @@ def parse_args():
         parser.error("--portfolio-bound may only be used for portfolios.")
     if args.portfolio_bound is not None and args.portfolio_bound < 0:
         parser.error("--portfolio-bound must not be negative.")
-    if args.portfolio_single_plan and not args.portfolio:
-        parser.error("--portfolio-single_plan may only be used for portfolios.")
 
     if not args.show_aliases and not args.cleanup:
         _set_components_and_inputs(parser, args)

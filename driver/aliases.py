@@ -137,10 +137,9 @@ ALIASES["lama-first"] = [
                                cost_type=one,reopen_closed=false)"""]
 
 ALIASES["seq-opt-bjolp"] = [
-    "--heuristic",
-    "lmc=lmcount(lm_merged([lm_rhw(),lm_hm(m=1)]),admissible=true)",
     "--search",
-    "astar(lmc,lazy_evaluator=lmc)"]
+    "astar(lmcount(lm_merged([lm_rhw(),lm_hm(m=1)]),admissible=true),"
+    "      mpd=true)"]
 
 ALIASES["seq-opt-lmcut"] = [
     "--search", "astar(lmcut())"]

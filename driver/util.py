@@ -43,6 +43,25 @@ def find_domain_filename(task_filename):
     raise SystemExit(
         "Error: Could not find domain file using automatic naming rules.")
 
+def find_property_filename(task_filename):
+    """
+    Find property filename for the given task using automatic naming rules.
+    """
+    dirname, basename = os.path.split(task_filename)
+
+    property_basenames = [
+        "property_" + basename,
+        "property-" + basename,
+    ]
+
+    for property_basename in property_basenames:
+        property_filename = os.path.join(dirname, property_basename)
+        if os.path.exists(property_filename):
+            return property_filename
+
+    return None
+
+
 # Shell-escaping code taken from Python's shlex.quote (missing in Python < 3.3).
 _find_unsafe = re.compile(r'[^\w@%+=:,./-]').search
 
