@@ -683,6 +683,7 @@ def main():
     options.setup()
     path = options.plan_property
     print("Plan property path: ", path)
+
     timer = timers.Timer()
     with timers.timing("Parsing", True):
         task = pddl_parser.open(
