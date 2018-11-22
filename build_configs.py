@@ -1,4 +1,4 @@
-release32 = ["-DCMAKE_BUILD_TYPE=Release"]
+release32 = ["-DCMAKE_BUILD_TYPE=Release", "-DPLUGIN_CONFLICT_LEARNING_ENABLED:BOOL=1"]
 debug32 = ["-DCMAKE_BUILD_TYPE=Debug"]
 release32nolp = ["-DCMAKE_BUILD_TYPE=Release", "-DUSE_LP=NO"]
 debug32nolp = ["-DCMAKE_BUILD_TYPE=Debug", "-DUSE_LP=NO"]
@@ -13,5 +13,5 @@ debug32dynamic = ["-DCMAKE_BUILD_TYPE=Debug", "-DFORCE_DYNAMIC_BUILD=YES"]
 release64dynamic = ["-DCMAKE_BUILD_TYPE=Release", "-DALLOW_64_BIT=True", "-DCMAKE_CXX_FLAGS='-m64'", "-DFORCE_DYNAMIC_BUILD=YES"]
 debug64dynamic = ["-DCMAKE_BUILD_TYPE=Debug",   "-DALLOW_64_BIT=True", "-DCMAKE_CXX_FLAGS='-m64'", "-DFORCE_DYNAMIC_BUILD=YES"]
 
-DEFAULT = "release32"
-DEBUG = "debug32"
+DEFAULT = "release64"
+DEBUG = "debug64"
