@@ -1,6 +1,5 @@
 import sys
 import re
-import boolean
 import logic_formula
 
 #automata state
