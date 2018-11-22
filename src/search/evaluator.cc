@@ -23,20 +23,24 @@ bool Evaluator::dead_ends_are_reliable() const {
     return true;
 }
 
-void Evaluator::report_value_for_initial_state(const EvaluationResult &result) const {
+void Evaluator::report_value_for_initial_state(const EvaluationResult &) const { //result) const {
     assert(use_for_reporting_minima);
+    /*
     cout << "Initial heuristic value for " << description << ": ";
     if (result.is_infinite())
         cout << "infinity";
     else
         cout << result.get_evaluator_value();
     cout << endl;
+    */
 }
 
-void Evaluator::report_new_minimum_value(const EvaluationResult &result) const {
+void Evaluator::report_new_minimum_value(const EvaluationResult &) const { //result) const {
     assert(use_for_reporting_minima);
+    /*
     cout << "New best heuristic value for " << description << ": "
          << result.get_evaluator_value() << endl;
+    */
 }
 
 const string &Evaluator::get_description() const {

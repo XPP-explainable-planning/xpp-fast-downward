@@ -37,10 +37,12 @@ EagerSearch::EagerSearch(const Options &opts)
 }
 
 void EagerSearch::initialize() {
+    /*
     cout << "Conducting best first search"
          << (reopen_closed_nodes ? " with" : " without")
          << " reopening closed nodes, (real) bound = " << bound
          << endl;
+    */
     assert(open_list);
 
     /*
@@ -84,7 +86,7 @@ void EagerSearch::initialize() {
     path_dependent_evaluators.assign(evals.begin(), evals.end());
 
     const GlobalState &initial_state = state_registry.get_initial_state();
-    cout << "have initial state" << endl;
+    //cout << "have initial state" << endl;
     for (Evaluator *evaluator : path_dependent_evaluators) {
         evaluator->notify_initial_state(initial_state);
     }
@@ -113,19 +115,23 @@ void EagerSearch::initialize() {
 
     pruning_method->initialize(task);
 
-    cout << "Init finished" << endl;
+    //cout << "Init finished" << endl;
 }
 
-void EagerSearch::print_checkpoint_line(int g) const {
+void EagerSearch::print_checkpoint_line(int ) const { //g) const {
+    /*
     cout << "[g=" << g << ", ";
     statistics.print_basic_statistics();
     cout << "]" << endl;
+    */
 }
 
 void EagerSearch::print_statistics() const {
+    
     statistics.print_detailed_statistics();
     search_space.print_statistics();
     pruning_method->print_statistics();
+    
 }
 
 SearchStatus EagerSearch::step() {

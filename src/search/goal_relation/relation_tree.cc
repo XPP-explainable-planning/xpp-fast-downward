@@ -39,18 +39,20 @@ void Node::print(const std::vector<FactPair>& all_goals){
     }
 
 
-void Node::print_relation(const std::vector<FactPair>& all_goals){
+int Node::print_relation(const std::vector<FactPair>& all_goals){
     if(printed){
-        return;
+        return 0;
     }
     printed = true;
     TaskProxy taskproxy = TaskProxy(*tasks::g_root_task.get());
+    //Check if all children are solvable
     bool c_solved = true;
     for(Node* c : children){
         c_solved = c_solved && c->isSolvable(); //or or and ?
     }
-    //if((c_solved || constrained_goals.size() == 0) && ! isSolvable()){
+    int printed_nodes = 0;
     if((c_solved) && ! isSolvable()){
+        printed_nodes++;
         cout << ".........................." << endl;
         //bool solved = isSolvable();
         //cout << "Solved: " << solved << endl;
@@ -69,10 +71,12 @@ void Node::print_relation(const std::vector<FactPair>& all_goals){
         //cout << ".........................." << endl;
     }
     
+    
     for(Node* c : children){
-        c->print_relation(all_goals);
+        printed_nodes += c->print_relation(all_goals);
     }
     
+    return printed_nodes;
 }
 
 void printList(vector<FactPair> list){
@@ -161,8 +165,9 @@ std::vector<FactPair> RelationTree::get_goals(const Node* node) const
 void RelationTree::print(){
     cout << "*********************************"  << endl;
     cout << "Size of tree: " << nodes.size() << endl;
-    root->print_relation(goal_list);
+    int printed_nodes = root->print_relation(goal_list);
     cout << "*********************************"  << endl;
+    cout << "Number of minimal unsolvable goal subsets: " << printed_nodes << endl;
 }
 
 }

@@ -37,13 +37,16 @@ void SearchStatistics::report_f_value_progress(int f) {
 }
 
 void SearchStatistics::print_f_line() const {
+    /*
     cout << "f = " << lastjump_f_value
          << " [";
     print_basic_statistics();
     cout << "]" << endl;
+    */
 }
 
 void SearchStatistics::print_basic_statistics() const {
+    /*
     cout << evaluated_states << " evaluated, "
          << expanded_states << " expanded, ";
     if (reopened_states > 0) {
@@ -51,6 +54,7 @@ void SearchStatistics::print_basic_statistics() const {
     }
     cout << "t=" << utils::g_timer;
     cout << ", " << utils::get_peak_memory_in_kb() << " KB";
+    */
 }
 
 void SearchStatistics::print_detailed_statistics() const {

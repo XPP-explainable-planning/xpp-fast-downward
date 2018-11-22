@@ -15,12 +15,15 @@ class State:
         #outgoing transitions
         self.transitions = []
 
+    def isBlocking(self):
+        return len(self.transitions) == 1 and not self.transitions[0].guard.isTrue()
+
     def replaceConstantsName(self, map):
         for t in self.transitions:
             t.replaceConstantsName(map)
 
     def  __repr__(self):
-        s = self.name + ": "
+        s = self.name + ":\n"
         for t in self.transitions:
             s += str(t) + "\n"
 
@@ -86,6 +89,20 @@ class Automata:
         for name, s in self.states.items():
             s.replaceConstantsName(map)
 
+    def eliminateBlockingStates(self):
+        for name, s in self.states.items():
+            if s.isBlocking():
+                dummy_state = State("dummy_" + name)
+                dummy_state.accepting = False
+                self.addState(dummy_state)
+                #transition to dummy state
+                neg_trans = Transition("neg_trans", s, dummy_state, logic_formula.LNot(s.transitions[0].guard))
+                s.transitions.append(neg_trans)
+
+                #self loop dummy state
+                skip_trans = Transition("dummy_trans", dummy_state, dummy_state, logic_formula.LConstant("true", 0))
+                dummy_state.transitions.append(skip_trans)
+            
     def  __repr__(self):
         string = "______________________\nAutomata: " + self.name + "\n"
         for name, s in self.states.items():

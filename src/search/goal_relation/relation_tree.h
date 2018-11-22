@@ -98,7 +98,7 @@ public:
     }
 
     void print(const std::vector<FactPair>& all_goals);
-    void print_relation(const std::vector<FactPair>& all_goals);
+    int print_relation(const std::vector<FactPair>& all_goals);
     std::vector<Node*> expand(std::vector<Node>& nodes);
 
 

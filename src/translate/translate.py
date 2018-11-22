@@ -19,11 +19,8 @@ from collections import defaultdict
 from copy import deepcopy
 from itertools import product
 
-sys.path.append("/home/rebecca/Uni/XAI/plan_prop/planPropertyChecker")
-import predicate_dict_generator
-from predicate_dict_generator import literalDict
-from automata import *
-from xxp_framework.action_set_property import addActionSetPropertiesToTask
+
+import xpp_framework
 import axiom_rules
 import fact_groups
 import instantiate
@@ -699,37 +696,37 @@ def main():
                 if effect.literal.negated:
                     del action.effects[index]
 
-    print("----------- PDDL-------------")
-    task.dump()
-    print("----------- PDDL-------------")
+    #print("----------- PDDL-------------")
+    #task.dump()
+    #print("----------- PDDL-------------")
 
 
-    predicate_dict_generator.generateDictFromTask(task)
+    #predicate_dict_generator.generateDictFromTask(task)
 
     sas_task = pddl_to_sas(task)
 
-    for v in sas_task.variables.value_names:
-        print(v)
+    #for v in sas_task.variables.value_names:
+        #print(v)
 
     if options.plan_property:
         addPlanProperties(task, sas_task)
 
     #take a look
-    print("------------------------------------")
-    for v in sas_task.variables.value_names:
-        print(v)
+    #print("------------------------------------")
+    #for v in sas_task.variables.value_names:
+     #   print(v)
 
-    print("Operators:")
-    for o in sas_task.operators:
-        print(o.name)
-        print(o.pre_post)
-        print(o.cost)
+    #print("Operators:")
+    #for o in sas_task.operators:
+     #   print(o.name)
+     #   print(o.pre_post)
+     #   print(o.cost)
 
-    print("Init:")
-    print(sas_task.init.values)
+    #print("Init:")
+    #print(sas_task.init.values)
 
-    print("Goal:")
-    print(sas_task.goal.pairs)
+    #print("Goal:")
+    #print(sas_task.goal.pairs)
     
 
 
@@ -741,19 +738,19 @@ def main():
     print("Done! %s" % timer)
 
 def addPlanProperties(task, sas_task):
-    #automata = parseNFA(options.plan_property)
-    #automata.pprint()
-    #automata.addFluents(sas_task)
-    #automata.addSyncPrecondition(sas_task)
-    #automata.addTransitions(sas_task)
-
     #action set properties
     path = options.plan_property
     if path == "None":
         return
     
-    addActionSetPropertiesToTask(path, task, sas_task, options)
-    #print("No property")
+    if options.property_type == 0:
+        xpp_framework.addActionSetPropertiesToTask(path, task, sas_task, options)
+        return
+    
+    if options.property_type == 1:
+        xpp_framework.addLTLPlanProperties(sas_task, path)    
+        return
+
 
 
 def handle_sigxcpu(signum, stackframe):

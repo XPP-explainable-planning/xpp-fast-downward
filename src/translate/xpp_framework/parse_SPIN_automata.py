@@ -5,22 +5,23 @@ import re
 
 def parseGuard(guard_string):
 
-    parts = guard_string.split()
-    (guard, rest, constants) = LogicalOperator.parse(parts)
+    #print("Parse guard: ")  
+    guard_string = guard_string.replace("(", " ( ").replace(")", " ) ")
+    #print(guard_string)
+    parts = shuntingYard(guard_string.split())
+    #print(parts)
+    guard, rest, constants = Operator.parse(parts)
+    assert len(rest) == 0, "Parse LTL property failed:\n\tresult: " + str(guard) + "\n\trest is not empty: " + str(rest)
 
-    assert(len(rest) == 0)
-
-    return guard
+    return guard, constants
 
 def parseTransition(line, automata, source):
     #print("Trans: " + line)
-    m = re.match(r":: \((.+)\) -> goto (.+)", line)
+    m = re.match(r"[\s]*:: (.+) -> goto (.+)", line)
     assert(m)
     
     guard_string = m.group(1)
-    guard, rest, constants = LogicalOperator.parse(guard_string.split())
-    assert(len(rest) == 0)
-
+    guard, constants = parseGuard(guard_string)
 
     targetName = m.group(2)
     if not targetName in automata.states:
@@ -37,8 +38,9 @@ def parseTransition(line, automata, source):
     return constants
 
 def parseStateName(line, automata):
-    m = re.match("(.+):", line)
-    
+    m = re.match("[\s]*(.+):", line)
+    print("State name",line)
+
     name = m.group(1)
 
     isInit = name.endswith("init")
@@ -79,21 +81,22 @@ def parseNFA(path):
         if line.startswith("never") or line.startswith("}"):
             continue
 
-        if line.startswith("if"):
+        if re.match("[\s]+if", line):
             constants += parseTransition(lines.pop(0).replace("\t",""), automata, source)
             continue
 
-        if line.startswith("::"):
+        if re.match("[\s]+::", line):
+            print("Transition",line)
             constants += parseTransition(line, automata, source)
             continue
 
-        if line.startswith("fi"):
+        if re.match("[\s]+fi", line):
             source = None
             continue
 
         # the skip action is interpreted as a "true" self loop 
-        if line.startswith("skip"):
-            true_exp = LConstant("true", None)
+        if re.match("[\s]+skip", line):
+            true_exp = logic_formula.LConstant("true", None)
             trans = Transition("skip", source, source, true_exp)
             automata.transitions.append(trans)
             source.transitions.append(trans)

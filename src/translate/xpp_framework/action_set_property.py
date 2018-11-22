@@ -87,7 +87,7 @@ class ActionSet:
     @staticmethod
     def parse(lines):
         line = lines.pop(0)
-        print("Actionset: " + line)
+        #print("Actionset: " + line)
         set_parts = line.replace("\n","").split()
         if(len(set_parts) != 3):
             print("Set definition should have the form: set <name> <number of elmes> \n but is: " + line)
@@ -96,12 +96,12 @@ class ActionSet:
         name = set_parts[1]
         number = int(set_parts[2])
         newActionSet = ActionSet(name)
-        print("Number of actions: " + str(number))
+        #print("Number of actions: " + str(number))
 
         for n in range(number):
 
             line = lines.pop(0)
-            print(line)
+            #print(line)
 
             # ignore comment and empty lines
             if line.startswith("#") or line == "\n" or line == "":
@@ -193,13 +193,13 @@ class actionSetPropertyClass:
     @staticmethod
     def parse(lines):
         line = lines.pop(0)
-        print("PropertyClass: " + line)
+        #print("PropertyClass: " + line)
          #name of the property
         name_param_parts = line.split()[1]
         class_name = name_param_parts.split("(")[0]
         class_params = name_param_parts.split("(")[1].replace(")","").replace(" ","").split(",")
-        print("Class params: ")
-        print(class_params)
+        #print("Class params: ")
+        #print(class_params)
 
         assert(lines.pop(0).startswith("{"))
 
@@ -213,25 +213,23 @@ class actionSetPropertyClass:
            
             while not re.match('[\s]*[a-zA-B_-\}\{]+', line):
                 #print(re.match('(\S)+', line))
-                print("whitespace: " + line)
                 lines.pop(0)
                 line = lines[0]
 
-            print("PropertyClass LOOP: " + line)
 
             #if line.startswith("}"):
             #    break
             line = line.replace("\t", "")
 
             if line.startswith("set"):
-                print(lines)
+                #print(lines)
                 (newActionSet, remaining_lines) = ActionSet.parse(lines)
                 lines = remaining_lines
                 actionSets.append(newActionSet)
                 continue
 
             if line.startswith("property"):
-                print("parse property")
+                #print("parse property")
                 (asProperty, remaining_lines) = actionSetProperty.parse(lines)
                 lines = remaining_lines
                 propertyDefs.append(asProperty)
@@ -243,12 +241,12 @@ class actionSetPropertyClass:
         assert(lines.pop(0).startswith("{"))
         assert len(propertyDefs) > 0, "Missing property definition."
 
-        print("Parse instancs: " + lines[0])
+        #print("Parse instancs: " + lines[0])
         #parse instances
         instances = []
         while(not lines[0].startswith("}")):
             line = lines.pop(0)
-            print("Instances: " + line)
+            #print("Instances: " + line)
             while line.startswith("#") or line == "\n" or line == "":
                 lines.pop(0)
                 line = lines[0]
@@ -262,7 +260,7 @@ class actionSetPropertyClass:
 
         lines.pop(0)
 
-        print("Generate Instances")
+        #print("Generate Instances")
 
         final_action_sets = []
         final_properties = []
@@ -304,14 +302,14 @@ class actionSetProperty:
                     
         #parse prefix notion logic formula
         property_string = line.replace("\n","")
-        (formula, rest, constants) = logic_formula.LogicalOperator.parse(property_string.split())
+        (formula, rest, constants) = logic_formula.Operator.parse(property_string.split())
         asProperty = actionSetProperty(name, formula, constants)
 
         return (asProperty, lines)
 
     def generateInstance(self, instance_postfix):
         formula_instance = self.formula.addPostfix(instance_postfix)
-        print(formula_instance)
+        #print(formula_instance)
         instance_constants = []
         for c in self.constants:
             instance_constants.append(c +instance_postfix)
@@ -340,7 +338,7 @@ class ActionSetProperties:
 
     def addActionSet(self, actions):
         if(actions.name in self.actionSets):
-            print("Name: " + actions.name + " ist not unique!!!")
+            #print("Name: " + actions.name + " ist not unique!!!")
             return False
         self.actionSets[actions.name]  = actions
 
@@ -350,21 +348,21 @@ class ActionSetProperties:
 
     def generateImpPropertyFiles(self, folder):
 
-        print("Number of Properties: " + str(len(self.properties)))
+        #print("Number of Properties: " + str(len(self.properties)))
 
         #for every property combination generate one file with the 
         #property p1 && ! p2
         for p1 in self.properties:
             for p2 in self.properties:
-                print("Property file: " + folder + "/" + p1.name + "-" + p2.name)
+                #print("Property file: " + folder + "/" + p1.name + "-" + p2.name)
                 if p1.name == p2.name:
                     continue
 
                 
-                print("F1:")
-                print(p1.formula.toPrefixForm())
-                print("F2:")
-                print(p2.formula.toPrefixForm())
+                #print("F1:")
+                #print(p1.formula.toPrefixForm())
+                #print("F2:")
+                #print(p2.formula.toPrefixForm())
                 
                 #construct the formula p1 && ! p2 
                 #negate automatically pushes the negations to the constants
@@ -423,13 +421,13 @@ class ActionSetProperties:
 
         # compile property into one (goal) fact 
         #fact that indicates if the property is satisfied at the end of the plan
-        print("Properties: ")
+        #print("Properties: ")
         #for each property add one new binary variable
         for prop in self.properties:
             prop.var_id = len(sas_task.variables.value_names)
             prop_vars = ["not_sat_" + prop.name, "sat_" + prop.name]
 
-            print(prop.name + " : " + str(prop.var_id))
+            #print(prop.name + " : " + str(prop.var_id))
 
             sas_task.variables.value_names.append(prop_vars)
             sas_task.variables.ranges.append(len(prop_vars)) #binary var
@@ -442,13 +440,13 @@ class ActionSetProperties:
 
 
         #for every action set add an variable which indicates if one of the actions in the set has been used
-        print("Actions Sets:")
+        #print("Actions Sets:")
         for (n,s) in self.actionSets.iteritems():
             new_vars =  ["not_used_" + s.name, "used_" + s.name]
 
             #new variable 
             s.var_id = len(sas_task.variables.value_names)
-            print(s.name + " id: " + str(s.var_id))
+            #print(s.name + " id: " + str(s.var_id))
             sas_task.variables.value_names.append(new_vars)
             sas_task.variables.ranges.append(len(new_vars))
             sas_task.variables.axiom_layers.append(-1)
@@ -470,14 +468,14 @@ class ActionSetProperties:
         
         #add the actions checking if the property ist true
         # Assumption: property is in disjunctive normal form
-        print("Actions checking satisfaction property:")
+        #print("Actions checking satisfaction property:")
         for prop in self.properties:
 
-            print("Clauses: \n Property: " + str(prop))
+            #print("Clauses: \n Property: " + str(prop))
             #for every clause in DNF we have to create one action
             clauses = prop.getClauses()
-            print("Result: ")
-            print(clauses)
+            #print("Result: ")
+            #print(clauses)
             for c in clauses:
                 pre_post = []
                 # literals form the preconditions
@@ -525,7 +523,7 @@ def parseActionSetProperty(path, typeObjectMap):
             lines.pop(0)
             continue
 
-        print("Main Loop: " + line)
+        #print("Main Loop: " + line)
 
         # parse set: set <name> <number of elems>
         if line.startswith("set"):
@@ -542,7 +540,7 @@ def parseActionSetProperty(path, typeObjectMap):
             continue
 
         if line.startswith("propertyclass"):
-            print("--> propertyclass")
+            #print("--> propertyclass")
             (newActionSets, properties, remaining_lines) = actionSetPropertyClass.parse(lines)
             lines = remaining_lines
             for nas in newActionSets:
@@ -554,11 +552,11 @@ def parseActionSetProperty(path, typeObjectMap):
                 actionSetProperties.addProperty(p)
             continue
 
-        print("nothing done")
+        #print("nothing done")
         assert(False)
 
-    print(actionSetProperties)
-    print(">>>>>>>>>>>>>>>>>>>Parse finished>>>>>>>>>>>>>>>>>>>>>>>>>><")
+    #print(actionSetProperties)
+    #print(">>>>>>>>>>>>>>>>>>>Parse finished>>>>>>>>>>>>>>>>>>>>>>>>>><")
 
     return actionSetProperties
 
@@ -571,8 +569,8 @@ def addActionSetPropertiesToTask(path, task, sas_task, options):
 
         typeObjectMap[o.type_name].append(o.name)
 
-    print("++++++++++ typeObjectMap ++++++++++")
-    print(typeObjectMap)
+    #print("++++++++++ typeObjectMap ++++++++++")
+    #print(typeObjectMap)
 
     # parse action sets and properties
     asps = parseActionSetProperty(path, typeObjectMap)

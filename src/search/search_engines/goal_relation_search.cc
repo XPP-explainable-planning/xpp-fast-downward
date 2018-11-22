@@ -39,8 +39,8 @@ shared_ptr<SearchEngine> GoalRelationSearch::get_search_engine(int engine_config
     //adapt goals of current task according to the current goals relation node   
     current_node = relation_tree.get_next_node();
 
-    cout << "Current Node: " << endl;
-    current_node->print(relation_tree.getGoals());
+    //cout << "Current Node: " << endl;
+    //current_node->print(relation_tree.getGoals());
     tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), relation_tree.get_goals(current_node)); // current_node->get_goals());
 
     ((Heuristic*) heuristic)->set_abstract_task(tasks::g_root_task);
@@ -52,9 +52,11 @@ shared_ptr<SearchEngine> GoalRelationSearch::get_search_engine(int engine_config
     OptionParser parser(engine_configs[engine_configs_index], false);
     shared_ptr<SearchEngine> engine(parser.start_parsing<shared_ptr<SearchEngine>>());
 
+    /*
     cout << "Starting search: ";
     kptree::print_tree_bracketed(engine_configs[engine_configs_index], cout);
     cout << endl;
+    */
 
     return engine;
 }
@@ -64,7 +66,7 @@ shared_ptr<SearchEngine> GoalRelationSearch::create_phase(int phase) {
 }
 
 SearchStatus GoalRelationSearch::step() {
-    cout << "-------------------------------------------------------------------------------------------" << endl;
+    //cout << "-------------------------------------------------------------------------------------------" << endl;
     shared_ptr<SearchEngine> current_search = create_phase(0);
 
     //TODO
@@ -80,12 +82,12 @@ SearchStatus GoalRelationSearch::step() {
 
     //stop search in this branch
     if (last_phase_found_solution) {
-        cout << "++++++++ SOLUTION +++++++"  << endl;
+        //cout << "++++++++ SOLUTION +++++++"  << endl;
         iterated_found_solution = true;
         current_node->solved();
     }
     else{
-        cout << "-------- FAILS ----------"  << endl;
+        //cout << "-------- FAILS ----------"  << endl;
         relation_tree.expand(current_node);
         current_node->not_solved();
     }

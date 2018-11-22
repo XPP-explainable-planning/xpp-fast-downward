@@ -57,8 +57,11 @@ def parse_args():
         "--dump-task", action="store_true",
         help="dump human-readable SAS+ representation of the task")
     argparser.add_argument(
+        "--property_type", default=0, type=int,
+        help="Type of propperties: \n\t0: action set \n\t1: LTL")
+    argparser.add_argument(
         "--property_compilation_type", default=0, type=int,
-        help="who to compile the properties: \n\t0: add all properties as goals \n\t1: generate property dependency files")
+        help="How to compile the properties: \n\t0: add all properties as goals \n\t1: generate property dependency files")
     return argparser.parse_args()
 
 

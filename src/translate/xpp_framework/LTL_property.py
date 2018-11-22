@@ -14,25 +14,26 @@ def parse(path):
     while len(lines) > 0:
         line = lines.pop(0)
 
-        if line.startswith("#") or not re.match('[\s]*[a-zA-B_-\}\{&|\[\]]+', line):
-            #print(re.match('(\S)+', line))
-            #print("whitespace or comment: " + line)
+        if line.startswith("#") or not re.match('[\s]*[a-zA-Z_-\}\{&|\[\]]+', line):
             continue
             
-        m = re.match("property ([a-zA-B0-9_]+)", line)
+        m = re.match("property ([a-zA-Z0-9_]+)", line)
         if m:
 
             name = m.group(1)
-            (formula, rest, c) = logic_formula.ModalOperator.parse(lines.pop(0).split())
+            #print("Property name:" + name)
+
+            parts = lines.pop(0).split()
+            #print(parts)
+            (formula, rest, c) = logic_formula.Operator.parse(parts)
             constants += c
-            assert(len(rest) == 0)
+            assert len(rest) == 0, "Parse LTL property failed:\n\tresult: " + str(formula) + "\n\trest is not empty: " + str(rest)
 
             properties.append(LTLProperty(name, formula))
             continue
 
         assert False, "Parse LTL properties: Wrong format in line: " + line
 
-    #TODO use constants
     return (properties, constants)
 
 class LTLProperty:
@@ -43,24 +44,22 @@ class LTLProperty:
         
 
     def generateAutomataRepresentation(self, constant_name_map, constant_id_map):
-        
-        self.genericFormula = self.formula.replaceConstantsName(constant_id_map)
-        #print("Generic  formula: ")
-        #print(self.genericFormula)
 
-        #print(os.environ)
-        generator = os.environ['LTL2B']
+        #replace the fact names in the formula with valied names for the LTL to BA programm
+        self.genericFormula = self.formula.replaceConstantsName(constant_id_map)
+
+        #folder to store the output files of the LTL2BA programm
         temp_folder = os.environ['TEMP_FOLDER']
 
-        cmd = generator + " -f \'" + str(self.genericFormula) + "\' > " + temp_folder + "/" + self.name
+        cmd = "ltl2tgba -C -s \'" + str(self.genericFormula) + "\' > " + temp_folder + "/" + self.name
         os.system(cmd)
 
         self.automata = parse_SPIN_automata.parseNFA(temp_folder + "/" + self.name)
         self.automata.name = self.name
-        #print("Before")
+
         #print(self.automata)
+        #replace the generic variable name with the original state facts
         self.automata.replaceConstantsName(constant_name_map)
-        print(self.automata)
 
         
 

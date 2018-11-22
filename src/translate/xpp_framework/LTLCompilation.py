@@ -63,7 +63,7 @@ def automataTransitionOperators(automata, sas_task):
     new_operators = []
     for name, s in automata.states.iteritems():
         for t in s.transitions:
-            print("Process action: " + t.name) 
+            #print("Process action: " + t.name) 
 
             #encoding of the precondition and effect (var, pre, post, cond)
             pre_post = []
@@ -72,14 +72,15 @@ def automataTransitionOperators(automata, sas_task):
             pre_post.append((automata.pos_var, t.source.id, t.target.id, []))
 
             #accepting
-            # if the target state is accepting than the variable which indicates the acceptance of the 
+            # if the target state is accepting than the variable which indicates the acceptance of the #TODO why if
             # automata is set to true
-            if t.target.accepting:
-                pre_post.append((automata.accept_var, int(t.source.accepting), int(t.target.accepting), []))
-
+            #if t.target.accepting:
+            pre_post.append((automata.accept_var, int(t.source.accepting), int(t.target.accepting), []))
             #sync: condition for the alternating execution of task and automata actions
             #pre_post.append((automata.sync_var, 1, 0, []))
 
+            #transition name:
+            t_name = automata.name + ": " + t.name
             #encode the guard of the transition in the precondition of the action
             if not t.guard.isTrue():
                 # returns a disjunction of pre_post, such that every pre_post belongs to one action
@@ -91,15 +92,16 @@ def automataTransitionOperators(automata, sas_task):
                     for l in clause:
                         new_con = []
                         new_values = literalVarValue(sas_task, l.constant, l.negated)
+                        assert new_values and len(new_values) > 0, "value not found: " + str(l.constant)
                         for var, value in new_values:
                             for c in con:
                                 new_con.append(c + [(var, value, value, [])])
                         con = new_con
                     for c in con:
                         final_pre_post = pre_post + c
-                        new_operators.append(SASOperator(t.name,[], final_pre_post, 0))
+                        new_operators.append(SASOperator(t_name,[], final_pre_post, 0))
             else:
-                new_operators.append(SASOperator(t.name,[], pre_post, 0))
+                new_operators.append(SASOperator(t_name,[], pre_post, 0))
 
     return new_operators
 
@@ -127,7 +129,6 @@ def literalVarValue(sas_task, constant, neg):
         for v in range(len(values)):
             value_name = values[v].replace(", ", ",")
             if "Atom " + constant.name == value_name:
-                print(neg)
                 if neg:
                     #print(len(values))
                     #if the domain size of the variable is larger than 2, return all other variables except the given one
@@ -173,6 +174,9 @@ def addLTLPlanProperties(sas_task, path_propertyfile):
 
     constant_name_map["1"] = "true"
     constant_name_map["true"] = "true"
+
+    print(constant_name_map)
+    print(constant_id_map)
     
     #for every property run the LTL2B program
     for p in properties:

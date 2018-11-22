@@ -27,7 +27,7 @@ Heuristic::~Heuristic() {
 }
 
 void Heuristic::set_abstract_task(std::shared_ptr<AbstractTask> t){
-    cout << "Update abstract task" << endl;
+    //cout << "Update abstract task" << endl;
     task = t;
     task_proxy = TaskProxy(*t.get());
 }

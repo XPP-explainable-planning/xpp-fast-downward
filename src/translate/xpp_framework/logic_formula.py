@@ -1,5 +1,55 @@
 from enum import Enum
 import types
+import re
+
+def shuntingYard(input):
+    output = []
+    stack = []
+
+    while len(input) > 0:
+        token = input.pop(0)
+        #print("------------------------------------")
+        #print("Token: " + token)
+        #print("Stack: ")
+        #print(stack)
+        #print("Output: ")
+        #print(output)
+
+        if re.match("[a-zA-Z0-9]+", token):
+            output.append(token)
+            continue
+
+        if re.match("&&|\|\||<=>|=>|!", token):
+            while len(stack) > 0 and re.match("&&|\|\||<=>|=>|!", stack[len(stack)-1]): #TODO UND Token IST-linksassoziativ UND Praezedenz von Token IST-KLEINER-GLEICH Praezedenz von Stack-Spitze
+                output.append(stack.pop())
+
+            stack.append(token)
+            continue
+
+        if token == "(":
+            stack.append(token)
+            continue
+
+        if token == ")":
+            assert len(stack) > 0
+            while stack[len(stack)-1] != "(":
+                assert len(stack) > 0
+                output.append(stack.pop())
+
+            stack.pop() #Stack-Spitze (oeffnende-Klammer) entfernen
+            continue
+
+    #print("Stack: ")
+    #print(stack)
+
+    while len(stack) > 0:
+        assert stack[len(stack)-1] != "("
+        output.append(stack.pop())
+
+
+    output.reverse()
+    return output
+
 
 class Parameter:
 
@@ -16,12 +66,14 @@ class Predicate:
     def addParam(self, param):
         self.params.append(param)
 
-
-class LogicalOperator:
+class Operator:
 
     def __init__(self, left, right):
         self.left = left
         self.right = right
+
+    def isTrue(self):
+        return False
 
     #parse logic formula in prefix notation
     @staticmethod
@@ -32,11 +84,22 @@ class LogicalOperator:
             return LOr.parse(parts)
         elif parts[0] == "&&": 
             return LAnd.parse(parts)
+
+        elif parts[0] == "<>": 
+            return OpSometimes.parse(parts)
+        elif parts[0] == "[]": 
+            return OpAlways.parse(parts)
+        elif parts[0] == "X": 
+            return OpNext.parse(parts)
+        elif parts[0] == "U": 
+            return OpUntil.parse(parts)
+        elif parts[0] == "W": 
+            return OpWeakUntil.parse(parts)
         else:
             return LConstant.parse(parts)
 
 
-class LConstant(LogicalOperator):
+class LConstant(Operator):
 
     @staticmethod
     def parse(parts):
@@ -73,7 +136,7 @@ class LConstant(LogicalOperator):
         return self.name
 
 #Literals are used to generate the actions which decide if a property is satisfied
-class LLiteral(LogicalOperator):
+class LLiteral(Operator):
 
     def __init__(self, constant, negated):
         self.constant = constant
@@ -86,12 +149,12 @@ class LLiteral(LogicalOperator):
             return self.constant.name
 
 
-class LNot(LogicalOperator):
+class LNot(Operator):
     @staticmethod
     def parse(parts):
         operatorString = parts.pop(0)
         assert(operatorString == "!")
-        (operand, rest, constants) = LogicalOperator.parse(parts)
+        (operand, rest, constants) = Operator.parse(parts)
 
         return (LNot(operand), rest, constants)
 
@@ -122,13 +185,13 @@ class LNot(LogicalOperator):
     def __repr__(self):
         return " (! " + str(self.operand) + ") "
 
-class LAnd(LogicalOperator):
+class LAnd(Operator):
     @staticmethod
     def parse(parts):
         operatorString = parts.pop(0)
         assert(operatorString == "&&")
-        (operand_left, rest1, constants1) = LogicalOperator.parse(parts)
-        (operand_right, rest2, constants2) = LogicalOperator.parse(rest1)
+        (operand_left, rest1, constants1) = Operator.parse(parts)
+        (operand_right, rest2, constants2) = Operator.parse(rest1)
 
         return (LAnd(operand_left, operand_right), rest2, constants1 + constants2)
 
@@ -158,8 +221,8 @@ class LAnd(LogicalOperator):
 
     #only works for the special case a & b where a and b are in DNF (#TODO is this realy the case?)
     def toDNF(self):
-        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-        print("toDNF: " + self.toPrefixForm())
+        #print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        #print("toDNF: " + self.toPrefixForm())
 
         #apply distributive law to push all ANDs in until the formula does not change anymore
         current_f = self
@@ -174,8 +237,8 @@ class LAnd(LogicalOperator):
 
         DNF = new_f
             
-        print("Result: " + DNF.toPrefixForm())
-        print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+        #print("Result: " + DNF.toPrefixForm())
+        #print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
         return DNF
 
 
@@ -191,13 +254,13 @@ class LAnd(LogicalOperator):
     def __repr__(self):
         return "(" + str(self.left) + " && " + str(self.right) + ")"
 
-class LOr(LogicalOperator):
+class LOr(Operator):
     @staticmethod
     def parse(parts):
         operatorString = parts.pop(0)
         assert(operatorString == "||")
-        (operand_left, rest1, constants1) = LogicalOperator.parse(parts)
-        (operand_right, rest2, constants2) = LogicalOperator.parse(rest1)
+        (operand_left, rest1, constants1) = Operator.parse(parts)
+        (operand_right, rest2, constants2) = Operator.parse(rest1)
 
         return (LOr(operand_left, operand_right), rest2, constants1 + constants2)
 
@@ -241,47 +304,13 @@ class LOr(LogicalOperator):
         return "(" + str(self.left) + " || " + str(self.right) + ")"
 
 
-class MOp(Enum):
-    SOMETIMES = 1
-    ALSWAYS = 2
-    UNTIL = 3
-    WEAKUNTIL = 4
-    NEXT = 5
-
-#we do support nested modal operators 
-class ModalOperator:
-
-
-    @staticmethod
-    def parse(parts):
-        if parts[0] == "!":
-            return LNot.parse(parts)
-        elif parts[0] == "||": 
-            return LOr.parse(parts)
-        elif parts[0] == "&&": 
-            return LAnd.parse(parts)
-
-        elif parts[0] == "<>": 
-            return OpSometimes.parse(parts)
-        elif parts[0] == "[]": 
-            return OpAlways.parse(parts)
-        elif parts[0] == "X": 
-            return OpNext.parse(parts)
-        elif parts[0] == "U": 
-            return OpUntil.parse(parts)
-        elif parts[0] == "W": 
-            return OpWeakUntil.parse(parts)
-        else:
-            return LConstant.parse(parts)
-
-
-class OpSometimes(ModalOperator):
+class OpSometimes(Operator):
 
     @staticmethod
     def parse(parts):
         operatorString = parts.pop(0)
         assert(operatorString == "<>")
-        (operand, rest, constants) = ModalOperator.parse(parts)
+        (operand, rest, constants) = Operator.parse(parts)
 
         return (OpSometimes(operand), rest, constants)
 
@@ -295,13 +324,13 @@ class OpSometimes(ModalOperator):
     def __repr__(self):
         return " <> " + str(self.operand)    
 
-class OpAlways(ModalOperator):
+class OpAlways(Operator):
 
     @staticmethod
     def parse(parts):
         operatorString = parts.pop(0)
         assert(operatorString == "[]")
-        (operand, rest, constants) = ModalOperator.parse(parts)
+        (operand, rest, constants) = Operator.parse(parts)
 
         return (OpAlways(operand), rest, constants)
 
@@ -315,13 +344,13 @@ class OpAlways(ModalOperator):
         return " [] " + str(self.operand)
 
     
-class OpNext(ModalOperator):
+class OpNext(Operator):
 
     @staticmethod
     def parse(parts):
         operatorString = parts.pop(0)
         assert(operatorString == "X")
-        (operand, rest, constants) = ModalOperator.parse(parts)
+        (operand, rest, constants) = Operator.parse(parts)
 
         return (OpNext(operand), rest, constants)
 
@@ -334,14 +363,14 @@ class OpNext(ModalOperator):
     def __repr__(self):
         return " X " + str(self.operand)
 
-class OpUntil(ModalOperator):
+class OpUntil(Operator):
 
     @staticmethod
     def parse(parts):
         operatorString = parts.pop(0)
         assert(operatorString == "U")
-        (operand_left, rest1, constants1) = ModalOperator.parse(parts)
-        (operand_right, rest2, constants2) = ModalOperator.parse(rest1)
+        (operand_left, rest1, constants1) = Operator.parse(parts)
+        (operand_right, rest2, constants2) = Operator.parse(rest1)
 
         return (OpUntil(operand_left, operand_right), rest2, constants1 + constants2)
 
@@ -357,14 +386,14 @@ class OpUntil(ModalOperator):
         return str(self.left) + " U " + str(self.right)
 
 
-class OpWeakUntil(ModalOperator):
+class OpWeakUntil(Operator):
 
     @staticmethod
     def parse(parts):
         operatorString = parts.pop(0)
         assert(operatorString == "W")
-        (operand_left, rest1, constants1) = ModalOperator.parse(parts)
-        (operand_right, rest2, constants2) = ModalOperator.parse(rest1)
+        (operand_left, rest1, constants1) = Operator.parse(parts)
+        (operand_right, rest2, constants2) = Operator.parse(rest1)
 
         return (OpWeakUntil(operand_left, operand_right), rest2, constants1 + constants2)
 

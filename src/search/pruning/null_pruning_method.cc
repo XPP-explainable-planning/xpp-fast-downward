@@ -8,7 +8,7 @@ using namespace std;
 namespace null_pruning_method {
 void NullPruningMethod::initialize(const shared_ptr<AbstractTask> &task) {
     PruningMethod::initialize(task);
-    cout << "pruning method: none" << endl;
+    //cout << "pruning method: none" << endl;
 }
 
 static shared_ptr<PruningMethod> _parse(OptionParser &parser) {
