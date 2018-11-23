@@ -241,8 +241,16 @@ def _set_components_and_inputs(parser, args):
             domain_file = args.filenames[1]
             args.translate_inputs = [domain_file, task_file]
             args.translate_plan_properties = util.find_property_filename(task_file)
+        elif num_files == 3:
+            task_file = args.filenames[0]
+            domain_file = args.filenames[1]
+            args.translate_inputs = [domain_file, task_file]
+            args.translate_plan_properties = args.filenames[2]
+            print("Translate input (domain, problem): ", args.translate_inputs)
         else:
-            parser.error("translator needs one or two input files")
+            parser.error("translator needs one, two or three input files")
+        
+
     elif first == "search":
         if "--help" in args.search_options:
             args.search_input = None
