@@ -681,6 +681,11 @@ def dump_statistics(sas_task):
 
 def main():
     options.setup()
+    path = options.plan_property
+    print("Plan property path: ", path)
+    print("domain: ", options.domain)
+    print("problem: ", options.task)
+
     timer = timers.Timer()
     with timers.timing("Parsing", True):
         task = pddl_parser.open(
@@ -740,6 +745,7 @@ def main():
 def addPlanProperties(task, sas_task):
     #action set properties
     path = options.plan_property
+    print("Plan property path: ", path)
     if path == "None":
         return
     
