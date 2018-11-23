@@ -304,6 +304,8 @@ def parse_axiom(alist, type_dict, predicate_dict):
 
 
 def parse_task(domain_pddl, task_pddl):
+    print("Problem:")
+    print(task_pddl)
     domain_name, domain_requirements, types, type_dict, constants, predicates, predicate_dict, functions, actions, axioms \
                  = parse_domain_pddl(domain_pddl)
     task_name, task_domain_name, task_requirements, objects, init, goal, use_metric = parse_task_pddl(task_pddl, type_dict, predicate_dict)
@@ -325,12 +327,13 @@ def parse_task(domain_pddl, task_pddl):
 
 
 def parse_domain_pddl(domain_pddl):
+    print("Domain:")
+    print(domain_pddl)
     iterator = iter(domain_pddl)
 
     define_tag = next(iterator)
     assert define_tag == "define"
     domain_line = next(iterator)
-    print(domain_line)
     assert domain_line[0] == "domain" and len(domain_line) == 2
     yield domain_line[1]
 

@@ -683,6 +683,8 @@ def main():
     options.setup()
     path = options.plan_property
     print("Plan property path: ", path)
+    print("domain: ", options.domain)
+    print("problem: ", options.task)
 
     timer = timers.Timer()
     with timers.timing("Parsing", True):
