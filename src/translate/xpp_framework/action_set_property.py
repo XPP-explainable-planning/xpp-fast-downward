@@ -228,7 +228,7 @@ class actionSetPropertyClass:
                 actionSets.append(newActionSet)
                 continue
 
-            if line.startswith("property"):
+            if line.startswith("property") or line.startswith("soft-property"):
                 #print("parse property")
                 (asProperty, remaining_lines) = actionSetProperty.parse(lines)
                 lines = remaining_lines
@@ -283,8 +283,9 @@ class actionSetPropertyClass:
 
 class actionSetProperty:
 
-    def __init__(self, name, formula, constants):
+    def __init__(self, name, soft, formula, constants):
         self.name = name
+        self.soft = soft
         self.formula = formula
         self.constants = constants
         self.var_id = None
@@ -292,6 +293,9 @@ class actionSetProperty:
     @staticmethod
     def parse(lines):
         line = lines.pop(0)
+
+        soft = line.split()[0].startswith("soft")
+
          #name of the property
         name = line.split()[1]
 
@@ -303,7 +307,7 @@ class actionSetProperty:
         #parse prefix notion logic formula
         property_string = line.replace("\n","")
         (formula, rest, constants) = logic_formula.Operator.parse(property_string.split())
-        asProperty = actionSetProperty(name, formula, constants)
+        asProperty = actionSetProperty(name, soft, formula, constants)
 
         return (asProperty, lines)
 
@@ -314,7 +318,7 @@ class actionSetProperty:
         for c in self.constants:
             instance_constants.append(c +instance_postfix)
 
-        return actionSetProperty(self.name + instance_postfix, formula_instance, instance_constants)
+        return actionSetProperty(self.name + instance_postfix, self.soft, formula_instance, instance_constants)
 
     def containsSet(self, set_name):
         #print("Contains: " + set_name)
@@ -335,6 +339,7 @@ class ActionSetProperties:
     def __init__(self):
         self.actionSets = {}
         self.properties = []
+        self.soft_goals = []
 
     def addActionSet(self, actions):
         if(actions.name in self.actionSets):
@@ -425,7 +430,10 @@ class ActionSetProperties:
         #for each property add one new binary variable
         for prop in self.properties:
             prop.var_id = len(sas_task.variables.value_names)
-            prop_vars = ["not_sat_" + prop.name, "sat_" + prop.name]
+            soft_prefix = "hard"
+            if prop.soft:
+                soft_prefix = "soft"
+            prop_vars = [soft_prefix + "_not_sat_" + prop.name, soft_prefix + "_sat_" + prop.name]
 
             #print(prop.name + " : " + str(prop.var_id))
 
@@ -494,6 +502,24 @@ class ActionSetProperties:
                 #TODO assigning a cost of 0 does not work -> only possible in a pddl version which uses action costs
                 sas_task.operators.append(SASOperator(str(c),[], pre_post, 0))
 
+
+        #specify soft goals
+        for g in self.soft_goals:
+            print("Add soft_goal: " + g)
+            for i in range(len(sas_task.variables.value_names)):
+                for j in range(len(sas_task.variables.value_names[i])):
+                    value_name = sas_task.variables.value_names[i][j]
+                    #print("\t " + value_name)
+                    if value_name.endswith(g):
+                        sas_task.variables.value_names[i][j] = "soft_" + value_name
+
+        for i in range(len(sas_task.variables.value_names)):
+            for j in range(len(sas_task.variables.value_names[i])):
+                value_name = sas_task.variables.value_names[i][j]
+                print("\t " + value_name)
+            print("---------------------")
+
+
     def __repr__(self):
         s = "--------------------------------------------------------------\n"
         for (n,aS) in self.actionSets.iteritems():
@@ -533,13 +559,13 @@ def parseActionSetProperty(path, typeObjectMap):
             actionSetProperties.addActionSet(newActionSet)
             continue
 
-        if line.startswith("property "):
+        if line.startswith("property ") or line.startswith("soft-property "):
             (asProperty, remaining_lines) = actionSetProperty.parse(lines)
             lines = remaining_lines
             actionSetProperties.addProperty(asProperty)
             continue
 
-        if line.startswith("propertyclass"):
+        if line.startswith("propertyclass") or line.startswith("soft-propertyclass"):
             #print("--> propertyclass")
             (newActionSets, properties, remaining_lines) = actionSetPropertyClass.parse(lines)
             lines = remaining_lines
@@ -550,6 +576,14 @@ def parseActionSetProperty(path, typeObjectMap):
                 actionSetProperties.addActionSet(nas)
             for p in properties:
                 actionSetProperties.addProperty(p)
+            continue
+
+        if line.startswith("soft-goals"):
+            lines.pop(0)
+            line = lines.pop(0).replace("\n","")
+            while line != "":
+                actionSetProperties.soft_goals.append(line)
+                line = lines.pop(0).replace("\n","")
             continue
 
         #print("nothing done")

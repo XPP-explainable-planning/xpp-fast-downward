@@ -86,7 +86,7 @@ def parseNFA(path):
             continue
 
         if re.match("[\s]+::", line):
-            print("Transition",line)
+            #print("Transition",line)
             constants += parseTransition(line, automata, source)
             continue
 

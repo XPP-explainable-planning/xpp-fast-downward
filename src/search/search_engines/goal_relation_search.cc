@@ -39,8 +39,8 @@ shared_ptr<SearchEngine> GoalRelationSearch::get_search_engine(int engine_config
     //adapt goals of current task according to the current goals relation node   
     current_node = relation_tree.get_next_node();
 
-    //cout << "Current Node: " << endl;
-    //current_node->print(relation_tree.getGoals());
+    cout << "Current Node: " << endl;
+    current_node->print(relation_tree.getSoftGoals());
     tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), relation_tree.get_goals(current_node)); // current_node->get_goals());
 
     ((Heuristic*) heuristic)->set_abstract_task(tasks::g_root_task);

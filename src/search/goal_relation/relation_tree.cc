@@ -29,13 +29,13 @@ std::vector<FactPair> Node::get_goals(const std::vector<FactPair>& all_goals) co
 }
 
 void Node::print(const std::vector<FactPair>& all_goals){
-        cout << ".........................." << endl;
-        cout << "G:"  << endl;
+        //cout << ".........................." << endl;
+        //cout << "Current soft goals: "  << goals << endl;
         for(FactPair l : get_goals(all_goals)){
             cout << "var" << l.var << " = " << l.value << ", ";
         }
         cout << endl;
-        cout << ".........................." << endl;
+        //cout << ".........................." << endl;
     }
 
 
@@ -53,10 +53,10 @@ int Node::print_relation(const std::vector<FactPair>& all_goals){
     int printed_nodes = 0;
     if((c_solved) && ! isSolvable()){
         printed_nodes++;
-        cout << ".........................." << endl;
+        //cout << ".........................." << endl;
         //bool solved = isSolvable();
         //cout << "Solved: " << solved << endl;
-        cout << "G:"  << endl;
+        cout << "Unsolvable:"  << endl;
 
         for(uint i = 0; i < get_goals(all_goals).size(); i++){
             FactPair g = get_goals(all_goals)[i];
@@ -90,14 +90,13 @@ void printList(vector<FactPair> list){
 std::vector<Node*> Node::expand(std::vector<Node>& nodes){
     vector<Node*> new_nodes;
 
-    /*
-    cout << "Expand next node in relation tree" << endl;
-    printList(goals);
-    */
+    
+    //cout << "Expand next node in relation tree" << endl;
+    //printList(goals);
+    
 
-    // cout << "Expand(" << goals << ", " << sleep_set_i << ")" << std::endl;
+    //cout << "Expand(" << goals << ", " << sleep_set_i << ")" << std::endl;
 
-    //take g in A and put it into F, B stays unchanged
     // successors who have been expanded before
     for (uint i = 0; i < sleep_set_i; i++) {
         if ((goals >> i) & 1U) {
@@ -118,29 +117,36 @@ std::vector<Node*> Node::expand(std::vector<Node>& nodes){
         new_nodes.back()->goals = new_goals;
         children.push_back(new_nodes.back());
 
-        // std::cout << goals << " -> " << new_goals << std::endl;
+        //std::cout << goals << " -> " << new_goals << std::endl;
 
-         /*
+        
         // cout << "Expand next node in relation tree" << endl;
-        cout << "Successor node in relation tree (i=" << i << "):" << endl << "  ";
-        printList(new_goals);
-        */
+        //cout << "Successor node in relation tree (i=" << i << "):" << endl << "  ";
+        //printList(new_goals);
+        
     }
 
     return new_nodes;
 }
 
 RelationTree::RelationTree(GoalsProxy goals){
+    TaskProxy taskproxy = TaskProxy(*tasks::g_root_task.get());
     for(uint i = 0; i < goals.size(); i++){
-        goal_list.push_back(goals[i].get_pair());
+        if(taskproxy.get_variables()[goals[i].get_pair().var].get_fact(goals[i].get_pair().value).get_name().find("soft") == 0){
+            soft_goal_list.push_back(goals[i].get_pair());
+        }
+        else{
+            hard_goal_list.push_back(goals[i].get_pair());
+        }
+        
     }
-    std::sort(goal_list.begin(), goal_list.end());
-    if (goal_list.size() > 32) {
+    std::sort(soft_goal_list.begin(), soft_goal_list.end());
+    if (soft_goal_list.size() > 32) {
         std::cerr << "too many goal facts, aborting" << std::endl;
         utils::exit_with(utils::ExitCode::SEARCH_CRITICAL_ERROR);
     }
-    nodes.resize((1U << goal_list.size()));
-    uint id = (1U << goal_list.size()) - 1;
+    nodes.resize((1U << soft_goal_list.size()));
+    uint id = (1U << soft_goal_list.size()) - 1;
     root = &nodes[id];
     root->set_goals(id);
     open_list.push_back(root);
@@ -159,15 +165,30 @@ Node* RelationTree::get_next_node(){
 
 std::vector<FactPair> RelationTree::get_goals(const Node* node) const
 {
-    return node->get_goals(goal_list);
+    std::vector<FactPair> current_goals;
+    std::vector<FactPair> soft_goals = node->get_goals(soft_goal_list);
+    current_goals.insert( current_goals.end(), hard_goal_list.begin(), hard_goal_list.end() );
+    current_goals.insert( current_goals.end(), soft_goals.begin(), soft_goals.end() );
+    return current_goals;
 }
 
 void RelationTree::print(){
     cout << "*********************************"  << endl;
     cout << "Size of tree: " << nodes.size() << endl;
-    int printed_nodes = root->print_relation(goal_list);
+    cout << "Hard goals: " << endl;
+    TaskProxy taskproxy = TaskProxy(*tasks::g_root_task.get());
+    for(FactPair g : hard_goal_list){
+        cout << taskproxy.get_variables()[g.var].get_fact(g.value).get_name() << endl;
+    }
+    cout << "Soft goals: " << endl;
+    for(FactPair g : soft_goal_list){
+        cout << taskproxy.get_variables()[g.var].get_fact(g.value).get_name() << endl;
+    }
+    cout << "*********************************"  << endl;
+    int printed_nodes = root->print_relation(soft_goal_list);
     cout << "*********************************"  << endl;
     cout << "Number of minimal unsolvable goal subsets: " << printed_nodes << endl;
+    cout << "*********************************"  << endl;
 }
 
 }
