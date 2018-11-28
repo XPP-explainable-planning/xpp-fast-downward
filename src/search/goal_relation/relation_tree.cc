@@ -11,7 +11,7 @@ using namespace options;
 namespace goalre {
 
 Node::Node()
-    : sleep_set_i(0), goals(0){
+    : sleep_set_i(0), goals(1U << 31){
 }
 
 Node::~Node() {
@@ -44,19 +44,22 @@ int Node::print_relation(const std::vector<FactPair>& all_goals){
         return 0;
     }
     printed = true;
+    //cout << ">>.........................." << endl;
     TaskProxy taskproxy = TaskProxy(*tasks::g_root_task.get());
     //Check if all children are solvable
     bool c_solved = true;
     for(Node* c : children){
         c_solved = c_solved && c->isSolvable(); //or or and ?
     }
+    if(children.size() == 0)
+        c_solved = true;
     int printed_nodes = 0;
     if((c_solved) && ! isSolvable()){
         printed_nodes++;
         //cout << ".........................." << endl;
         //bool solved = isSolvable();
         //cout << "Solved: " << solved << endl;
-        cout << "Unsolvable:"  << endl;
+        cout << "Unsolvable: " << endl;
 
         for(uint i = 0; i < get_goals(all_goals).size(); i++){
             FactPair g = get_goals(all_goals)[i];
@@ -70,11 +73,20 @@ int Node::print_relation(const std::vector<FactPair>& all_goals){
         cout << endl;
         //cout << ".........................." << endl;
     }
+    /*
+    if((! c_solved) && ! isSolvable()){
+        cout << "Not minimal: softgoals: " << goals << endl;
+    }
+    if(isSolvable()){
+        cout << "Solvable: softgoals: " << goals << endl;
+    }
+    */
     
     
     for(Node* c : children){
         printed_nodes += c->print_relation(all_goals);
     }
+    //cout << "<<.........................." << endl;
     
     return printed_nodes;
 }
@@ -126,6 +138,16 @@ std::vector<Node*> Node::expand(std::vector<Node>& nodes){
         
     }
 
+    /*
+    cout << "Number of children: " << children.size() << endl;
+    for(uint i = 0; i < children.size(); i++){
+        cout << "\t id " << children[i]->id() << " solvable" << children[i]->isSolvable() << endl;
+    }
+    cout << "Number of new nodes: " << new_nodes.size() << endl;
+    for(uint i = 0; i < new_nodes.size(); i++){
+        cout << "\t " << new_nodes[i]->id() << endl;
+    }
+    */
     return new_nodes;
 }
 
@@ -141,7 +163,7 @@ RelationTree::RelationTree(GoalsProxy goals){
         
     }
     std::sort(soft_goal_list.begin(), soft_goal_list.end());
-    if (soft_goal_list.size() > 32) {
+    if (soft_goal_list.size() > 31) {
         std::cerr << "too many goal facts, aborting" << std::endl;
         utils::exit_with(utils::ExitCode::SEARCH_CRITICAL_ERROR);
     }

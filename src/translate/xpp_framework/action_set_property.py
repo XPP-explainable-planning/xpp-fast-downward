@@ -513,11 +513,6 @@ class ActionSetProperties:
                     if value_name.endswith(g):
                         sas_task.variables.value_names[i][j] = "soft_" + value_name
 
-        for i in range(len(sas_task.variables.value_names)):
-            for j in range(len(sas_task.variables.value_names[i])):
-                value_name = sas_task.variables.value_names[i][j]
-                print("\t " + value_name)
-            print("---------------------")
 
 
     def __repr__(self):
