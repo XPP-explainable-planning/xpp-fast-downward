@@ -175,12 +175,12 @@ def addLTLPlanProperties(sas_task, path_propertyfile):
     constant_name_map["1"] = "true"
     constant_name_map["true"] = "true"
 
-    print(constant_name_map)
-    print(constant_id_map)
+    #print(constant_name_map)
+    #print(constant_id_map)
     
     #for every property run the LTL2B program
     for p in properties:
-        print(str(p))
+        #print(str(p))
         p.generateAutomataRepresentation(constant_name_map, constant_id_map)
 
     operators = []
@@ -190,7 +190,7 @@ def addLTLPlanProperties(sas_task, path_propertyfile):
 
     for i in range(len(properties)):
         a = properties[i].automata
-        print(str(a))
+        #print(str(a))
         addFluents(a, i, sas_task) #also addd the sync vars
         operators.append(automataTransitionOperators(a, sas_task))
     

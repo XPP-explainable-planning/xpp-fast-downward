@@ -18,7 +18,8 @@ class Node;
 
 class RelationTree {
     Node* root;
-    std::vector<FactPair> goal_list;
+    std::vector<FactPair> soft_goal_list;
+    std::vector<FactPair> hard_goal_list;
     std::vector<Node> nodes;
     std::deque<Node*> open_list;
 
@@ -34,8 +35,12 @@ public:
         return root;
     }
 
-    std::vector<FactPair> getGoals() {
-        return goal_list;
+    std::vector<FactPair> getSoftGoals() {
+        return soft_goal_list;
+    }
+
+    std::vector<FactPair> getHardGoals() {
+        return hard_goal_list;
     }
 
     bool continue_search(){
