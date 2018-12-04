@@ -418,9 +418,10 @@ class ActionSetProperties:
             op.pre_post.append((eval_var_id, 0, 0, []))
 
         #action which changes from execution to evaluation phase    
-        pre_post_change_phase = []
-        pre_post_change_phase.append((eval_var_id, 0, 1, []))
-        sas_task.operators.append(SASOperator("change_phase",[], pre_post_change_phase, 0))
+        #TODO moved to the end
+        #pre_post_change_phase = []
+        #pre_post_change_phase.append((eval_var_id, 0, 1, []))
+        #sas_task.operators.append(SASOperator("change_phase",[], pre_post_change_phase, 0))
 
 
 
@@ -465,7 +466,7 @@ class ActionSetProperties:
         ######################## ACTIONS ###############################
 
 
-        # every action in the set assigns the corresponsing variable to true and the property fact to false
+        # every action in the set assigns the corresponsing variable to true
         for op in sas_task.operators:
             for (n,s) in self.actionSets.iteritems():
                 #if the action is in the action set than is assigns the variable to True/Used
@@ -503,9 +504,15 @@ class ActionSetProperties:
                 sas_task.operators.append(SASOperator(str(c),[], pre_post, 0))
 
 
+        #action which changes from execution to evaluation phase 
+        # only allow phase change if all hard goals are satisfied  
+        pre_post_change_phase = []
+        pre_post_change_phase.append((eval_var_id, 0, 1, []))
+        
+
         #specify soft goals
         for g in self.soft_goals:
-            print("Add soft_goal: " + g)
+            #print("Add soft_goal: " + g)
             for i in range(len(sas_task.variables.value_names)):
                 for j in range(len(sas_task.variables.value_names[i])):
                     value_name = sas_task.variables.value_names[i][j]
@@ -513,7 +520,14 @@ class ActionSetProperties:
                     if value_name.endswith(g):
                         sas_task.variables.value_names[i][j] = "soft_" + value_name
 
+        #add change phase action
+        # only allow phase change if all hard goals are satisfied  
+        #for (var, value) in sas_task.goal.pairs:
+         #   if not sas_task.variables.value_names[var][value].startswith("soft"):
+          #      pre_post_change_phase.append((var, value, value, []))
+           #     print("New pre", var, "=", value)
 
+        sas_task.operators.append(SASOperator("change_phase",[], pre_post_change_phase, 0))
 
     def __repr__(self):
         s = "--------------------------------------------------------------\n"
