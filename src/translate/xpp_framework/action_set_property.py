@@ -7,14 +7,45 @@ from sas_tasks import *
 import pddl
 import re
 
+class ParamMatcher:
+
+    def __init__(self):
+        self.matcher = {}
+        self.num_params = -1
+  
+    def addAction(self,a):
+        assert(self.num_params  == -1 or len(a.params) != self.num_params)
+        self.num_params = len(a.params)
+        current_matcher = self.matcher
+        for i in range(len(a.params)):
+            param = a.params[i]
+            if not param in current_matcher:
+                current_matcher[param] = {}
+            current_matcher = current_matcher[param]
+
+    def match(self,params):
+        assert(self.num_params == len(params))
+        current_matcher = self.matcher
+        for i in range(len(params)):
+            param = params[i]
+            if not param in current_matcher:
+                if not "*" in current_matcher:
+                    return False
+                else:
+                    current_matcher = current_matcher["*"]
+                    continue
+            current_matcher = current_matcher[param]
+        return True
+
+
 
 class Action:
 
     @staticmethod
-    def parse(string, current_actions, typeObjectMap):
+    def parse(string, typeObjectMap):
         parts = string.split()
         actionName = parts[0]
-        current_actions.append(Action(actionName, string))
+        action = Action(actionName, string)
 
         for n in range(1, len(parts)):
             #remove whitespaces
@@ -26,13 +57,7 @@ class Action:
             #if the param is a type instantiate the action with each object of the corresponsing type
             #it does not matter if any of the combinations does not exists in the planning task
             if param in typeObjectMap:              
-                new_actions = []
-                for a in current_actions:
-                    for o in typeObjectMap[param]:
-                        cAction = a.copy()
-                        cAction.addParam(o)
-                        new_actions.append(cAction)
-                current_actions = new_actions
+                action.addParam("*")
 
             else:
                 # if the param is an object just use the object
@@ -44,10 +69,9 @@ class Action:
                         break
                 assert found, "Param: " + param + " not found in planning task."
                 
-                for a in current_actions:
-                    a.addParam(param)
+                action.addParam(param)
 
-        return current_actions
+        return action
 
 
     def copy(self):
@@ -84,6 +108,8 @@ class ActionSet:
         self.definition = []
         self.var_id = None
 
+        self.number_of_contained_ops = 0
+
     @staticmethod
     def parse(lines):
         line = lines.pop(0)
@@ -112,15 +138,19 @@ class ActionSet:
 
             n += 1
 
+        
         return (newActionSet, lines)
 
     def generateActions(self, typeObjectMap):
         for d in self. definition:
-            current_actions = []
-            current_actions = Action.parse(d, current_actions, typeObjectMap)
-            
-            for a in current_actions:
-                self.addAction(a)
+            self.addAction(Action.parse(d, typeObjectMap))
+
+        #generate action dict to check if a action in contained in the set
+        self.action_dict = {}
+        for a in self.actions:
+            if not a.name in self.action_dict:
+                self.action_dict[a.name] =  ParamMatcher()
+                self.action_dict[a.name].addAction(a)
 
 
     def generateInstance(self, vars, params):
@@ -151,15 +181,18 @@ class ActionSet:
 
     def addAction(self, a):
         self.actions.append(a)
-        self.actionStrings.append(str(a))
+        #self.actionStrings.append(str(a))
 
     def addDefinition(self, d):
         self.definition.append(d)
 
     def containsOperator(self, op):
-        #print("\t" + self.name + " contains " + op.name + "")
-        #print("\t\t-> " + str(op.name in self.actionStrings))
-        return op.name in self.actionStrings
+        parts = op.name.replace("(","").replace(")","").split()
+        if parts[0] in self.action_dict:
+            if self.action_dict[parts[0]].match(parts[1:]):
+                self.number_of_contained_ops += 1
+                return True
+        return False
 
     def genSetDefinition(self):
         s = "set " + self.name + " " + str(len(self.definition)) + "\n"
@@ -473,7 +506,9 @@ class ActionSetProperties:
                 if s.containsOperator(op):
                     op.pre_post.append((s.var_id, -1, 1, []))
         
-
+        for (n,s) in self.actionSets.iteritems():
+            if s.number_of_contained_ops == 0:
+                print("WARNING: " + s.name + " does not contain any action, no actions maps to the definition \n" + str(s.definition))
         
         #add the actions checking if the property ist true
         # Assumption: property is in disjunctive normal form
@@ -489,6 +524,7 @@ class ActionSetProperties:
                 pre_post = []
                 # literals form the preconditions
                 for l in c:
+                    #print(l.constant.name)
                     if l.negated:
                         pre_post.append((self.actionSets[l.constant.name].var_id,0,0,[]))
                     else:
@@ -590,7 +626,7 @@ def parseActionSetProperty(path, typeObjectMap):
         if line.startswith("soft-goals"):
             lines.pop(0)
             line = lines.pop(0).replace("\n","")
-            while line != "":
+            while line != "" and len(lines) > 0:
                 actionSetProperties.soft_goals.append(line)
                 line = lines.pop(0).replace("\n","")
             continue

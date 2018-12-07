@@ -713,6 +713,10 @@ def main():
     #for v in sas_task.variables.value_names:
         #print(v)
 
+    #print("Operators:")
+    #for o in sas_task.operators:
+    #    print(o.name)
+
     if options.plan_property:
         addPlanProperties(task, sas_task)
 
@@ -723,9 +727,9 @@ def main():
 
     #print("Operators:")
     #for o in sas_task.operators:
-     #   print(o.name)
-     #   print(o.pre_post)
-     #   print(o.cost)
+    #    print(o.name)
+    #    print(o.pre_post)
+    #    print(o.cost)
 
     #print("Init:")
     #print(sas_task.init.values)
