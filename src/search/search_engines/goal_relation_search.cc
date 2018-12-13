@@ -20,13 +20,14 @@ GoalRelationSearch::GoalRelationSearch(const Options &opts)
       repeat_last_phase(opts.get<bool>("repeat_last")),
       continue_on_fail(opts.get<bool>("continue_on_fail")),
       continue_on_solve(opts.get<bool>("continue_on_solve")),
+      all_soft_goals(opts.get<bool>("all_soft_goals")),
       heuristic(opts.get<Evaluator*>("heu")),
       phase(0),
       algo_phase(1),
       last_phase_found_solution(false),
       best_bound(bound),
       iterated_found_solution(false),
-      relation_tree(task_proxy.get_goals()) {
+      relation_tree(task_proxy.get_goals(), all_soft_goals) {
 
       //current_node = relation_tree.get_root();
       //cout << "Current Node: " << endl;
@@ -39,8 +40,8 @@ shared_ptr<SearchEngine> GoalRelationSearch::get_search_engine(int engine_config
     //adapt goals of current task according to the current goals relation node   
     current_node = relation_tree.get_next_node();
 
-    cout << "Current Node: " << endl;
-    current_node->print(relation_tree.getSoftGoals());
+    //cout << "Current Node: " << endl;
+    //current_node->print(relation_tree.getSoftGoals());
     tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), relation_tree.get_goals(current_node)); // current_node->get_goals());
 
     ((Heuristic*) heuristic)->set_abstract_task(tasks::g_root_task);
@@ -79,6 +80,7 @@ SearchStatus GoalRelationSearch::step() {
 
     //Plan found_plan;
     last_phase_found_solution = current_search->found_solution();
+    num_solved_nodes++;
 
     //stop search in this branch
     if (last_phase_found_solution) {
@@ -119,6 +121,7 @@ SearchStatus GoalRelationSearch::step_return_value() {
 
 void GoalRelationSearch::print_statistics() const {
     cout << "Cumulative statistics:" << endl;
+    cout << "Number of solved nodes: " << num_solved_nodes << endl;
     statistics.print_detailed_statistics();
 }
 
@@ -165,6 +168,9 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
     parser.add_option<bool>("continue_on_solve",
                             "continue search after solution found",
                             "true");
+    parser.add_option<bool>("all_soft_goals",
+                            "TODO",
+                            "false");
     parser.add_option<Evaluator*>("heu", "reference to heuristic to update abstract task");
     SearchEngine::add_options_to_parser(parser);
     Options opts = parser.parse();

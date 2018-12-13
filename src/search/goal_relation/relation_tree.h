@@ -24,7 +24,7 @@ class RelationTree {
     std::deque<Node*> open_list;
 
 public:
-    RelationTree(GoalsProxy goals);
+    RelationTree(GoalsProxy goals, bool all_soft_goals);
 
     // Visual Studio 2013 needs an explicit implementation.
     RelationTree(RelationTree &&other)

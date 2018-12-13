@@ -151,10 +151,10 @@ std::vector<Node*> Node::expand(std::vector<Node>& nodes){
     return new_nodes;
 }
 
-RelationTree::RelationTree(GoalsProxy goals){
+RelationTree::RelationTree(GoalsProxy goals, bool all_soft_goals){
     TaskProxy taskproxy = TaskProxy(*tasks::g_root_task.get());
     for(uint i = 0; i < goals.size(); i++){
-        if(taskproxy.get_variables()[goals[i].get_pair().var].get_fact(goals[i].get_pair().value).get_name().find("soft") == 0){
+        if(all_soft_goals || taskproxy.get_variables()[goals[i].get_pair().var].get_fact(goals[i].get_pair().value).get_name().find("soft") == 0){
             soft_goal_list.push_back(goals[i].get_pair());
         }
         else{

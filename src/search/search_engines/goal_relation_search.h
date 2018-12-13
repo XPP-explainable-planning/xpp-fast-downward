@@ -15,6 +15,7 @@ class GoalRelationSearch : public SearchEngine {
     bool repeat_last_phase;
     bool continue_on_fail;
     bool continue_on_solve;
+    bool all_soft_goals;
     Evaluator * heuristic;
 
     int phase;
@@ -22,6 +23,8 @@ class GoalRelationSearch : public SearchEngine {
     bool last_phase_found_solution;
     int best_bound;
     bool iterated_found_solution;
+
+    int num_solved_nodes = 0;
 
     goalre::RelationTree relation_tree;
 
