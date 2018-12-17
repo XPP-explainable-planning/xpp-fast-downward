@@ -71,9 +71,6 @@ SearchStatus GoalRelationSearch::step() {
     //cout << "-------------------------------------------------------------------------------------------" << endl;
     shared_ptr<SearchEngine> current_search = create_phase(0);
 
-    
-    cout << "Goals checked" << endl;
-
     //TODO
     if (!current_search) {
         return found_solution() ? SOLVED : FAILED;
