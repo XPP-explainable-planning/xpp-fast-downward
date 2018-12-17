@@ -535,8 +535,8 @@ def pddl_to_sas(task):
         (relaxed_reachable, atoms, actions, axioms,
          reachable_action_params) = instantiate.explore(task)
 
-    if not relaxed_reachable:
-        return unsolvable_sas_task("No relaxed solution")
+    #if not relaxed_reachable:
+    #    return unsolvable_sas_task("No relaxed solution")
 
     # HACK! Goals should be treated differently.
     if isinstance(task.goal, pddl.Conjunction):
