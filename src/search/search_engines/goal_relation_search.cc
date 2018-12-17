@@ -44,6 +44,7 @@ shared_ptr<SearchEngine> GoalRelationSearch::get_search_engine(int engine_config
     //current_node->print(relation_tree.getSoftGoals());
     tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), relation_tree.get_goals(current_node)); // current_node->get_goals());
 
+
     ((Heuristic*) heuristic)->set_abstract_task(tasks::g_root_task);
     //TODO find an other way
     //not necessary if only the goal is changed
@@ -68,13 +69,10 @@ shared_ptr<SearchEngine> GoalRelationSearch::create_phase(int phase) {
 
 SearchStatus GoalRelationSearch::step() {
     //cout << "-------------------------------------------------------------------------------------------" << endl;
-    if(relation_tree.get_goals(current_node).size() == 0){
-        cout << "++++++++ SOLUTION +++++++"  << endl;
-        iterated_found_solution = true;
-        current_node->solved();
-    }
-
     shared_ptr<SearchEngine> current_search = create_phase(0);
+
+    
+    cout << "Goals checked" << endl;
 
     //TODO
     if (!current_search) {
@@ -99,6 +97,7 @@ SearchStatus GoalRelationSearch::step() {
         relation_tree.expand(current_node);
         current_node->not_solved();
     }
+    
 
     //current_search->print_statistics();
 

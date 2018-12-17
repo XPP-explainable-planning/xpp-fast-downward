@@ -121,13 +121,21 @@ std::vector<Node*> Node::expand(std::vector<Node>& nodes){
             children.push_back(succ);
         }
     }
+
     // new successors
     for(uint i = sleep_set_i; ((goals >> i) & 1U); i++){
         uint new_goals = goals & ~(1U << i);
-        new_nodes.push_back(&nodes[new_goals]);
-        new_nodes.back()->sleep_set_i = i + 1;
-        new_nodes.back()->goals = new_goals;
-        children.push_back(new_nodes.back());
+        Node* succ = &nodes[new_goals];
+        if(new_goals != 0){
+            new_nodes.push_back(succ);
+            new_nodes.back()->sleep_set_i = i + 1;
+            new_nodes.back()->goals = new_goals;
+        }
+        else{
+            succ->goals = new_goals;
+            succ->solvable = true;
+        }
+        children.push_back(succ);
 
         //std::cout << goals << " -> " << new_goals << std::endl;
 
