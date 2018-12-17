@@ -68,6 +68,12 @@ shared_ptr<SearchEngine> GoalRelationSearch::create_phase(int phase) {
 
 SearchStatus GoalRelationSearch::step() {
     //cout << "-------------------------------------------------------------------------------------------" << endl;
+    if(relation_tree.get_goals(current_node).size() == 0){
+        cout << "++++++++ SOLUTION +++++++"  << endl;
+        iterated_found_solution = true;
+        current_node->solved();
+    }
+
     shared_ptr<SearchEngine> current_search = create_phase(0);
 
     //TODO
