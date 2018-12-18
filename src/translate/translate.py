@@ -468,6 +468,8 @@ def translate_task(strips_to_sas, ranges, translation_key,
 
     goal_dict_list = translate_strips_conditions(goals, strips_to_sas, ranges,
                                                  mutex_dict, mutex_ranges)
+                                        
+
     if goal_dict_list is None:
         # "None" is a signal that the goal is unreachable because it
         # violates a mutex.
@@ -594,6 +596,8 @@ def pddl_to_sas(task):
             variable_order.find_and_apply_variable_order(
                 sas_task, options.reorder_variables,
                 options.filter_unimportant_vars)
+
+    assert(len(goal_list) == len(sas_task.goal.pairs))
 
     return sas_task
 
