@@ -178,8 +178,7 @@ public:
         std::vector<unsigned> &subsumed_by);
     std::pair<unsigned, bool> insert_conjunction_and_update_data_structures(
         const std::vector<unsigned> &conj,
-        int cost = 0,
-        bool ensure_correct_cost_bound = false);
+        int cost = 0);
     unsigned insert_conjunction(const std::vector<unsigned> &conj, int cost = 0);
     unsigned create_counter(unsigned action_id, int cost, ConjunctionData *eff);
 

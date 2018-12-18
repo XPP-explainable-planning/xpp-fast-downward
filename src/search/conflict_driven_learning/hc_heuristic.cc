@@ -264,8 +264,8 @@ void HCHeuristic::get_satisfied_conjunctions(
 
 unsigned HCHeuristic::lookup_conjunction_id(
     const std::vector<unsigned> &conj,
-    std::vector<unsigned> &subsuming,
-    std::vector<unsigned> &subsumed_from)
+    std::vector<unsigned> &conj_subsets,
+    std::vector<unsigned> &conj_supersets)
 {
     std::fill(m_subset_count.begin(), m_subset_count.end(), 0);
     for (const unsigned &p : conj) {
@@ -274,14 +274,14 @@ unsigned HCHeuristic::lookup_conjunction_id(
                 if (m_conjunction_size[c] == conj.size()) {
                     return c;
                 }
-                subsuming.push_back(c);
+                conj_subsets.push_back(c);
             } else if (m_subset_count[c] == conj.size()) {
-                subsumed_from.push_back(c);
+                conj_supersets.push_back(c);
             }
         }
     }
-    std::sort(subsuming.begin(), subsuming.end());
-    std::sort(subsumed_from.begin(), subsumed_from.end());
+    std::sort(conj_subsets.begin(), conj_subsets.end());
+    std::sort(conj_supersets.begin(), conj_supersets.end());
     return m_conjunction_data.size();
 }
 
@@ -299,8 +299,7 @@ void HCHeuristic::update_fact_conjunction_mapping(
 std::pair<unsigned, bool>
 HCHeuristic::insert_conjunction_and_update_data_structures(
     const std::vector<unsigned> &conj,
-    int cost,
-    bool ensure_correct_cost_bound)
+    int cost)
 {
 #ifndef NDEBUG
     assert(std::is_sorted(conj.begin(), conj.end()));
@@ -309,11 +308,11 @@ HCHeuristic::insert_conjunction_and_update_data_structures(
                        __debug_tbv.end()) == __debug_tbv.end());
 #endif
 
-    std::vector<unsigned> subsuming;
-    std::vector<unsigned> subsumed_from;
+    std::vector<unsigned> conj_subsets;
+    std::vector<unsigned> conj_supersets;
     unsigned newconjid = lookup_conjunction_id(conj,
-                         subsuming,
-                         subsumed_from);
+                         conj_subsets,
+                         conj_supersets);
     if (newconjid < m_conjunction_data.size()) {
         ConjunctionData *data = &m_conjunction_data[newconjid];
         if (data->cost != ConjunctionData::UNACHIEVED
@@ -321,9 +320,6 @@ HCHeuristic::insert_conjunction_and_update_data_structures(
             for (Counter *counter : data->pre_of) {
                 if (cost == ConjunctionData::UNACHIEVED) {
                     counter->unsat++;
-                } else if (counter->unsat == 0
-                           && counter->max_pre->cost < cost) {
-                    counter->max_pre = data;
                 }
             }
             data->cost = cost;
@@ -332,25 +328,22 @@ HCHeuristic::insert_conjunction_and_update_data_structures(
     }
 
 #ifndef NDEBUG
-    for (unsigned cid : subsuming) {
+    for (unsigned cid : conj_subsets) {
         assert(std::includes(conj.begin(), conj.end(),
                              m_conjunctions[cid].begin(), m_conjunctions[cid].end()));
     }
-    for (unsigned cid : subsumed_from) {
+    for (unsigned cid : conj_supersets) {
         assert(std::includes(m_conjunctions[cid].begin(), m_conjunctions[cid].end(),
                              conj.begin(), conj.end()));
     }
 #endif
 
-    if (ensure_correct_cost_bound && cost != ConjunctionData::UNACHIEVED) {
-        for (const unsigned &sub : subsuming) {
-            const ConjunctionData &data = m_conjunction_data[sub];
-            if (!data.achieved()) {
-                cost = ConjunctionData::UNACHIEVED;
-                break;
-            } else if (data.cost > cost) {
-                cost = data.cost;
-            }
+    for (const unsigned &sup : conj_supersets) {
+        ConjunctionData& data = m_conjunction_data[sup];
+        if (cost == ConjunctionData::UNACHIEVED) {
+            data.cost = ConjunctionData::UNACHIEVED;
+        } else if (cost > data.cost) {
+            data.cost = cost;
         }
     }
 
@@ -369,13 +362,13 @@ HCHeuristic::insert_conjunction_and_update_data_structures(
         for (const unsigned &c : m_counters_with_fact_precondition[p]) {
             if (++in_counter_pre[c] == conj.size()) {
                 if (!c_prune_subsumed_preconditions
-                    || !set_utils::intersects(m_counter_precondition[c], subsumed_from)) {
+                    || !set_utils::intersects(m_counter_precondition[c], conj_supersets)) {
                     Counter *counter = &m_counters[c];
                     // assert(counter->unsat != 0 || counter->max_pre != NULL);
                     if (c_prune_subsumed_preconditions) {
                         set_utils::inplace_difference(
                             m_counter_precondition[c],
-                            subsuming,
+                            conj_subsets,
                         [this, counter](const unsigned & d) {
                             ConjunctionData &data = m_conjunction_data[d];
                             assert(std::find(data.pre_of.begin(),
