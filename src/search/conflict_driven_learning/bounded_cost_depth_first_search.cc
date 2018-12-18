@@ -108,7 +108,7 @@ BoundedCostDepthFirstSearch::expand(const GlobalState& state)
     }
 
     if (state_bound == INF || !evaluate(state, m_pruning_evaluator)) {
-        std::cout << state_bound << ": " <<  (state_bound == INF) << std::endl;
+        // std::cout << state_bound << ": " <<  (state_bound == INF) << std::endl;
         state_bound = INF;
         return false;
     }
