@@ -420,7 +420,7 @@ fast_downward_plugin(
     HELP "Iterated search algorithm"
     SOURCES
         search_engines/goal_relation_search
-    DEPENDS GOAL_RELATION
+    DEPENDS GOAL_RELATION EXTRA_TASKS
 )
 
 fast_downward_plugin(
