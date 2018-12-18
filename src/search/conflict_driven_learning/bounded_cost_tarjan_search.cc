@@ -43,7 +43,7 @@ static bool _is_onstack(const int& status)
 
 static void _set_bound(int& status, int bound)
 {
-    assert(bound >= 0 && bound < UNDEFINED);
+    assert(bound >= 0 && bound != UNDEFINED);
     status = bound;
     assert(_get_bound(status) == bound);
     assert(!_is_onstack(status));
