@@ -109,7 +109,7 @@ void initialize(const AbstractTask& task)
         action.cost = task.get_operator_cost(op, false);
 
         for (int i = 0; i < task.get_num_operator_preconditions(op, false); i++) {
-            auto p = task.get_operator_precondition(op, i, false);
+            FactPair p = task.get_operator_precondition(op, i, false);
             var_in_pre[p.var] = p.value;
             action.pre.push_back(variable_offset[p.var] + p.value);
             for (const unsigned &q : mutex_with[action.pre.back()]) {
@@ -119,18 +119,20 @@ void initialize(const AbstractTask& task)
 
         for (int i = 0; i < task.get_num_operator_effects(op, false); i++) {
             bool adds = true;
-            auto e = task.get_operator_effect(op, i, false);
+            FactPair e = task.get_operator_effect(op, i, false);
             if (var_in_pre[e.var] != -1) {
-                unsigned p = variable_offset[e.var] + var_in_pre[e.var];
-                action.del.push_back(p);
-                strips_task.m_actions_with_del[p].push_back(op);
+                if (var_in_pre[e.var] == e.value) {
+                    adds = false;
+                } else {
+                    unsigned p = variable_offset[e.var] + var_in_pre[e.var];
+                    action.del.push_back(p);
+                    strips_task.m_actions_with_del[p].push_back(op);
+                }
             } else {
                 for (int val = 0; val < task.get_variable_domain_size(e.var); val++) {
                     if (val != e.value) {
                         action.del.push_back(variable_offset[e.var] + val);
                         strips_task.m_actions_with_del[variable_offset[e.var] + val].push_back(op);
-                    } else {
-                        adds = false;
                     }
                 }
             }
