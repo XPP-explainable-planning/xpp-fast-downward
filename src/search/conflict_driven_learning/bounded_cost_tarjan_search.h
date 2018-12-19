@@ -68,7 +68,6 @@ protected:
     bool c_compute_neighbors;
     const bool c_make_neighbors_unique;
     // const int c_learning_belt;
-    bool c_reexpand;
 
     std::shared_ptr<AbstractTask> m_task;
     TaskProxy m_task_proxy;

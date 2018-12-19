@@ -118,6 +118,7 @@ void initialize(const AbstractTask& task)
         }
 
         for (int i = 0; i < task.get_num_operator_effects(op, false); i++) {
+            bool adds = true;
             auto e = task.get_operator_effect(op, i, false);
             if (var_in_pre[e.var] != -1) {
                 unsigned p = variable_offset[e.var] + var_in_pre[e.var];
@@ -128,11 +129,15 @@ void initialize(const AbstractTask& task)
                     if (val != e.value) {
                         action.del.push_back(variable_offset[e.var] + val);
                         strips_task.m_actions_with_del[variable_offset[e.var] + val].push_back(op);
+                    } else {
+                        adds = false;
                     }
                 }
             }
-            action.add.push_back(variable_offset[e.var] + e.value);
-            strips_task.m_actions_with_add[variable_offset[e.var] + e.value].push_back(op);
+            if (adds) {
+                action.add.push_back(variable_offset[e.var] + e.value);
+                strips_task.m_actions_with_add[variable_offset[e.var] + e.value].push_back(op);
+            }
         }
 
         for (const unsigned &p : action.add) {

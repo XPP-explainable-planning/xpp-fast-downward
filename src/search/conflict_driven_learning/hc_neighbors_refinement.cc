@@ -176,15 +176,50 @@ bool HCNeighborsRefinement::refine_heuristic(
         while (!m_open.empty() && !size_limit_reached()) {
             OpenElement &elem = m_open.back();
             if (elem.i == elem.achievers.size()) {
+#if DEBUG_VERBOSE_PRINT_OUTS
+                std::cout << "  <-<" << m_open.size() << ", " << elem.i << "/" << elem.achievers.size() << ">" << std::endl;
+#endif
                 m_open.pop_back();
             } else {
+#if DEBUG_VERBOSE_PRINT_OUTS
+                std::cout << "  <" << m_open.size() << ", " << elem.i << "/" << elem.achievers.size() << ">->" << std::endl;
+#endif
                 unsigned counter = elem.achievers[elem.i++];
                 assert(counter < m_hc->num_counters());
                 if (m_hc->get_counter(counter).unsat == 0) {
                     unsigned op = m_hc->get_action_id(counter);
                     const strips::Action &action =
                         m_strips_task->get_action(op);
+#if DEBUG_VERBOSE_PRINT_OUTS
+                    std::cout << "   regressing by " << m_task->get_operator_name(op, 0) << std::endl;
+                    std::cout << "       pre = [";
+                    for (int op_i = 0; op_i < m_task->get_num_operator_preconditions(op, false); op_i++) {
+                        std::cout << (op_i > 0 ? ", " : "")
+                                  << m_task->get_fact_name(m_task->get_operator_precondition(op, op_i, false));
+                    }
+                    std::cout << "]" << std::endl;
+                    std::cout << "       add = [";
+                    for (int op_i = 0; op_i < m_task->get_num_operator_effects(op, false); op_i++) {
+                        std::cout << (op_i > 0 ? ", " : "")
+                                  << m_task->get_fact_name(m_task->get_operator_effect(op, op_i, false));
+                    }
+                    std::cout << "]" << std::endl;
+                    std::cout << "       del = [";
+                    for (int op_i = 0; op_i < m_task->get_num_operator_preconditions(op, false); op_i++) {
+                        FactPair p = m_task->get_operator_precondition(op, op_i, false);
+                        bool deleted = false;
+                        for (int op_i = 0;!deleted&& op_i < m_task->get_num_operator_effects(op, false); op_i++) {
+                            FactPair q = m_task->get_operator_effect(op, op_i, false);
+                            deleted = p.var == q.var && p.value != q.value;
+                        }
+                        if (deleted)
+                        std::cout << (op_i > 0 ? ", " : "")
+                                  << m_task->get_fact_name(p);
+                    }
+                    std::cout << "]" << std::endl;
+#endif
                     if (elem.bound - action.cost >= 0) {
+                        assert(m_regression.empty());
                         assert(set_utils::intersects(elem.conj, action.add));
                         assert(!set_utils::intersects(elem.conj, action.del));
                         std::set_union(elem.conj.begin(), elem.conj.end(),
@@ -192,13 +227,14 @@ bool HCNeighborsRefinement::refine_heuristic(
                                     std::back_inserter(m_regression));
                         set_utils::inplace_difference(m_regression, action.add);
                         assert(!m_strips_task->contains_mutex(m_regression));
-#if 0
+#if DEBUG_VERBOSE_PRINT_OUTS
                         std::cout << "<regression of conflict=";
-                        print_conjunction(m_regression, false);
+                        m_hc->dump_conjunction(elem.conj);
                         std::cout << " through action "
-                                << g_operators[op].get_name() << std::endl
+                                << m_task->get_operator_name(op, false) << std::endl
                                 << "<regression = ";
-                        print_conjunction(m_regression, true);
+                        m_hc->dump_conjunction(m_regression);
+                        std::cout << ">" << std::endl;
 #endif
                         push_conflict_for(m_regression, elem.bound - action.cost);
                         m_regression.clear();
@@ -282,9 +318,12 @@ void HCNeighborsRefinement::push_conflict_for(
 #if DEBUG_VERBOSE_PRINT_OUTS
     std::cout << "push_conflict_for(";
     m_hc->dump_conjunction(subgoal);
-    std::cout << ", bound=" << bound << ")" << std::endl;
+    std::cout << ", bound=" << bound << ") -> " << m_open.size() << std::endl;
 #endif
     if (get_cost(subgoal) >= bound) {
+#if DEBUG_VERBOSE_PRINT_OUTS
+        std::cout << "  <-<current bound=" << get_cost(subgoal) << ">" << std::endl;
+#endif
         return;
     }
     compute_conflict(subgoal, m_conflict, bound);
@@ -357,7 +396,7 @@ unsigned HCNeighborsRefinement::collect_greedy_minimal(
     std::vector<unsigned> &chosen,
     int bound)
 {
-    unsigned left = covered_by.size();
+    unsigned left = m_num_successors;
     while (left > 0) {
         unsigned best_size = 0;
         unsigned best_coverage = 0;
@@ -402,7 +441,7 @@ unsigned HCNeighborsRefinement::collect_greedy_minimal(
     const std::vector<std::vector<unsigned> > &covered_by,
     std::vector<unsigned> &chosen)
 {
-    unsigned left = covered_by.size();
+    unsigned left = m_component_size;
     while (left > 0) {
         unsigned best_size = 0;
         unsigned best_coverage = 0;
@@ -455,6 +494,19 @@ void HCNeighborsRefinement::compute_conflict(
         }
     }
 #ifndef NDEBUG
+    std::vector<int> max_succ_conj_cost(m_num_successors, 0);
+    for (const auto& id : m_satisfied_conjunctions) {
+        for (auto it = m_conjunction_to_successors[id].begin(); it != m_conjunction_to_successors[id].end(); it++) {
+            for (const auto& succ : it->second) {
+                if (it->first > max_succ_conj_cost[succ]) {
+                    max_succ_conj_cost[succ] = it->first;
+                }
+            }
+        }
+    }
+    for (unsigned i = 0; i < max_succ_conj_cost.size(); i++) {
+        assert(max_succ_conj_cost[i] >= bound);
+    }
     bool handled_all = !
 #endif
     collect_greedy_minimal(m_satisfied_conjunctions,

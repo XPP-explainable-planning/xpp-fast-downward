@@ -36,27 +36,11 @@ static int _get_bound(const int& status)
     return status & INF;
 }
 
-static bool _is_onstack(const int& status)
-{
-    return status & NEGINF;
-}
-
 static void _set_bound(int& status, int bound)
 {
     assert(bound >= 0 && bound != UNDEFINED);
     status = bound;
     assert(_get_bound(status) == bound);
-    assert(!_is_onstack(status));
-}
-
-static void _set_onstack(int& status)
-{
-#ifndef NDEBUG
-    int old = _get_bound(status);
-#endif
-    status = status | NEGINF;
-    assert(_is_onstack(status));
-    assert(old == _get_bound(status));
 }
 
 BoundedCostTarjanSearch::Locals::Locals(const GlobalState& state, bool zero_layer, unsigned size)
@@ -86,7 +70,6 @@ BoundedCostTarjanSearch::BoundedCostTarjanSearch(const options::Options& opts)
     , c_refinement_toggle(false)
     , c_compute_neighbors(false)
     , c_make_neighbors_unique(opts.get<bool>("unique_neighbors"))
-    , c_reexpand(opts.get<bool>("reexpand"))
     // , c_learning_belt(opts.contains("learning_belt") ? bound - opts.get<int>("learning_belt") : 0)
     , m_task(OperatorCost(opts.get_enum("cost_type")) != OperatorCost::NORMAL ? std::make_shared<tasks::CostAdaptedTask>(opts) : task)
     , m_task_proxy(*m_task)
@@ -100,7 +83,6 @@ BoundedCostTarjanSearch::BoundedCostTarjanSearch(const options::Options& opts)
     if (m_refiner != nullptr) {
         c_refinement_toggle = true;
         c_compute_neighbors = m_refiner->requires_neighbors();
-        c_reexpand = c_reexpand || c_compute_neighbors;
         m_pruning_evaluator = m_refiner->get_underlying_heuristic().get();
     }
 
@@ -152,7 +134,7 @@ bool
 BoundedCostTarjanSearch::expand(const GlobalState& state,
                                 PerLayerData* layer)
 {
-    static std::vector<OperatorID> aops;
+    static std::vector<OperatorID> aops; assert(aops.empty());
 
     int& status = m_state_information[state];
     assert(_get_bound(status) != INF && m_current_g + _get_bound(status) < bound);
@@ -171,7 +153,6 @@ BoundedCostTarjanSearch::expand(const GlobalState& state,
         }
     }
 
-    _set_onstack(status);
     statistics.inc_expanded();
     
     bool has_zero_cost = layer != NULL;
@@ -188,7 +169,7 @@ BoundedCostTarjanSearch::expand(const GlobalState& state,
         if (evaluate(succ, m_expansion_evaluator)) {
             has_zero_cost = has_zero_cost || op.get_cost() == 0;
             locals.open[m_cached_h].emplace_back(aops[i], succ.get_id());
-        } else {
+        } else if (c_compute_neighbors) {
             m_neighbors.emplace_back(
                     m_task->get_operator_cost(aops[i].get_index(), false),
                     succ);
@@ -280,9 +261,10 @@ BoundedCostTarjanSearch::step()
             }
             bool dead = false;
             int succ_bound = _get_bound(succ_status);
-            if (succ_bound != INF && m_current_g + succ_bound < bound
-                    && (c_reexpand || !_is_onstack(succ_status))) {
+            if (succ_bound != INF
+                    && m_current_g + succ_bound < bound) {
                 if (cost == 0) {
+                    assert(state_info != NULL);
                     ExpansionInfo& succ_info = m_last_layer->state_infos[succ.second];
                     if (succ_info.index == INF) {
                         if (expand(succ_state, m_last_layer)) {
@@ -296,7 +278,7 @@ BoundedCostTarjanSearch::step()
                     } else {
                         // onstack
                         state_info->lowlink = std::min(state_info->lowlink,
-                                                       succ_info.lowlink);
+                                                       succ_info.index);
                     }
                 } else {
                     if (expand(succ_state, NULL)) {
@@ -312,9 +294,9 @@ BoundedCostTarjanSearch::step()
             if (dead && c_compute_neighbors) {
                 m_neighbors.emplace_back(cost, succ_state);
             }
-        } else {
+        } else if (c_compute_neighbors) {
             // neighbor should not be required
-            // m_neighbors.emplace_back(cost, succ_state);
+            m_neighbors.emplace_back(cost, succ_state);
         }
         m_current_g -= cost;
     }
@@ -354,6 +336,42 @@ BoundedCostTarjanSearch::step()
                                 m_neighbors.begin() + locals.neighbors_size,
                                 m_neighbors.end()));
                 }
+#if DEBUG_BOUNDED_COST_DFS_ASSERT_NEIGHBORS
+                if (c_compute_neighbors) {
+                    std::unordered_set<StateID> component_state_ids;
+                    if (state_info != NULL) {
+                        for (auto it = m_last_layer->stack.begin();; it++) {
+                            component_state_ids.insert((*it).get_id());
+                            if ((*it).get_id().hash() == locals.state.get_id().hash()) {
+                                break;
+                            }
+                        }
+                    } else {
+                        component_state_ids.insert(locals.state.get_id());
+                    }
+                    std::unordered_set<StateID> successor_state_ids;
+                    for (auto it = m_neighbors.begin() + locals.neighbors_size;
+                            it != m_neighbors.end(); it++) {
+                        successor_state_ids.insert(it->second.get_id());
+                    }
+                    for (auto it = component_state_ids.begin(); it != component_state_ids.end(); it++) {
+                        GlobalState state = state_registry.lookup_state(*it);
+                        std::vector<OperatorID> aops;
+                        g_successor_generator->generate_applicable_ops(state, aops);
+                        for (int i = aops.size() - 1; i >= 0; i--) {
+                            OperatorProxy op = m_task_proxy.get_operators()[aops[i]];
+                            GlobalState succ = state_registry.get_successor_state(state, op);
+                            assert(component_state_ids.count(succ.get_id())
+                                    || successor_state_ids.count(succ.get_id()));
+                            int status = m_state_information[succ];
+                            if (!component_state_ids.count(succ.get_id())) {
+                                assert(_get_bound(status) == INF || 
+                                        _get_bound(status) + m_current_g + op.get_cost() >= bound);
+                            }
+                        }
+                    }
+                }
+#endif
             }
             if (state_info == NULL) {
                 _set_bound(m_state_information[locals.state],
@@ -394,23 +412,14 @@ BoundedCostTarjanSearch::step()
                     m_last_layer = m_layers.empty() ? NULL : &m_layers.back();
                 }
             }
+#if DEBUG_BOUNDED_COST_DFS_ASSERT_LEARNING
+            if (c_refinement_toggle) {
+                bool dead = !evaluate(locals.state, m_pruning_evaluator);
+                // std::cout << "refinement result => dead=" << dead << " h=" << m_cached_h << std::endl;
+                assert(dead || m_current_g + m_cached_h >= bound);
+            }
+#endif
             component_neighbors.clear();
-// #if DEBUG_BOUNDED_COST_DFS_ASSERT_NEIGHBORS
-//                 for (const auto& succ : locals.successors) {
-//                     bool dead = !evaluate(succ.second, m_pruning_evaluator);
-//                     // std::cout << "successor " << succ.second.get_id()
-//                     //     << " -> cost=" << succ.first << " dead=" << dead << " h=" << m_cached_h << " bound=" << m_bounds[succ.second] << std::endl;
-//                     assert(m_bounds[succ.second] + m_current_g + succ.first >= bound);
-//                     assert(dead || m_bounds[succ.second] <= m_cached_h);
-//                 }
-// #endif
-// #if DEBUG_BOUNDED_COST_DFS_ASSERT_LEARNING
-//                 if (c_refinement_toggle) {
-//                     bool dead = !evaluate(locals.state, m_pruning_evaluator);
-//                     // std::cout << "refinement result => dead=" << dead << " h=" << m_cached_h << std::endl;
-//                     assert(dead || m_current_g + m_cached_h >= bound);
-//                 }
-// #endif
             if (locals.neighbors_size != m_neighbors.size()) {
                 m_neighbors.erase(m_neighbors.begin() + locals.neighbors_size, m_neighbors.end());
             }
@@ -446,7 +455,6 @@ BoundedCostTarjanSearch::add_options_to_parser(options::OptionParser& parser)
     parser.add_option<Evaluator *>("eval");
     parser.add_option<std::shared_ptr<HeuristicRefiner> >("learn", "", options::OptionParser::NONE);
     parser.add_option<bool>("unique_neighbors", "", "true");
-    parser.add_option<bool>("reexpand", "", "false");
     // parser.add_option<int>("learning_belt", "", options::OptionParser::NONE);
     add_cost_type_option_to_parser(parser);
     SearchEngine::add_options_to_parser(parser);

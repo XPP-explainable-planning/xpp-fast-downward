@@ -34,18 +34,22 @@ struct Task {
     }
     const Action &get_action(unsigned op) const
     {
+        assert(op < m_actions.size());
         return m_actions[op];
     }
     const std::vector<unsigned> &get_actions_with_add(unsigned p) const
     {
+        assert(p < m_actions_with_add.size());
         return m_actions_with_add[p];
     }
     const std::vector<unsigned> &get_actions_with_del(unsigned p) const
     {
+        assert(p < m_actions_with_del.size());
         return m_actions_with_del[p];
     }
     const std::vector<unsigned> &get_actions_with_mutex_regression(unsigned p) const
     {
+        assert(p < m_actions_with_mutex_regression.size());
         return m_actions_with_mutex_regression[p];
     }
     std::size_t num_actions() const
