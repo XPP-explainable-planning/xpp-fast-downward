@@ -12,6 +12,8 @@ using namespace std;
 
 int get_adjusted_action_cost(int cost, OperatorCost cost_type) {
     switch (cost_type) {
+    case ZERO:
+        return 0;
     case NORMAL:
         return cost;
     case ONE:
@@ -43,6 +45,7 @@ void add_cost_type_option_to_parser(OptionParser &parser) {
     cost_types_doc.push_back(
         "all actions are accounted for as unit cost");
     cost_types.push_back("PLUSONE");
+    cost_types.push_back("ZERO");
     cost_types_doc.push_back(
         "all actions are accounted for as their real cost + 1 "
         "(except if all actions have original cost 1, "

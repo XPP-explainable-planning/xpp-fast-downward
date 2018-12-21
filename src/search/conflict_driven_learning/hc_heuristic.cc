@@ -1067,6 +1067,18 @@ int HCHeuristicGeneralCost::compute_heuristic_get_reachable_conjunctions(
     return m_goal_conjunction.achieved() ? m_goal_conjunction.cost : DEAD_END;
 }
 
+int UCHeuristic::compute_heuristic(const std::vector<unsigned> &state)
+{
+    return HCHeuristicUnitCost::compute_heuristic(state) == DEAD_END ? DEAD_END : 0;
+}
+
+int UCHeuristic::compute_heuristic_get_reachable_conjunctions(
+    std::vector<unsigned> &reachable)
+{
+    return HCHeuristicUnitCost::compute_heuristic(reachable) == DEAD_END ? DEAD_END : 0;
+}
+
+
 }
 }
 
@@ -1086,4 +1098,16 @@ _parse(options::OptionParser& parser)
     return NULL;
 }
 
+static Heuristic*
+_parse_uc(options::OptionParser& parser)
+{
+    conflict_driven_learning::hc_heuristic::HCHeuristic::add_options_to_parser(parser);
+    options::Options opts = parser.parse();
+    if (!parser.dry_run()) {
+        return new conflict_driven_learning::hc_heuristic::UCHeuristic(opts);
+    }
+    return NULL;
+}
+
 static Plugin<Evaluator> _plugin_hc("hc", _parse);
+static Plugin<Evaluator> _plugin_uc("uc", _parse_uc);

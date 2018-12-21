@@ -21,6 +21,7 @@ bool StateMinimizationNoGoods::evaluate(
 void StateMinimizationNoGoods::initialize()
 {
     assert(m_full_goal.empty());
+    m_formula.set_num_keys(strips::num_facts());
     const auto& goal = strips::get_task().get_goal();
     m_full_goal.insert(m_full_goal.end(),
                        goal.begin(),
@@ -75,6 +76,10 @@ void StateMinimizationNoGoods::synchronize_goal()
     std::fill(x.begin(), x.end(), false);
 
     m_formula.clear();
+#if 1
+    m_clauses.resize(0);
+    m_conjs_to_clauses.clear();
+#else
     m_hc->get_satisfied_conjunctions(strips::get_task().get_goal(),
                                      goal_conjunctions);
     for (const unsigned& conj_id : goal_conjunctions) {
@@ -85,6 +90,7 @@ void StateMinimizationNoGoods::synchronize_goal()
             }
         }
     }
+#endif
     goal_conjunctions.clear();
 }
 

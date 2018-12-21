@@ -14,6 +14,7 @@
 #include <memory>
 #include <vector>
 #include <deque>
+#include <set>
 
 namespace conflict_driven_learning
 {
@@ -34,6 +35,7 @@ protected:
 
     bool expand(const GlobalState &state);
     bool evaluate(const GlobalState& state);
+    bool evaluate(const GlobalState& state, Evaluator* eval);
     bool evaluate_dead_end_heuristic(const GlobalState& state);
     int get_h_value() const;
 
@@ -57,8 +59,10 @@ protected:
     bool c_dead_end_refinement;
     bool c_compute_recognized_neighbors;
 
-    int m_cached_h_value;
+    EvaluationResult m_eval_result;
     Evaluator* m_guidance;
+    Evaluator* m_preferred;
+    std::set<Evaluator*> m_path_dependent_evaluators;
     std::shared_ptr<Evaluator> m_dead_end_identifier;
     std::shared_ptr<ConflictLearner> m_learner;
 
@@ -69,7 +73,7 @@ protected:
 
     DFSResult m_result;
     std::deque<CallStackElement> m_call_stack;
-    LayeredMultiValueMap<int, StateID> m_open_list;
+    LayeredMultiValueMap<std::pair<bool, int>, StateID> m_open_list;
 
     std::deque<StateID> m_recognized_neighbors;
     std::deque<unsigned> m_rn_offset;

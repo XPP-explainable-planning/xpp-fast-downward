@@ -295,6 +295,17 @@ public:
     override;
 };
 
+class UCHeuristic : public HCHeuristicUnitCost
+{
+public:
+    using HCHeuristicUnitCost::HCHeuristicUnitCost;
+    virtual int compute_heuristic(const std::vector<unsigned> &conjunction_ids)
+    override;
+    virtual int compute_heuristic_get_reachable_conjunctions(
+        std::vector<unsigned> &reachable_conjunctions)
+    override;
+};
+
 
 }
 }

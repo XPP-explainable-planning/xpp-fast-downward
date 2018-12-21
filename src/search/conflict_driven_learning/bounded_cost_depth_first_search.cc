@@ -87,7 +87,7 @@ bool BoundedCostDepthFirstSearch::evaluate(const GlobalState& state,
         return true;
     }
     EvaluationContext ctxt(state);
-    EvaluationResult res = eval->compute_result(ctxt);
+    EvaluationResult res = std::move(eval->compute_result(ctxt));
     if (res.is_infinite()) {
         return false;
     }
@@ -259,15 +259,15 @@ BoundedCostDepthFirstSearch::add_options_to_parser(options::OptionParser& parser
 }
 }
 
-static
-std::shared_ptr<SearchEngine> _parse(options::OptionParser& p) {
-    conflict_driven_learning::bounded_cost::BoundedCostDepthFirstSearch::add_options_to_parser(p);
-    options::Options opts = p.parse();
-    if (!p.dry_run()) {
-        return std::make_shared<conflict_driven_learning::bounded_cost::BoundedCostDepthFirstSearch>(opts);
-    }
-    return nullptr;
-}
+// static
+// std::shared_ptr<SearchEngine> _parse(options::OptionParser& p) {
+//     conflict_driven_learning::bounded_cost::BoundedCostDepthFirstSearch::add_options_to_parser(p);
+//     options::Options opts = p.parse();
+//     if (!p.dry_run()) {
+//         return std::make_shared<conflict_driven_learning::bounded_cost::BoundedCostDepthFirstSearch>(opts);
+//     }
+//     return nullptr;
+// }
 
-static PluginShared<SearchEngine> _plugin("bounded_cost_dfs", _parse);
+// static PluginShared<SearchEngine> _plugin("bounded_cost_dfs", _parse);
 

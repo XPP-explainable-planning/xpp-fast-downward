@@ -28,16 +28,12 @@ public:
         d_initialized = false;
 #endif
     }
-    CounterBasedFormula(size_t size)
-    {
-        resize(size);
-    }
-    void resize(size_t size)
+    void set_num_keys(const unsigned& num)
     {
 #ifndef NDEBUG
         d_initialized = true;
 #endif
-        m_rel.resize(size);
+        m_rel.resize(num);
     }
     bool insert_element(unsigned id, const std::vector<unsigned> &, unsigned elem,
                         bool)
@@ -117,6 +113,13 @@ public:
         assert(d_initialized);
         return m_sizes.size();
     }
+    void clear()
+    {
+        std::vector<std::vector<unsigned> > new_rel(m_rel.size());
+        m_rel.swap(new_rel);
+        m_sizes.clear();
+        m_subset.clear();
+    }
     // void statistics(const std::string &name = "Formula") const
     // {
     //     printf("%s size: %zu\n", name, m_sizes.size());
@@ -157,6 +160,8 @@ protected:
 public:
     UBTreeFormula();
     ~UBTreeFormula();
+
+    void set_num_keys(const unsigned&) {}
 
     bool contains_subset_of(const std::vector<K> &set) const;
     bool contains_set(const std::vector<K> &set) const;

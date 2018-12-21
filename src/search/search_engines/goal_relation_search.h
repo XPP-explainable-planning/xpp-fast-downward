@@ -9,6 +9,8 @@ namespace options {
 class Options;
 }
 
+class Heuristic;
+
 namespace goal_relation_search {
 class GoalRelationSearch : public SearchEngine {
     const std::vector<options::ParseTree> engine_configs;
@@ -16,7 +18,7 @@ class GoalRelationSearch : public SearchEngine {
     bool continue_on_fail;
     bool continue_on_solve;
     bool all_soft_goals;
-    Evaluator * heuristic;
+    std::vector<Heuristic *> heuristic;
 
     int phase;
     int algo_phase;

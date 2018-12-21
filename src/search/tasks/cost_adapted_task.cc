@@ -36,6 +36,8 @@ int CostAdaptedTask::get_operator_cost(int index, bool is_axiom) const {
         return original_cost;
 
     switch (cost_type) {
+    case ZERO:
+        return 0;
     case NORMAL:
         return original_cost;
     case ONE:

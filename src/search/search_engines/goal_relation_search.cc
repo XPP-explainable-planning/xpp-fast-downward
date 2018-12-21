@@ -8,6 +8,8 @@
 #include "../task_utils/successor_generator.h"
 #include "../heuristic.h"
 
+#include "../utils/timer.h"
+
 #include <iostream>
 
 using namespace std;
@@ -21,13 +23,18 @@ GoalRelationSearch::GoalRelationSearch(const Options &opts)
       continue_on_fail(opts.get<bool>("continue_on_fail")),
       continue_on_solve(opts.get<bool>("continue_on_solve")),
       all_soft_goals(opts.get<bool>("all_soft_goals")),
-      heuristic(opts.get<Evaluator*>("heu")),
       phase(0),
       algo_phase(1),
       last_phase_found_solution(false),
       best_bound(bound),
       iterated_found_solution(false),
       relation_tree(task_proxy.get_goals(), all_soft_goals) {
+
+          std::vector<Evaluator*> evaluators = opts.get_list<Evaluator*>("heu");
+          for (Evaluator* eval : evaluators) {
+              heuristic.push_back(dynamic_cast<Heuristic*>(eval));
+              assert(heuristic.back() != nullptr);
+          }
 
       //current_node = relation_tree.get_root();
       //cout << "Current Node: " << endl;
@@ -45,7 +52,9 @@ shared_ptr<SearchEngine> GoalRelationSearch::get_search_engine(int engine_config
     tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), relation_tree.get_goals(current_node)); // current_node->get_goals());
 
 
-    ((Heuristic*) heuristic)->set_abstract_task(tasks::g_root_task);
+    for (Heuristic* h : heuristic) {
+        h->set_abstract_task(tasks::g_root_task);
+    }
     //TODO find an other way
     //not necessary if only the goal is changed
     //g_successor_generator = new successor_generator::SuccessorGenerator(TaskProxy(*(tasks::g_root_task).get()));
@@ -77,7 +86,32 @@ SearchStatus GoalRelationSearch::step() {
     }
     ++phase;
 
+    static unsigned num_executed_searched = 0;
+    static unsigned num_satisfied = 0;
+    static const unsigned print_status_every = 100;
+    static utils::Timer search_timer; search_timer.resume();
+
+    std::cout.setstate(std::ios::failbit);
     current_search->search();
+    std::cout.clear() ;
+
+    search_timer.stop();
+    num_executed_searched++;
+    if (current_search->found_solution()) {
+        num_satisfied++;
+    }
+
+    if (num_executed_searched % print_status_every == 0) {
+        std::cout << "properties=" << num_executed_searched
+                  << ", satisfied=" << num_satisfied
+                  << ", time/property="
+                  << ((search_timer() / ((double) print_status_every)))
+                  << "s"
+                  << " [t=" << utils::g_timer << "]"
+                  << std::endl;
+        search_timer.reset();
+        search_timer.stop();
+    }
 
     //Plan found_plan;
     last_phase_found_solution = current_search->found_solution();
@@ -173,7 +207,7 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
     parser.add_option<bool>("all_soft_goals",
                             "TODO",
                             "false");
-    parser.add_option<Evaluator*>("heu", "reference to heuristic to update abstract task");
+    parser.add_list_option<Evaluator*>("heu", "reference to heuristic to update abstract task");
     SearchEngine::add_options_to_parser(parser);
     Options opts = parser.parse();
 

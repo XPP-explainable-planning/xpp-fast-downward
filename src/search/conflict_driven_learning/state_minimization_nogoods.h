@@ -15,7 +15,8 @@ namespace hc_heuristic
 class StateMinimizationNoGoods : public NoGoodFormula
 {
 protected:
-    UBTreeFormula<unsigned> m_formula;
+    using Formula = UBTreeFormula<unsigned>;
+    Formula m_formula;
 
     std::vector<unsigned> m_clause;
     std::vector<unsigned> m_new_facts;

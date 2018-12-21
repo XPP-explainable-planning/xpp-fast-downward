@@ -17,6 +17,9 @@ public:
     static const int INFTY;
 
     EvaluationResult();
+    EvaluationResult(const EvaluationResult& other) = default;
+    EvaluationResult(EvaluationResult&& other) = default;
+    EvaluationResult& operator=(EvaluationResult&& other) = default;
 
     /* TODO: Can we do without this "uninitialized" business?
 

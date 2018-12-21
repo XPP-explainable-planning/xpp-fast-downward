@@ -180,4 +180,22 @@ void RelaxationHeuristic::simplify() {
 
     cout << " done! [" << unary_operators.size() << " unary operators]" << endl;
 }
+
+void
+RelaxationHeuristic::set_abstract_task(std::shared_ptr<AbstractTask> task)
+{
+    Heuristic::set_abstract_task(task);
+    for (Proposition* p : goal_propositions) {
+        p->is_goal = false;
+    }
+    goal_propositions.clear();
+    for (FactProxy goal : task_proxy.get_goals()) {
+        Proposition *prop = get_proposition(goal);
+        prop->is_goal = true;
+        goal_propositions.push_back(prop);
+    }
+}
+
+
+
 }
