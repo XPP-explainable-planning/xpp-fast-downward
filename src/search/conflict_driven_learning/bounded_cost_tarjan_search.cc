@@ -517,6 +517,7 @@ BoundedCostTarjanSearch::add_options_to_parser(options::OptionParser& parser)
     parser.add_option<int>("max_bound", "", options::OptionParser::NONE);
     parser.add_option<double>("step", "", "2.0");
     // parser.add_option<int>("learning_belt", "", options::OptionParser::NONE);
+    parser.add_option<Evaluator *>("preferred", "", options::OptionParser::NONE);
     add_cost_type_option_to_parser(parser);
     SearchEngine::add_options_to_parser(parser);
 }

@@ -17,22 +17,29 @@ class StateMinimizationNoGoods : public NoGoodFormula
 protected:
     using Formula = UBTreeFormula<unsigned>;
     Formula m_formula;
+    segmented_vector::SegmentedVector<std::vector<unsigned> > m_clauses;
+    std::map<unsigned, std::vector<unsigned> > m_conjs_to_clauses;
+
+    std::vector<unsigned> m_full_goal_facts;
+    std::vector<unsigned> m_full_goal_conjunction_ids;
+
+    std::vector<int> m_cur_goal_assignment;
+    std::vector<std::vector<int> > m_var_orders;
 
     std::vector<unsigned> m_clause;
     std::vector<unsigned> m_new_facts;
     std::vector<unsigned> m_reachable_conjunctions;
 
-    /* multiple goal sets support */
-    std::vector<unsigned> m_full_goal;
-    segmented_vector::SegmentedVector<std::vector<unsigned> > m_clauses;
-    std::map<unsigned, std::vector<unsigned> > m_conjs_to_clauses;
+
+    void setup_var_orders();
 
     virtual bool evaluate(const std::vector<unsigned> &conjunction_ids) override;
-    virtual void refine(const PartialState &state) override;
+    virtual void refine(const GlobalState &state) override;
 public:
     using NoGoodFormula::NoGoodFormula;
     virtual void initialize() override;
-    virtual void synchronize_goal() override;
+    virtual void synchronize_goal(std::shared_ptr<AbstractTask> task) override;
+    virtual void notify_on_new_conjunction(unsigned) override;
     virtual void print_statistics() const override;
 };
 

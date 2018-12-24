@@ -167,7 +167,7 @@ public:
     bool contains_set(const std::vector<K> &set) const;
     bool is_cut_by(const std::vector<K> &set) const;
 
-    Node *insert(const std::vector<K> &set);
+    std::pair<Node *, bool> insert(const std::vector<K> &set);
     void erase(unsigned, const std::vector<K> &set);
     void remove_all_supersets_of(const std::vector<K> &set);
 
@@ -507,10 +507,12 @@ bool UBTreeFormula<K>::is_cut_by(const std::vector<K> &set) const
 }
 
 template<typename K>
-typename UBTreeFormula<K>::Node *UBTreeFormula<K>::insert(
+std::pair<typename UBTreeFormula<K>::Node*, bool> UBTreeFormula<K>::insert(
     const std::vector<K> &set)
 {
-    return insert(m_root, set, 0);
+    std::pair<Node*, bool> res(NULL, false);
+    res.first = insert(m_root, set, 0, res.second);
+    return res;
 }
 
 template<typename K>

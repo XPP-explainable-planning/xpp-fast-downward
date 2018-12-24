@@ -32,6 +32,13 @@ ALIASES["xpp_ff_uc"] = [
         "--search", "goal_relation([dfs(eval=hff, learn=ucrn(hc=h), preferred=hff)], heu=[hff, h], all_soft_goals=true)"
         ]
 
+ALIASES["xpp_ids_ff_hc"] = [
+        "--heuristic", "h=hc(cache_estimates=false, nogoods=true, prune_subsumed_preconditions=false)",
+        "--heuristic", "hff=ff(cache_estimates=false)",
+        "--search", "goal_relation([bounded_cost_dfs(max_bound=infinity, bound=4, step=2, eval=hff, learn=hcrn(hc=h), preferred=hff)], heu=[hff, h], all_soft_goals=true)"
+        ]
+
+
 
 ALIASES["seq-sat-fd-autotune-1"] = [
     "--heuristic", "hff=ff(transform=adapt_costs(one))",
