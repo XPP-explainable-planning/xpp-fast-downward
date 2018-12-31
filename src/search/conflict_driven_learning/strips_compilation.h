@@ -9,8 +9,6 @@
 
 namespace conflict_driven_learning
 {
-namespace hc_heuristic
-{
 namespace strips
 {
 
@@ -78,16 +76,15 @@ struct Task {
 void initialize(const AbstractTask& task);
 void update_goal_set(const AbstractTask& task);
 const Task &get_task();
+unsigned get_fact_id(int var, int val);
 template<typename t_var, typename t_val>
 unsigned get_fact_id(const std::pair<t_var, t_val> &assignment)
 {
     return get_fact_id(assignment.first, assignment.second);
 }
-unsigned get_fact_id(const int &var, const int &val);
 std::pair<int, int> get_variable_assignment(const unsigned& fact_id);
 std::size_t num_facts();
 
-}
 }
 }
 

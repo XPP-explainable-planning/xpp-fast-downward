@@ -1,6 +1,7 @@
 #ifndef HC_HEURISTIC_H
 #define HC_HEURISTIC_H
 
+#include "partial_state_evaluator.h"
 #include "../algorithms/segmented_vector.h"
 #include "../algorithms/priority_queues.h"
 #include "../heuristic.h"
@@ -75,6 +76,7 @@ protected:
 public:
     NoGoodFormula(std::shared_ptr<AbstractTask> task,
                   HCHeuristic *hc);
+    virtual ~NoGoodFormula() = default;
     virtual void initialize() {}
     virtual void synchronize_goal(std::shared_ptr<AbstractTask>) { }
     virtual void notify_on_new_conjunction(unsigned) {}
@@ -85,7 +87,7 @@ public:
     virtual void print_statistics() const = 0;
 };
 
-class HCHeuristic : public Heuristic
+class HCHeuristic : public Heuristic, public PartialStateEvaluator
 {
 protected:
     const bool c_prune_subsumed_preconditions;
@@ -129,7 +131,7 @@ protected:
 
     virtual int compute_heuristic(const GlobalState &state) override;
 
-    void initialize();
+    void initialize(unsigned m);
 public:
     static const int DEAD_END;
 
@@ -138,6 +140,7 @@ public:
     virtual void set_abstract_task(std::shared_ptr<AbstractTask> task) override;
 
     int evaluate(const GlobalState& state);
+    virtual int evaluate_partial_state(const PartialState& state) override;
 
     bool set_early_termination(bool t);
     bool set_early_termination_and_nogoods(bool e);

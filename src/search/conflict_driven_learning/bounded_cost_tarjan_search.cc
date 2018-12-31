@@ -28,7 +28,6 @@ namespace conflict_driven_learning {
 namespace bounded_cost {
 
 static const int INF = std::numeric_limits<int>::max();
-static const int NEGINF = std::numeric_limits<int>::min();
 static const int UNDEFINED = (INF - 1);
 
 static int _get_bound(const int& status) 
@@ -153,7 +152,7 @@ bool BoundedCostTarjanSearch::evaluate(const GlobalState& state,
         return true;
     }
     EvaluationContext ctxt(state);
-    m_eval_result = std::move(eval->compute_result(ctxt));
+    m_eval_result = eval->compute_result(ctxt);
     if (m_eval_result.is_infinite()) {
         return false;
     }

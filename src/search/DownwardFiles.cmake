@@ -777,6 +777,9 @@ fast_downward_plugin(
         conflict_driven_learning/bounded_cost_tarjan_search
         conflict_driven_learning/hc_heuristic_refiner
         conflict_driven_learning/hc_neighbors_refinement
+
+        conflict_driven_learning/partial_state_evaluator
+        conflict_driven_learning/trap_unsat_heuristic
     )
 
 fast_downward_add_plugin_sources(PLANNER_SOURCES)

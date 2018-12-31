@@ -112,7 +112,7 @@ bool TarjanSearch::evaluate(const GlobalState& state, Evaluator* eval)
         return true;
     }
     EvaluationContext ctxt(state);
-    m_eval_result = std::move(eval->compute_result(ctxt));
+    m_eval_result = eval->compute_result(ctxt);
     if (m_eval_result.is_infinite()) {
         return false;
     }
@@ -125,7 +125,7 @@ bool TarjanSearch::evaluate_dead_end_heuristic(const GlobalState& state)
         return false;
     }
     EvaluationContext ctxt(state);
-    EvaluationResult res = std::move(m_dead_end_identifier->compute_result(ctxt));
+    EvaluationResult res = m_dead_end_identifier->compute_result(ctxt);
     if (res.is_infinite()) {
         return true;
     }

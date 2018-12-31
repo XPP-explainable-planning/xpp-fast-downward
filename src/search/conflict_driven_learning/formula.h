@@ -179,7 +179,6 @@ public:
 
     size_t size() const;
 
-    void resize(size_t) {}
     void print() const;
     void clear();
 };

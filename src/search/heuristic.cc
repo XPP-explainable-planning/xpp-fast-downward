@@ -115,3 +115,7 @@ int Heuristic::get_cached_estimate(const GlobalState &state) const {
     assert(is_estimate_cached(state));
     return heuristic_cache[state].h;
 }
+
+std::shared_ptr<AbstractTask> Heuristic::get_abstract_task() const {
+    return task;
+}
