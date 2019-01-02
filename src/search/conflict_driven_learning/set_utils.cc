@@ -139,7 +139,7 @@ std::pair<typename C::iterator, bool> insert_get_position(
 }
 
 template<typename C, typename T>
-bool erase(C &v, const T &elem)
+bool remove(C &v, const T &elem)
 {
     typename C::iterator i =
         lower_bound(v.begin(), v.end(), elem);
@@ -151,14 +151,14 @@ bool erase(C &v, const T &elem)
 }
 
 template<typename C, typename T>
-void erase_lower_bound(C &v, const T &elem)
+void remove_lower_bound(C &v, const T &elem)
 {
     assert(lower_bound(v.begin(), v.end(), elem) != v.end());
     v.erase(lower_bound(v.begin(), v.end(), elem));
 }
 
 template<typename C, typename T, typename Compare>
-void erase_lower_bound(C &v, const T &elem, Compare &compare)
+void remove_lower_bound(C &v, const T &elem, Compare &compare)
 {
     assert(lower_bound(v.begin(), v.end(), elem, compare) != v.end());
     v.erase(lower_bound(v.begin(), v.end(), elem, compare));
@@ -285,6 +285,13 @@ bool disjoint(const C &x, const C &y)
         }
     }
     return true;
+}
+
+template<typename C>
+bool is_set(C& c)
+{
+    return std::is_sorted(c.begin(), c.end())
+        && std::unique(c.begin(), c.end()) == c.end();
 }
 
 }

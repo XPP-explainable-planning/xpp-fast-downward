@@ -151,8 +151,11 @@ void initialize(const AbstractTask& task)
         }
 
         std::sort(action.pre.begin(), action.pre.end());
+        action.pre.erase(std::unique(action.pre.begin(), action.pre.end()), action.pre.end());
         std::sort(action.add.begin(), action.add.end());
+        action.add.erase(std::unique(action.add.begin(), action.add.end()), action.add.end());
         std::sort(action.del.begin(), action.del.end());
+        action.del.erase(std::unique(action.del.begin(), action.del.end()), action.del.end());
     }
 
     update_goal_set(task);

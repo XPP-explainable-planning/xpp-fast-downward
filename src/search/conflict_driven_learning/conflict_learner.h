@@ -28,7 +28,7 @@ public:
     bool notify_dead_end_component(StateComponent &&component,
                                    StateComponent &&recognized_neighbors);
 
-    virtual std::shared_ptr<Evaluator> get_underlying_heuristic() = 0;
+    virtual Evaluator* get_underlying_heuristic() = 0;
 
     virtual bool requires_recognized_neighbors() const;
     virtual void print_statistics() const;

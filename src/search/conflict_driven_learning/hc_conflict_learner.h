@@ -21,7 +21,7 @@ protected:
 public:
     HCConflictLearner(const options::Options &opts);
     bool size_limit_reached() const;
-    virtual std::shared_ptr<Evaluator> get_underlying_heuristic() override;
+    virtual Evaluator* get_underlying_heuristic() override;
     static void add_options_to_parser(options::OptionParser &parser);
 };
 

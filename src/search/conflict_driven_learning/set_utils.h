@@ -47,15 +47,15 @@ std::pair<typename C::iterator, bool> insert_get_position(
 
 
 template<typename C, typename T>
-bool erase(C &v, const T &elem);
+bool remove(C &v, const T &elem);
 
 
 template<typename C, typename T>
-void erase_lower_bound(C &v, const T &elem);
+void remove_lower_bound(C &v, const T &elem);
 
 
 template<typename C, typename T, typename Compare>
-void erase_lower_bound(C &v, const T &elem, Compare &compare);
+void remove_lower_bound(C &v, const T &elem, Compare &compare);
 
 
 template<typename C>
@@ -76,6 +76,9 @@ void inplace_intersection(C &dest, const C &src);
 
 template<typename C>
 bool disjoint(const C &x, const C &y);
+
+template<typename C>
+bool is_set(C& c);
 
 }
 

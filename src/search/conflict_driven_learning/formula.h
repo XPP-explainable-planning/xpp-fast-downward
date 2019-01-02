@@ -45,13 +45,13 @@ public:
     bool delete_element(unsigned id, const std::vector<unsigned> &, unsigned elem)
     {
         m_sizes[id]--;
-        set_utils::erase(m_rel[elem], id);
+        set_utils::remove(m_rel[elem], id);
         return true;
     }
     void erase(unsigned id, const std::vector<unsigned> &set)
     {
         for (const unsigned &x : set) {
-            set_utils::erase(m_rel[x], id);
+            set_utils::remove(m_rel[x], id);
         }
     }
     template<typename Callback>
@@ -62,6 +62,19 @@ public:
         for (const unsigned &x : set) {
             for (const unsigned &y : m_rel[x]) {
                 if (++m_subset[y] == m_sizes[y]) {
+                    callback(y);
+                }
+            }
+        }
+    }
+    template<typename Callback>
+    void forall_supersets(const std::vector<unsigned> &set, const Callback &callback)
+    {
+        assert(d_initialized);
+        std::fill(m_subset.begin(), m_subset.end(), 0);
+        for (const unsigned &x : set) {
+            for (const unsigned &y : m_rel[x]) {
+                if (++m_subset[y] == set.size()) {
                     callback(y);
                 }
             }

@@ -1,14 +1,17 @@
 #include "trap_unsat_heuristic.h"
 #include "strips_compilation.h"
 #include "partial_state_evaluator.h"
+#include "set_utils.h"
 #include "../option_parser.h"
 #include "../plugin.h"
 #include "../global_state.h"
 #include "../utils/timer.h"
 
+#include <algorithm>
 #include <cassert>
 #include <iostream>
 #include <cstdio>
+#include <set>
 
 namespace conflict_driven_learning {
 namespace traps {
@@ -19,6 +22,7 @@ TrapUnsatHeuristic::TrapUnsatHeuristic(const options::Options& opts)
     strips::initialize(*task);
     m_task = &strips::get_task();
     m_formula.set_num_keys(strips::num_facts());
+    m_formula_all.set_num_keys(strips::num_facts());
     std::vector<Evaluator*> evals = opts.get_list<Evaluator*>("evaluators");
     for (unsigned i = 0; i < evals.size(); i++) {
         m_evaluators.push_back(dynamic_cast<PartialStateEvaluator*>(evals[i]));
@@ -103,7 +107,7 @@ TrapUnsatHeuristic::initialize(unsigned k)
                 fact_ids.push_back(fact_id);
                 if (e.goalvar) {
                     m_conjunctions.push_back(fact_ids);
-                    m_formula.insert(fact_ids);
+                    m_formula_all.insert(fact_ids);
                     m_mutex_with_goal.push_back(e.is_goal_mutex || goal_mutex);
                     if (m_mutex_with_goal.back()) { num_mutex++; }
                 }
@@ -130,17 +134,18 @@ TrapUnsatHeuristic::initialize(unsigned k)
         unsigned num_transitions = 0;
         for (unsigned i = 0; i < m_conjunctions.size(); i++) {
             const std::vector<unsigned>& conj = m_conjunctions[i];
-            for_every_post_action(conj, [&](unsigned op) {
+            for_every_progression_action(conj, [&](unsigned op) {
                 progression(conj, op, progress);
                 m_hyperarcs.push_back(ForwardHyperTransition(op, i));
                 ForwardHyperTransition& arc = m_hyperarcs[num_transitions];
                 assert(!m_task->contains_mutex(progress));
                 unsigned num = 0;
-                m_formula.forall_subsets(progress, [&](unsigned id) {
+                m_formula_all.forall_subsets(progress, [&](unsigned id) {
                     m_dest_to_transition_ids[id].push_back(num_transitions);
                     arc.destinations.push_back(id);
                     num++;
                 });
+                std::sort(arc.destinations.begin(), arc.destinations.end());
                 m_src_to_transition_ids[i].push_back(num_transitions);
                 progress.clear();
                 m_num_post_conjunctions.push_back(num);
@@ -151,8 +156,10 @@ TrapUnsatHeuristic::initialize(unsigned k)
                 num_transitions++;
                 return false;
             });
+            std::sort(m_src_to_transition_ids[i].begin(), m_src_to_transition_ids[i].end(), [&](const unsigned& i, const unsigned& j) {
+                return m_hyperarcs[i].label < m_hyperarcs[j].label;
+            });
         }
-        m_formula.clear();
         std::cout << "Found " << num_transitions << " transitions, of which "
             << m_no_post_transitions.size() << " have empty post set" << std::endl;
 
@@ -260,8 +267,8 @@ TrapUnsatHeuristic::are_mutex(const std::vector<unsigned> &phi,
     return false;
 }
 
-void
-TrapUnsatHeuristic::for_every_post_action(
+bool
+TrapUnsatHeuristic::for_every_progression_action(
         const std::vector<unsigned>& phi,
         std::function<bool(unsigned)> callback)
 {
@@ -286,51 +293,75 @@ TrapUnsatHeuristic::for_every_post_action(
             break;
         }
     }
+    return skip;
 }
 
-void
-TrapUnsatHeuristic::forward_mark_unreachable(std::vector<unsigned>& queue)
+bool
+TrapUnsatHeuristic::for_every_regression_action(
+        const std::vector<unsigned>& conj,
+        std::function<bool(unsigned)> callback)
 {
-    while (!queue.empty()) {
-        unsigned x = queue.back();
-        queue.pop_back();
-        const std::vector<unsigned>& ts = m_src_to_transition_ids[x];
-        for (int i = ts.size() - 1; i >= 0; i--) {
-            const ForwardHyperTransition& t = m_hyperarcs[ts[i]];
-            for (int j = t.destinations.size() - 1; j >= 0; j--) {
-                unsigned y = t.destinations[j];
-                if (m_goal_reachable[y] != -1) {
-                    m_goal_reachable[y] = -1;
-                    queue.push_back(y);
+    static std::vector<bool> closed;
+    closed.resize(m_task->num_actions());
+    std::fill(closed.begin(), closed.end(), false);
+    for (const unsigned& p : conj) {
+        const std::vector<unsigned>& ops = m_task->get_actions_with_del(p);
+        for (const unsigned& op : ops) {
+            closed[op] = true;
+        }
+    }
+    for (const unsigned& p : conj) {
+        const std::vector<unsigned>& ops = m_task->get_actions_with_add(p);
+        bool done = false;
+        for (const unsigned& op : ops) {
+            if (!closed[op]) {
+                closed[op] = true;
+                if (callback(op)) {
+                    done = true;
+                    break;
                 }
             }
         }
+        if (done) {
+            return true;
+        }
     }
+    return false;
 }
 
 void
 TrapUnsatHeuristic::propagate_reachability_setup_formula()
 {
     m_goal_reachable.resize(m_conjunctions.size());
-    std::fill(m_goal_reachable.begin(), m_goal_reachable.end(), 0);
+    std::fill(m_goal_reachable.begin(), m_goal_reachable.end(), 1);
 
-    std::vector<unsigned> exploration_queue;
-
-    // forward analysis using external information
     if (m_evaluators.size() > 0) {
         for (unsigned i = 0; i < m_conjunctions.size(); i++) {
             if (m_goal_reachable[i] == 0 && are_dead_ends(m_conjunctions[i])) {
                 m_goal_reachable[i] = -1;
-                exploration_queue.push_back(i);
-                forward_mark_unreachable(exploration_queue);
+                m_formula.insert(m_conjunctions[i]);
             }
         }
     }
 
-    // backward reachability analysis
+    update_reachability_insert_conjunctions();
+}
+
+
+void
+TrapUnsatHeuristic::update_reachability_insert_conjunctions()
+{
+    std::vector<bool> was_unreachable(m_conjunctions.size(), false);
+
+    std::vector<unsigned> exploration_queue;
     std::vector<unsigned> open(m_num_post_conjunctions);
     for (unsigned i = 0; i < m_mutex_with_goal.size(); i++) {
-        if (!m_mutex_with_goal[i] && m_goal_reachable[i] == 0) {
+        was_unreachable[i] = m_goal_reachable[i] <= 0;
+        if (m_goal_reachable[i] == -1) {
+            continue;
+        }
+        m_goal_reachable[i] = 0;
+        if (!m_mutex_with_goal[i]) {
             exploration_queue.push_back(i);
             m_goal_reachable[i] = 1;
         }
@@ -356,11 +387,160 @@ TrapUnsatHeuristic::propagate_reachability_setup_formula()
             }
         }
     }
+
     for (unsigned i = 0; i < m_conjunctions.size(); i++) {
-        if (m_goal_reachable[i] != 1) {
+        if (!was_unreachable[i] && m_goal_reachable[i] <= 0) {
             m_formula.insert(m_conjunctions[i]);
         }
     }
+}
+
+TrapUnsatHeuristic::Formula&
+TrapUnsatHeuristic::get_all_conjunctions_formula()
+{
+    return m_formula_all;
+}
+
+const TrapUnsatHeuristic::Formula&
+TrapUnsatHeuristic::get_all_conjunctions_formula() const
+{
+    return m_formula_all;
+}
+
+bool
+TrapUnsatHeuristic::can_reach_goal(unsigned conjid) const
+{
+    return m_goal_reachable[conjid] >= 1;
+}
+
+std::pair<unsigned, bool>
+TrapUnsatHeuristic::insert_conjunction(const std::vector<unsigned>& conj)
+{
+#ifndef NDEBUG
+    bool mutex = false;
+    for (unsigned i = 0; i < conj.size(); i++) {
+        mutex = mutex || m_task->are_mutex(conj[i], m_task->get_goal());
+    }
+    assert(mutex);
+#endif
+    unsigned conj_id = -1;
+    m_formula_all.forall_subsets(conj, [&](unsigned id) {
+        if (m_conjunctions[id].size() == conj.size()) {
+            conj_id = id;
+        }
+    });
+    if (conj_id != (unsigned) -1) {
+        assert(m_mutex_with_goal[conj_id]);
+        if (m_goal_reachable[conj_id] == 1) {
+            m_goal_reachable[conj_id] = 0;
+            m_formula.insert(conj);
+        }
+        return std::pair<unsigned, bool>(conj_id, false);
+    } else {
+        m_conjunctions.push_back(conj);
+        m_formula.insert(conj);
+        m_formula_all.insert(conj);
+        m_mutex_with_goal.push_back(true);
+        m_goal_reachable.push_back(0);
+        m_src_to_transition_ids.push_back(std::vector<unsigned>{});
+        m_dest_to_transition_ids.push_back(std::vector<unsigned>{});
+        return std::pair<unsigned, bool>(m_conjunctions.size() - 1, true);
+    }
+}
+
+void
+TrapUnsatHeuristic::set_transitions(
+        unsigned conj_id,
+        std::vector<ForwardHyperTransition>&& transitions)
+{
+    if (transitions.empty()) {
+        return;
+    }
+    std::sort(transitions.begin(), transitions.end(), [](const ForwardHyperTransition& t1, const ForwardHyperTransition& t2) {
+        return t1.label < t2.label;
+    });
+    std::vector<unsigned>& ts = m_src_to_transition_ids[conj_id];
+    if (ts.empty()) {
+        int i = m_hyperarcs.size();
+        unsigned num_transitions = m_hyperarcs.size() + transitions.size();
+        m_hyperarcs.resize(num_transitions, ForwardHyperTransition(-1, -1));
+        m_transition_source.resize(num_transitions, conj_id);
+        m_num_post_conjunctions.resize(num_transitions, 0);
+        for (unsigned j = 0; j < transitions.size(); j++) {
+            m_hyperarcs[i] = std::move(transitions[j]);
+            ForwardHyperTransition& t = m_hyperarcs[i];
+            std::sort(t.destinations.begin(), t.destinations.end());
+            m_num_post_conjunctions[i] = t.destinations.size();
+            for (const unsigned& dest : t.destinations) {
+                m_dest_to_transition_ids[dest].push_back(i);
+            }
+            if (t.destinations.empty()) {
+                m_no_post_transitions.push_back(i);
+            }
+            ts.push_back(i);
+            i++;
+        }
+    } else {
+        assert(transitions.size() == ts.size());
+        for (unsigned i = 0; i < ts.size(); i++) {
+            unsigned idx = ts[i];
+            assert(m_hyperarcs[idx].label == transitions[i].label);
+            assert(transitions[i].destinations.size() >= m_num_post_conjunctions[idx]);
+            bool was_empty = m_num_post_conjunctions[i] == 0;
+            if (m_num_post_conjunctions[i] == transitions[i].destinations.size()) {
+                assert(m_hyperarcs[idx] == transitions[i]);
+                continue;
+            }
+            m_hyperarcs[idx] = std::move(transitions[i]);
+            m_num_post_conjunctions[idx] = m_hyperarcs[idx].destinations.size();
+            for (const unsigned& dest : m_hyperarcs[idx].destinations) {
+                set_utils::insert(m_dest_to_transition_ids[dest], idx);
+            }
+            if (was_empty) {
+                assert(m_num_post_conjunctions[idx] > 0);
+                set_utils::remove(m_no_post_transitions, idx);
+            }
+        }
+    }
+}
+
+bool
+TrapUnsatHeuristic::evaluate_check_dead_end(const GlobalState& state)
+{
+    return compute_heuristic(state) == DEAD_END;
+}
+
+bool
+TrapUnsatHeuristic::add_to_transition_post(
+        const unsigned& source,
+        const unsigned& op,
+        const unsigned& dest)
+{
+    const std::vector<unsigned>& ts = m_src_to_transition_ids[source];
+    auto it = std::lower_bound(ts.begin(), ts.end(), op, [&](const unsigned& x, const unsigned& y) {
+        assert(y == op);
+        return m_hyperarcs[x].label < y;
+    });
+    if (it == ts.end() || m_hyperarcs[*it].label != op) {
+        return false;
+    }
+    unsigned idx = *it;
+    m_hyperarcs[idx].destinations.push_back(dest);
+    assert(set_utils::is_set(m_hyperarcs[idx].destinations));
+    m_num_post_conjunctions[idx]++;
+    m_dest_to_transition_ids[dest].push_back(idx);
+    return true;
+}
+
+bool
+ForwardHyperTransition::operator==(const ForwardHyperTransition& other) const
+{
+    if (label != other.label || source != other.source) {
+        return false;
+    }
+    std::set<unsigned> d1(destinations.begin(), destinations.end());
+    std::set<unsigned> d2(other.destinations.begin(), other.destinations.end());
+    return d1 == d2;
 }
 
 }
@@ -372,6 +552,7 @@ _parse(options::OptionParser& parser)
     conflict_driven_learning::traps::TrapUnsatHeuristic::add_options_to_parser(parser);
     Options opts = parser.parse();
     if (!parser.dry_run()) {
+        opts.set<bool>("cache_estimates", false);
         return new conflict_driven_learning::traps::TrapUnsatHeuristic(opts);
     }
     return nullptr;

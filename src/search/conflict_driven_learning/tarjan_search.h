@@ -63,7 +63,7 @@ protected:
     Evaluator* m_guidance;
     Evaluator* m_preferred;
     std::set<Evaluator*> m_path_dependent_evaluators;
-    std::shared_ptr<Evaluator> m_dead_end_identifier;
+    Evaluator* m_dead_end_identifier;
     std::shared_ptr<ConflictLearner> m_learner;
 
     SearchSpace m_search_space;
