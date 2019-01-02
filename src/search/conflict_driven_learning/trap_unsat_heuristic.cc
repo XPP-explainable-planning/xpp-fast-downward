@@ -23,7 +23,7 @@ TrapUnsatHeuristic::TrapUnsatHeuristic(const options::Options& opts)
     m_task = &strips::get_task();
     m_formula.set_num_keys(strips::num_facts());
     m_formula_all.set_num_keys(strips::num_facts());
-    std::vector<Evaluator*> evals = opts.get_list<Evaluator*>("evaluators");
+    std::vector<Evaluator*> evals = opts.get_list<Evaluator*>("evals");
     for (unsigned i = 0; i < evals.size(); i++) {
         m_evaluators.push_back(dynamic_cast<PartialStateEvaluator*>(evals[i]));
         assert(m_evaluators.back() != nullptr);
@@ -35,7 +35,7 @@ void
 TrapUnsatHeuristic::add_options_to_parser(options::OptionParser& parser)
 {
     parser.add_option<int>("k", "", "0");
-    parser.add_list_option<Evaluator *>("evaluators", "", "[]");
+    parser.add_list_option<Evaluator *>("evals", "", "[]");
     Heuristic::add_options_to_parser(parser);
 }
 
