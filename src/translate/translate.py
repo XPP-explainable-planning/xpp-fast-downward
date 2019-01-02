@@ -753,6 +753,7 @@ def main():
 def addPlanProperties(task, sas_task):
     #action set properties
     path = options.plan_property
+    print("----------------------------------------------------------------------------------------------")
     print("Plan property path: ", path)
     if path == "None":
         return

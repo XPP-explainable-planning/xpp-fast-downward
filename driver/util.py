@@ -31,9 +31,11 @@ def find_domain_filename(task_filename):
     domain_basenames = [
         "domain.pddl",
         basename[:3] + "-domain.pddl",
+        basename.replace(".pddl","") + "-domain.pddl",
         "domain_" + basename,
         "domain-" + basename,
     ]
+    print(domain_basenames)
 
     for domain_basename in domain_basenames:
         domain_filename = os.path.join(dirname, domain_basename)

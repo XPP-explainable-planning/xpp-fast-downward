@@ -124,21 +124,26 @@ class ActionSet:
         newActionSet = ActionSet(name)
         #print("Number of actions: " + str(number))
 
-        for n in range(number):
+        n = 0
+        #for n in range(number):
+        while True:
 
             line = lines.pop(0)
             #print(line)
 
             # ignore comment and empty lines
-            if line.startswith("#") or line == "\n" or line == "":
+            if line.startswith("#"):
                 continue
+
+            if line == "\n" or line == "": # stop action set definition if there is a newline
+                break
 
             actionString = line.replace("\n","")
             newActionSet.addDefinition(actionString)               
 
             n += 1
 
-        
+        #print("Num actions: " + str(n))
         return (newActionSet, lines)
 
     def generateActions(self, typeObjectMap):
@@ -191,6 +196,7 @@ class ActionSet:
         if parts[0] in self.action_dict:
             if self.action_dict[parts[0]].match(parts[1:]):
                 self.number_of_contained_ops += 1
+                #print(op.name)
                 return True
         return False
 
@@ -500,9 +506,11 @@ class ActionSetProperties:
 
 
         # every action in the set assigns the corresponsing variable to true
-        for op in sas_task.operators:
-            for (n,s) in self.actionSets.iteritems():
-                #if the action is in the action set than is assigns the variable to True/Used
+        for (n,s) in self.actionSets.iteritems():
+            #print("-------------------------------------------------------------------")
+            #print(s.name)
+            for op in sas_task.operators:        
+                #if the action is in the action set than is assigns the variable to True/Used              
                 if s.containsOperator(op):
                     op.pre_post.append((s.var_id, -1, 1, []))
         
@@ -587,6 +595,8 @@ def parseActionSetProperty(path, typeObjectMap):
 
     while len(lines) > 0:
         line = lines[0].replace("\n","") 
+
+        #print(line)
         
 
         # ignore comment and empty lines
