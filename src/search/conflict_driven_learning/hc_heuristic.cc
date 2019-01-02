@@ -23,62 +23,7 @@ namespace conflict_driven_learning
 namespace hc_heuristic
 {
 
-PartialState::PartialState() {}
-
-PartialState::PartialState(const PartialState &state)
-    : m_values(state.m_values) {}
-
-PartialState::PartialState(size_t size)
-    : m_values(size)
-{}
-
-void PartialState::copy_from(const GlobalState &state)
-{
-    // assert(m_values.size() == g_variable_domain.size());
-    for (unsigned var = 0; var < m_values.size(); var++) {
-        m_values[var] = state[var];
-    }
-#ifndef NDEBUG
-    for (unsigned var = 0; var < m_values.size(); var++) {
-        assert(is_defined(var) && m_values[var] == state[var]);
-    }
-#endif
-}
-
-void PartialState::clear(unsigned i)
-{
-    m_values[i] = UNDEFINED;
-}
-
-void PartialState::clear()
-{
-    std::fill(m_values.begin(), m_values.end(), UNDEFINED);
-}
-
-void PartialState::resize(unsigned size)
-{
-    m_values.resize(size, UNDEFINED);
-}
-
-int &PartialState::operator[](unsigned i)
-{
-    assert(i < m_values.size());
-    return m_values[i];
-}
-
-int PartialState::operator[](unsigned i) const
-{
-    assert(i < m_values.size());
-    return m_values[i];
-}
-
-bool PartialState::is_defined(unsigned i) const
-{
-    assert(i < m_values.size());
-    return m_values[i] != UNDEFINED;
-}
-
-NoGoodFormula::NoGoodFormula(const AbstractTask& task,
+NoGoodFormula::NoGoodFormula(std::shared_ptr<AbstractTask> task,
                              HCHeuristic* hc)
     : m_task(task)
     , m_hc(hc)
@@ -102,7 +47,7 @@ bool NoGoodFormula::evaluate_formula(
 }
 
 void NoGoodFormula::refine_formula(
-    const PartialState &state)
+    const GlobalState &state)
 {
     if (m_hc == NULL) {
         return;
@@ -129,7 +74,7 @@ HCHeuristic::HCHeuristic(const options::Options &opts)
       c_prune_subsumed_preconditions(opts.get<bool>("prune_subsumed_preconditions")),
       c_early_termination(true),
       m_hc_evaluations(0),
-      m_nogood_formula(opts.get<bool>("nogoods") ? std::unique_ptr<StateMinimizationNoGoods>(new StateMinimizationNoGoods(*task, this)) : nullptr)
+      m_nogood_formula(opts.get<bool>("nogoods") ? std::unique_ptr<StateMinimizationNoGoods>(new StateMinimizationNoGoods(task, this)) : nullptr)
       // m_nogood_formula(opts.contains("nogoods") ?
       //                  opts.get<NoGoodFormula * >("nogoods") : NULL)
 {
@@ -143,8 +88,6 @@ void HCHeuristic::initialize()
     strips::initialize(*task);
 
     utils::Timer timer_init;
-
-    m_partial_state.resize(task->get_num_variables());
 
     const strips::Task &strips_task = strips::get_task();
     std::vector<std::vector<unsigned> > temp_precondition;
@@ -505,6 +448,9 @@ HCHeuristic::insert_conjunction_and_update_data_structures(
     }
 
     update_fact_conjunction_mapping(conj, newconjid);
+    if (m_nogood_formula != nullptr) {
+        m_nogood_formula->notify_on_new_conjunction(newconjid);
+    }
 
     return std::pair<unsigned, bool>(newconjid, true);
 }
@@ -521,13 +467,6 @@ unsigned HCHeuristic::insert_conjunction(const std::vector<unsigned> &conj,
     return res;
 }
 
-void HCHeuristic::refine_nogood_formulas(const PartialState &state)
-{
-    if (m_nogood_formula) {
-        m_nogood_formula->refine_formula(state);
-    }
-}
-
 unsigned HCHeuristic::create_counter(unsigned action_id,
                                      int action_cost,
                                      ConjunctionData *eff)
@@ -542,59 +481,26 @@ unsigned HCHeuristic::create_counter(unsigned action_id,
     return res;
 }
 
-int HCHeuristic::heuristic_computation_wrapper(
-    const std::vector<unsigned> &conjids)
+int HCHeuristic::compute_heuristic(const GlobalState &state)
 {
-    if (c_nogood_evaluation_enabled && m_nogood_formula != nullptr
-        && m_nogood_formula->evaluate_formula(conjids)) {
+    m_state.clear();
+    get_satisfied_conjunctions(state, m_state);
+    if (c_nogood_evaluation_enabled
+        && m_nogood_formula != nullptr
+        && m_nogood_formula->evaluate_formula(m_state)) {
 #ifndef NDEBUG
         cleanup_previous_computation();
-        assert(compute_heuristic(conjids) == DEAD_END);
+        assert(compute_heuristic(m_state) == DEAD_END);
 #endif
         return DEAD_END;
     }
     m_hc_evaluations++;
     cleanup_previous_computation();
-    int res = compute_heuristic(conjids);
+    int res = compute_heuristic(m_state);
     if (res == DEAD_END && c_nogood_evaluation_enabled) {
-        refine_nogood_formulas(m_partial_state);
+        m_nogood_formula->refine_formula(state);
     }
     return res;
-}
-
-int HCHeuristic::compute_heuristic(const GlobalState &state)
-{
-    m_state.clear();
-    m_partial_state.copy_from(state);
-    get_satisfied_conjunctions(state, m_state);
-    return heuristic_computation_wrapper(m_state);
-}
-
-int HCHeuristic::compute_heuristic(
-    const PartialState &partial)
-{
-    m_state.clear();
-    for (int var = 0; var < task->get_num_variables(); var++) {
-        m_partial_state[var] = partial[var];
-        if (partial.is_defined(var)) {
-            m_state.push_back(strips::get_fact_id(
-                                  var,
-                                  partial[var]));
-        } else {
-            unsigned p_start = strips::get_fact_id(var, 0);
-            unsigned p_end = var == task->get_num_variables() - 1 ?
-                             strips::num_facts() : strips::get_fact_id(var + 1, 0);
-            for (unsigned p = p_start; p < p_end; p++) {
-                m_state.push_back(p);
-            }
-        }
-    }
-    get_satisfied_conjunctions(m_state, [this](const unsigned & i) {
-        if (i >= strips::num_facts()) {
-            m_state.push_back(i);
-        }
-    });
-    return heuristic_computation_wrapper(m_state);
 }
 
 int HCHeuristic::compute_heuristic_incremental(
@@ -623,14 +529,15 @@ void HCHeuristic::revert_incremental_computation(
             --m_subset_count[cid];
         }
     }
-    m_goal_conjunction.cost = ConjunctionData::UNACHIEVED;
     for (const unsigned &cid : reachable_conjunctions) {
         ConjunctionData &data = m_conjunction_data[cid];
         data.cost = ConjunctionData::UNACHIEVED;
         for (Counter *counter : data.pre_of) {
             counter->unsat++;
+            counter->max_pre = NULL;
         }
     }
+    assert(m_goal_conjunction.cost = ConjunctionData::UNACHIEVED);
 }
 
 bool HCHeuristic::set_early_termination(bool t)
@@ -859,7 +766,7 @@ void HCHeuristic::set_abstract_task(std::shared_ptr<AbstractTask> task)
     m_counters[m_goal_counter].preconditions = goal_conjunctions.size();
 
     if (m_nogood_formula != nullptr) {
-        m_nogood_formula->synchronize_goal();
+        m_nogood_formula->synchronize_goal(task);
     }
 }
 
@@ -950,6 +857,7 @@ int HCHeuristicUnitCost::compute_heuristic(const std::vector<unsigned> &state)
             }
         }
     }
+    assert(!m_goal_conjunction.achieved() || m_goal_conjunction.cost > 0);
     return m_goal_conjunction.achieved() ? m_goal_conjunction.cost - 1 : DEAD_END;
 }
 
@@ -1067,6 +975,18 @@ int HCHeuristicGeneralCost::compute_heuristic_get_reachable_conjunctions(
     return m_goal_conjunction.achieved() ? m_goal_conjunction.cost : DEAD_END;
 }
 
+int UCHeuristic::compute_heuristic(const std::vector<unsigned> &state)
+{
+    return HCHeuristicUnitCost::compute_heuristic(state) == DEAD_END ? DEAD_END : 0;
+}
+
+int UCHeuristic::compute_heuristic_get_reachable_conjunctions(
+    std::vector<unsigned> &reachable)
+{
+    return HCHeuristicUnitCost::compute_heuristic(reachable) == DEAD_END ? DEAD_END : 0;
+}
+
+
 }
 }
 
@@ -1086,4 +1006,16 @@ _parse(options::OptionParser& parser)
     return NULL;
 }
 
+static Heuristic*
+_parse_uc(options::OptionParser& parser)
+{
+    conflict_driven_learning::hc_heuristic::HCHeuristic::add_options_to_parser(parser);
+    options::Options opts = parser.parse();
+    if (!parser.dry_run()) {
+        return new conflict_driven_learning::hc_heuristic::UCHeuristic(opts);
+    }
+    return NULL;
+}
+
 static Plugin<Evaluator> _plugin_hc("hc", _parse);
+static Plugin<Evaluator> _plugin_uc("uc", _parse_uc);

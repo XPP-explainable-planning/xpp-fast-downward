@@ -11,6 +11,35 @@ PORTFOLIO_DIR = os.path.join(DRIVER_DIR, "portfolios")
 ALIASES = {}
 
 
+ALIASES["xpp_blind"] = [
+        "--heuristic", "hb=blind",
+        "--search", "goal_relation([astar(hb)], heu=[hb], all_soft_goals=true)"
+        ]
+
+ALIASES["xpp_ff"] = [
+        "--heuristic", "hff=ff(cache_estimates=false)",
+        "--search", "goal_relation([lazy_greedy([hff], preferred=[hff])], heu=[hff], all_soft_goals=true)"
+        ]
+
+ALIASES["xpp_blind_uc"] = [
+        "--heuristic", "h=hc(cache_estimates=false, nogoods=true, prune_subsumed_preconditions=false)",
+        "--search", "goal_relation([dfs(learn=ucrn(hc=h))], heu=[h], all_soft_goals=true)"
+        ]
+
+ALIASES["xpp_ff_uc"] = [
+        "--heuristic", "h=hc(cache_estimates=false, nogoods=true, prune_subsumed_preconditions=false)",
+        "--heuristic", "hff=ff(cache_estimates=false)",
+        "--search", "goal_relation([dfs(eval=hff, learn=ucrn(hc=h), preferred=hff)], heu=[hff, h], all_soft_goals=true)"
+        ]
+
+ALIASES["xpp_ids_ff_hc"] = [
+        "--heuristic", "h=hc(cache_estimates=false, nogoods=true, prune_subsumed_preconditions=false)",
+        "--heuristic", "hff=ff(cache_estimates=false)",
+        "--search", "goal_relation([bounded_cost_dfs(max_bound=infinity, bound=4, step=2, eval=hff, learn=hcrn(hc=h), preferred=hff)], heu=[hff, h], all_soft_goals=true)"
+        ]
+
+
+
 ALIASES["seq-sat-fd-autotune-1"] = [
     "--heuristic", "hff=ff(transform=adapt_costs(one))",
     "--heuristic", "hcea=cea()",

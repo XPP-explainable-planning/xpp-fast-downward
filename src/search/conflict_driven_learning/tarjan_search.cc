@@ -11,6 +11,7 @@
 #include "../evaluation_result.h"
 #include "../task_utils/successor_generator.h"
 #include "../task_utils/task_properties.h"
+#include "../algorithms/ordered_set.h"
 
 #include "../option_parser.h"
 #include "../plugin.h"
@@ -43,21 +44,30 @@ TarjanSearch::CallStackElement::CallStackElement(
 {}
 
 TarjanSearch::TarjanSearch(const options::Options &opts)
-    : SearchEngine(opts),
-      c_recompute_u(opts.get<bool>("recompute_u")),
-      c_refine_initial_state(opts.get<bool>("refine_initial_state")),
-      c_dead_end_refinement(opts.contains("learn")),
-      c_compute_recognized_neighbors(c_dead_end_refinement),
-      m_cached_h_value(0),
-      m_guidance(opts.get<Evaluator *>("eval")),
-      m_learner(opts.contains("learn") ? opts.get<std::shared_ptr<ConflictLearner>>("learn") : nullptr),
-      m_search_space(&state_registry),
-      m_current_index(0),
-      m_result(DFSResult::FAILED),
-      m_open_states(1)
+    : SearchEngine(opts)
+    , c_recompute_u(opts.get<bool>("recompute_u"))
+    , c_refine_initial_state(opts.get<bool>("refine_initial_state"))
+    , c_dead_end_refinement(opts.contains("learn"))
+    , c_compute_recognized_neighbors(c_dead_end_refinement)
+    , m_guidance(opts.contains("eval") ? opts.get<Evaluator *>("eval") : nullptr)
+    , m_preferred(opts.contains("preferred") ? opts.get<Evaluator*>("preferred") : nullptr)
+    , m_learner(opts.contains("learn") ? opts.get<std::shared_ptr<ConflictLearner>>("learn") : nullptr)
+    , m_search_space(&state_registry)
+    , m_current_index(0)
+    , m_result(DFSResult::FAILED)
+    , m_open_states(1)
 {
     c_compute_recognized_neighbors = m_learner != nullptr && m_learner->requires_recognized_neighbors();
     m_dead_end_identifier = m_learner == nullptr ? nullptr : m_learner->get_underlying_heuristic();
+    if (m_guidance) {
+        m_guidance->get_path_dependent_evaluators(m_path_dependent_evaluators);
+    }
+    if (m_preferred) {
+        m_preferred->get_path_dependent_evaluators(m_path_dependent_evaluators);
+    }
+    if (m_dead_end_identifier) {
+        m_dead_end_identifier->get_path_dependent_evaluators(m_path_dependent_evaluators);
+    }
 }
 
 void TarjanSearch::initialize()
@@ -71,6 +81,9 @@ void TarjanSearch::initialize()
     m_current_depth = 0;
     m_result = DFSResult::FAILED;
     GlobalState istate = state_registry.get_initial_state();
+    for (Evaluator* pde : m_path_dependent_evaluators) {
+        pde->notify_initial_state(istate);
+    }
     SearchNode inode = m_search_space[istate];
     if (!evaluate(istate)) {
         std::cout << "Initial state is dead-end!" << std::endl;
@@ -88,13 +101,21 @@ void TarjanSearch::initialize()
 bool TarjanSearch::evaluate(const GlobalState& state)
 {
     statistics.inc_evaluated_states();
+    return evaluate(state, m_guidance);
+}
+
+bool TarjanSearch::evaluate(const GlobalState& state, Evaluator* eval)
+{
     statistics.inc_evaluations();
+    if (eval == nullptr) {
+        m_eval_result.set_evaluator_value(0);
+        return true;
+    }
     EvaluationContext ctxt(state);
-    EvaluationResult res = m_guidance->compute_result(ctxt);
-    if (res.is_infinite()) {
+    m_eval_result = std::move(eval->compute_result(ctxt));
+    if (m_eval_result.is_infinite()) {
         return false;
     }
-    m_cached_h_value = res.get_evaluator_value();
     return true;
 }
 
@@ -104,7 +125,7 @@ bool TarjanSearch::evaluate_dead_end_heuristic(const GlobalState& state)
         return false;
     }
     EvaluationContext ctxt(state);
-    EvaluationResult res = m_dead_end_identifier->compute_result(ctxt);
+    EvaluationResult res = std::move(m_dead_end_identifier->compute_result(ctxt));
     if (res.is_infinite()) {
         return true;
     }
@@ -113,12 +134,13 @@ bool TarjanSearch::evaluate_dead_end_heuristic(const GlobalState& state)
 
 int TarjanSearch::get_h_value() const
 {
-    return m_cached_h_value;
+    return m_eval_result.get_evaluator_value();
 }
 
 bool TarjanSearch::expand(const GlobalState& state)
 {
     static std::vector<OperatorID> aops;
+    static ordered_set::OrderedSet<OperatorID> preferred;
 
     SearchNode node = m_search_space[state];
     m_open_states--;
@@ -141,10 +163,21 @@ bool TarjanSearch::expand(const GlobalState& state)
     m_open_list.push_layer();
     g_successor_generator->generate_applicable_ops(state, aops);
     statistics.inc_generated(aops.size());
+    if (m_preferred) {
+        if (evaluate(state, m_preferred)) {
+            const std::vector<OperatorID>& pref = m_eval_result.get_preferred_operators();
+            for (int i = pref.size() - 1; i >= 0; i--) {
+                preferred.insert(pref[i]);
+            }
+        }
+    }
     for (unsigned i = 0; i < aops.size(); i++) {
         GlobalState succ = state_registry.get_successor_state(
                 state,
                 task_proxy.get_operators()[aops[i]]);
+        for (Evaluator* pde : m_path_dependent_evaluators) {
+            pde->notify_state_transition(state, aops[i], succ);
+        }
         SearchNode succ_node = m_search_space[succ];
         assert(succ_node.is_new() || succ_node.get_lowlink() <= succ_node.get_index());
         if (succ_node.is_new()) {
@@ -157,11 +190,14 @@ bool TarjanSearch::expand(const GlobalState& state)
             }
         }
         if (!succ_node.is_dead_end()) {
-            m_open_list.push(node.get_h(), succ.get_id());
+            m_open_list.push(
+                    std::pair<bool, int>(!preferred.contains(aops[i]), node.get_h()),
+                    succ.get_id());
         } else if (c_compute_recognized_neighbors) {
             m_recognized_neighbors.push_back(succ.get_id());
         }
     }
+    preferred.clear();
     aops.clear();
 
     m_current_depth++;
@@ -377,7 +413,8 @@ void TarjanSearch::print_statistics() const
 void TarjanSearch::add_options_to_parser(options::OptionParser &parser)
 {
     SearchEngine::add_options_to_parser(parser);
-    parser.add_option<Evaluator *>("eval");
+    parser.add_option<Evaluator *>("eval", "", options::OptionParser::NONE);
+    parser.add_option<Evaluator *>("preferred", "", options::OptionParser::NONE);
     parser.add_option<std::shared_ptr<ConflictLearner>>("learn", "", options::OptionParser::NONE);
     parser.add_option<bool>("recompute_u",
                             "recompute dead-end detection heuristic after each refinement",

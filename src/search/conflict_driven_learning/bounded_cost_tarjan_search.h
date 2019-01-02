@@ -12,6 +12,7 @@
 #include <map>
 #include <unordered_map>
 #include <deque>
+#include <set>
 
 namespace conflict_driven_learning {
 namespace bounded_cost {
@@ -25,18 +26,20 @@ public:
     static void add_options_to_parser(options::OptionParser& parser);
 
 protected:
+    class PerLayerData;
+
     virtual void initialize() override;
     virtual SearchStatus step() override;
     bool evaluate(const GlobalState& state, Evaluator* eval);
     bool expand(const GlobalState& state);
-    class PerLayerData;
     bool expand(const GlobalState& state,
                 PerLayerData* layer);
+    bool increment_bound_and_push_initial_state();
 
     struct Locals {
         GlobalState state;
         OperatorID successor_op;
-        std::map<int, std::deque<std::pair<OperatorID, StateID> > > open;
+        std::map<std::pair<bool, int>, std::deque<std::pair<OperatorID, StateID> > > open;
         bool zero_layer;
         unsigned neighbors_size;
         Locals(const GlobalState& state, bool zero_layer, unsigned size);
@@ -69,11 +72,16 @@ protected:
     const bool c_make_neighbors_unique;
     // const int c_learning_belt;
 
+    int c_max_bound;
+    double c_bound_step;
+
     std::shared_ptr<AbstractTask> m_task;
     TaskProxy m_task_proxy;
 
     Evaluator* m_expansion_evaluator;
+    Evaluator* m_preferred;
     Evaluator* m_pruning_evaluator;
+    std::set<Evaluator*> m_path_dependent_evaluators;
     std::shared_ptr<HeuristicRefiner> m_refiner;
 
     // PerStateInformation<PerStateInfo> m_state_infos;
@@ -86,7 +94,7 @@ protected:
 
     StateID m_last_state;
     int m_last_state_lowlink;
-    int m_cached_h;
+    EvaluationResult m_eval_result;
     int m_current_g;
 };
 

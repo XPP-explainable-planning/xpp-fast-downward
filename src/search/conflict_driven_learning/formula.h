@@ -28,16 +28,12 @@ public:
         d_initialized = false;
 #endif
     }
-    CounterBasedFormula(size_t size)
-    {
-        resize(size);
-    }
-    void resize(size_t size)
+    void set_num_keys(const unsigned& num)
     {
 #ifndef NDEBUG
         d_initialized = true;
 #endif
-        m_rel.resize(size);
+        m_rel.resize(num);
     }
     bool insert_element(unsigned id, const std::vector<unsigned> &, unsigned elem,
                         bool)
@@ -117,6 +113,13 @@ public:
         assert(d_initialized);
         return m_sizes.size();
     }
+    void clear()
+    {
+        std::vector<std::vector<unsigned> > new_rel(m_rel.size());
+        m_rel.swap(new_rel);
+        m_sizes.clear();
+        m_subset.clear();
+    }
     // void statistics(const std::string &name = "Formula") const
     // {
     //     printf("%s size: %zu\n", name, m_sizes.size());
@@ -158,11 +161,13 @@ public:
     UBTreeFormula();
     ~UBTreeFormula();
 
+    void set_num_keys(const unsigned&) {}
+
     bool contains_subset_of(const std::vector<K> &set) const;
     bool contains_set(const std::vector<K> &set) const;
     bool is_cut_by(const std::vector<K> &set) const;
 
-    Node *insert(const std::vector<K> &set);
+    std::pair<Node *, bool> insert(const std::vector<K> &set);
     void erase(unsigned, const std::vector<K> &set);
     void remove_all_supersets_of(const std::vector<K> &set);
 
@@ -502,10 +507,12 @@ bool UBTreeFormula<K>::is_cut_by(const std::vector<K> &set) const
 }
 
 template<typename K>
-typename UBTreeFormula<K>::Node *UBTreeFormula<K>::insert(
+std::pair<typename UBTreeFormula<K>::Node*, bool> UBTreeFormula<K>::insert(
     const std::vector<K> &set)
 {
-    return insert(m_root, set, 0);
+    std::pair<Node*, bool> res(NULL, false);
+    res.first = insert(m_root, set, 0, res.second);
+    return res;
 }
 
 template<typename K>

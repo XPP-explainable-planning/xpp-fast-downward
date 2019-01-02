@@ -60,6 +60,7 @@ public:
     RelaxationHeuristic(const options::Options &options);
     virtual ~RelaxationHeuristic();
     virtual bool dead_ends_are_reliable() const;
+    virtual void set_abstract_task(std::shared_ptr<AbstractTask> task);
 };
 }
 

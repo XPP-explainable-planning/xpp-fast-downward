@@ -12,7 +12,7 @@
 #include "../utils/system.h"
 #include "../operator_cost.h"
 #include "../tasks/cost_adapted_task.h"
-
+#include "../algorithms/ordered_set.h"
 
 #include "hc_heuristic.h"
 
@@ -70,10 +70,13 @@ BoundedCostTarjanSearch::BoundedCostTarjanSearch(const options::Options& opts)
     , c_refinement_toggle(false)
     , c_compute_neighbors(false)
     , c_make_neighbors_unique(opts.get<bool>("unique_neighbors"))
+    , c_max_bound(opts.contains("max_bound") ? opts.get<int>("max_bound") : bound)
+    , c_bound_step(opts.get<double>("step"))
     // , c_learning_belt(opts.contains("learning_belt") ? bound - opts.get<int>("learning_belt") : 0)
     , m_task(OperatorCost(opts.get_enum("cost_type")) != OperatorCost::NORMAL ? std::make_shared<tasks::CostAdaptedTask>(opts) : task)
     , m_task_proxy(*m_task)
-    , m_expansion_evaluator(opts.get<Evaluator *>("eval"))
+    , m_expansion_evaluator(opts.contains("eval") ? opts.get<Evaluator *>("eval") : nullptr)
+    , m_preferred(opts.contains("preferred") ? opts.get<Evaluator*>("preferred") : nullptr)
     , m_pruning_evaluator(NULL)
     , m_refiner(opts.contains("learn") ? opts.get<std::shared_ptr<HeuristicRefiner> >("learn") : nullptr)
     , m_state_information(UNDEFINED)
@@ -85,26 +88,60 @@ BoundedCostTarjanSearch::BoundedCostTarjanSearch(const options::Options& opts)
         c_compute_neighbors = m_refiner->requires_neighbors();
         m_pruning_evaluator = m_refiner->get_underlying_heuristic().get();
     }
-
-    if (bound == std::numeric_limits<int>::max()) {
-        std::cerr << "bounded cost depth first search requires bound < infinity"
-                    << std::endl;
-        utils::exit_with(utils::ExitCode::SEARCH_CRITICAL_ERROR);
+    if (m_expansion_evaluator) {
+        m_expansion_evaluator->get_path_dependent_evaluators(m_path_dependent_evaluators);
     }
+    if (m_preferred) {
+        m_preferred->get_path_dependent_evaluators(m_path_dependent_evaluators);
+    }
+    if (m_pruning_evaluator) {
+        m_pruning_evaluator->get_path_dependent_evaluators(m_path_dependent_evaluators);
+    }
+
+    // if (c_max_bound == std::numeric_limits<int>::max()) {
+    //     std::cerr << "bounded cost depth first search requires bound < infinity"
+    //                 << std::endl;
+    //     utils::exit_with(utils::ExitCode::SEARCH_CRITICAL_ERROR);
+    // }
     m_current_g = 0;
+}
+
+bool
+BoundedCostTarjanSearch::increment_bound_and_push_initial_state()
+{
+    m_current_g = 0;
+    GlobalState istate = state_registry.get_initial_state();
+    while (true) {
+        assert(bound <= _get_bound(m_state_information[istate]));
+        bound = _get_bound(m_state_information[istate]);
+        if (bound >= c_max_bound || bound == INF) {
+            break;
+        }
+        bound = std::min(c_max_bound, (int)(c_bound_step * bound));
+        if (expand(istate)) {
+            std::cout << "incremented bound to " << bound << std::endl;
+            return true;
+        }
+    }
+    return false;
 }
 
 void
 BoundedCostTarjanSearch::initialize()
 {
     GlobalState istate = state_registry.get_initial_state();
+    for (Evaluator* pde : m_path_dependent_evaluators) {
+        pde->notify_initial_state(istate);
+    }
     _set_bound(m_state_information[istate], 0);
     if (task_properties::is_goal_state(m_task_proxy, istate)) {
         std::cout << "Initial state satisfies goal condition!" << std::endl;
         m_solved = true;
-    } else if (!evaluate(istate, m_expansion_evaluator) 
-            || !expand(istate)) {
-        std::cout << "Initial state is dead-end!" << std::endl;
+    } else {
+        if (evaluate(istate, m_expansion_evaluator)
+                && !expand(istate) && !increment_bound_and_push_initial_state()) {
+            std::cout << "Initial state is dead-end!" << std::endl;
+        }
     }
 }
 
@@ -112,15 +149,14 @@ bool BoundedCostTarjanSearch::evaluate(const GlobalState& state,
                                            Evaluator* eval)
 {
     if (eval == NULL) {
-        m_cached_h = 0;
+        m_eval_result.set_evaluator_value(0);
         return true;
     }
     EvaluationContext ctxt(state);
-    EvaluationResult res = eval->compute_result(ctxt);
-    if (res.is_infinite()) {
+    m_eval_result = std::move(eval->compute_result(ctxt));
+    if (m_eval_result.is_infinite()) {
         return false;
     }
-    m_cached_h = res.get_evaluator_value();
     return true;
 }
 
@@ -135,6 +171,7 @@ BoundedCostTarjanSearch::expand(const GlobalState& state,
                                 PerLayerData* layer)
 {
     static std::vector<OperatorID> aops; assert(aops.empty());
+    static ordered_set::OrderedSet<OperatorID> preferred; assert(preferred.empty());
 
     int& status = m_state_information[state];
     assert(_get_bound(status) != INF && m_current_g + _get_bound(status) < bound);
@@ -143,12 +180,14 @@ BoundedCostTarjanSearch::expand(const GlobalState& state,
     // evaluation
     if (!evaluate(state, m_pruning_evaluator)) {
         _set_bound(status, INF);
+        // std::cout << "Dead end -> " << _get_bound(status) << std::endl;
         return false;
     }
     
-    if (m_cached_h > _get_bound(status)) {
-        _set_bound(status, m_cached_h);
-        if (m_current_g + m_cached_h >= bound) {
+    if (m_eval_result.get_evaluator_value() > _get_bound(status)) {
+        _set_bound(status, m_eval_result.get_evaluator_value());
+        if (m_current_g + m_eval_result.get_evaluator_value() >= bound) {
+            // std::cout << "Exceeds bound-> " << m_current_g << " + " << _get_bound(status) << " > " << bound << std::endl;
             return false;
         }
     }
@@ -161,20 +200,35 @@ BoundedCostTarjanSearch::expand(const GlobalState& state,
 
     g_successor_generator->generate_applicable_ops(state, aops);
     statistics.inc_generated(aops.size());
+    if (m_preferred) {
+        if (evaluate(state, m_preferred)) {
+            const std::vector<OperatorID>& pref = m_eval_result.get_preferred_operators();
+            for (int i = pref.size() - 1; i >= 0; i--) {
+                preferred.insert(pref[i]);
+            }
+        }
+    }
     for (unsigned i = 0; i < aops.size(); i++) {
         auto op = m_task_proxy.get_operators()[aops[i]];
         GlobalState succ = state_registry.get_successor_state(
                 state,
                 op);
+        for (Evaluator* pde : m_path_dependent_evaluators) {
+            pde->notify_state_transition(state, aops[i], succ);
+        }
         if (evaluate(succ, m_expansion_evaluator)) {
             has_zero_cost = has_zero_cost || op.get_cost() == 0;
-            locals.open[m_cached_h].emplace_back(aops[i], succ.get_id());
+            std::pair<bool, int> key(
+                    !preferred.contains(aops[i]),
+                    m_eval_result.get_evaluator_value());
+            locals.open[key].emplace_back(aops[i], succ.get_id());
         } else if (c_compute_neighbors) {
             m_neighbors.emplace_back(
                     m_task->get_operator_cost(aops[i].get_index(), false),
                     succ);
         }
     }
+    preferred.clear();
     aops.clear();
 
     if (has_zero_cost && layer == NULL) {
@@ -210,9 +264,14 @@ BoundedCostTarjanSearch::step()
     }
 
     if (m_call_stack.empty()) {
+        if (increment_bound_and_push_initial_state()) {
+            return SearchStatus::IN_PROGRESS;
+        }
         std::cout << "Completely explored state space" << std::endl;
         return SearchStatus::FAILED;
     }
+
+    assert(bound < INF);
 
     Locals& locals = m_call_stack.back();
     ExpansionInfo* state_info = NULL;
@@ -273,7 +332,7 @@ BoundedCostTarjanSearch::step()
                         } else {
                             dead = true;
                             m_last_layer->state_infos.remove(succ.second);
-                            assert(succ_bound == INF || m_current_g + succ_bound >= bound);
+                            assert(_get_bound(succ_status) == INF || m_current_g + _get_bound(succ_status) >= bound);
                         }
                     } else {
                         // onstack
@@ -415,8 +474,8 @@ BoundedCostTarjanSearch::step()
 #if DEBUG_BOUNDED_COST_DFS_ASSERT_LEARNING
             if (c_refinement_toggle) {
                 bool dead = !evaluate(locals.state, m_pruning_evaluator);
-                // std::cout << "refinement result => dead=" << dead << " h=" << m_cached_h << std::endl;
-                assert(dead || m_current_g + m_cached_h >= bound);
+                // std::cout << "refinement result => dead=" << dead << " h=" << m_eval_result.get_evaluator_value() << std::endl;
+                assert(dead || m_current_g + m_eval_result.get_evaluator_value() >= bound);
             }
 #endif
             component_neighbors.clear();
@@ -452,10 +511,13 @@ void BoundedCostTarjanSearch::print_statistics() const
 void
 BoundedCostTarjanSearch::add_options_to_parser(options::OptionParser& parser)
 {
-    parser.add_option<Evaluator *>("eval");
+    parser.add_option<Evaluator *>("eval", "", options::OptionParser::NONE);
     parser.add_option<std::shared_ptr<HeuristicRefiner> >("learn", "", options::OptionParser::NONE);
     parser.add_option<bool>("unique_neighbors", "", "true");
+    parser.add_option<int>("max_bound", "", options::OptionParser::NONE);
+    parser.add_option<double>("step", "", "2.0");
     // parser.add_option<int>("learning_belt", "", options::OptionParser::NONE);
+    parser.add_option<Evaluator *>("preferred", "", options::OptionParser::NONE);
     add_cost_type_option_to_parser(parser);
     SearchEngine::add_options_to_parser(parser);
 }
@@ -473,5 +535,5 @@ std::shared_ptr<SearchEngine> _parse(options::OptionParser& p) {
     return nullptr;
 }
 
-static PluginShared<SearchEngine> _plugin("bounded_cost_dfsz", _parse);
+static PluginShared<SearchEngine> _plugin("bounded_cost_dfs", _parse);
 

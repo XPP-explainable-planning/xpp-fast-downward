@@ -18,27 +18,6 @@ namespace hc_heuristic
 
 /* void print_conjunction(const std::vector<unsigned> &conj, bool e = true); */
 
-class PartialState
-{
-    std::vector<int> m_values;
-public:
-    enum {UNDEFINED = -1};
-    PartialState();
-    PartialState(const PartialState &state);
-    PartialState(size_t size);
-    void copy_from(const GlobalState &state);
-    void clear(unsigned i);
-    void clear();
-    void resize(unsigned size);
-    int operator[](unsigned i) const;
-    int &operator[](unsigned i);
-    bool is_defined(unsigned i) const;
-    const std::vector<int> &values() const
-    {
-        return m_values;
-    }
-};
-
 struct ConjunctionData;
 
 struct Counter {
@@ -89,17 +68,18 @@ private:
     utils::Timer m_refinement_timer;
     utils::Timer m_evaluation_timer;
 protected:
-    const AbstractTask& m_task;
+    std::shared_ptr<AbstractTask> m_task;
     HCHeuristic *m_hc;
     virtual bool evaluate(const std::vector<unsigned> &conjunction_ids) = 0;
-    virtual void refine(const PartialState &state) = 0;
+    virtual void refine(const GlobalState &state) = 0;
 public:
-    NoGoodFormula(const AbstractTask& task,
+    NoGoodFormula(std::shared_ptr<AbstractTask> task,
                   HCHeuristic *hc);
     virtual void initialize() {}
-    virtual void synchronize_goal() { }
+    virtual void synchronize_goal(std::shared_ptr<AbstractTask>) { }
+    virtual void notify_on_new_conjunction(unsigned) {}
     bool evaluate_formula(const std::vector<unsigned> &conjunction_ids);
-    void refine_formula(const PartialState &state);
+    void refine_formula(const GlobalState &state);
     const utils::Timer &get_refinement_timer() const;
     const utils::Timer &get_evaluation_timer() const;
     virtual void print_statistics() const = 0;
@@ -130,7 +110,6 @@ protected:
     std::vector<unsigned> m_subset_count;
 
     std::vector<unsigned> m_state;
-    PartialState m_partial_state;
 
     ////
     // data for counter/conjunction construction and C computation
@@ -148,8 +127,6 @@ protected:
         const std::vector<unsigned> &conj,
         unsigned conjid);
 
-    int heuristic_computation_wrapper(const std::vector<unsigned> &conjids);
-    int compute_heuristic(const PartialState &state);
     virtual int compute_heuristic(const GlobalState &state) override;
 
     void initialize();
@@ -169,8 +146,6 @@ public:
                                     std::vector<unsigned> &ids);
     void get_satisfied_conjunctions(const GlobalState &fdr_state,
                                     std::vector<unsigned> &ids);
-
-    void refine_nogood_formulas(const PartialState &state);
 
     unsigned lookup_conjunction_id(
         const std::vector<unsigned> &conj,
@@ -288,6 +263,17 @@ protected:
 public:
     using HCHeuristic::HCHeuristic;
     virtual void cleanup_previous_computation() override;
+    virtual int compute_heuristic(const std::vector<unsigned> &conjunction_ids)
+    override;
+    virtual int compute_heuristic_get_reachable_conjunctions(
+        std::vector<unsigned> &reachable_conjunctions)
+    override;
+};
+
+class UCHeuristic : public HCHeuristicUnitCost
+{
+public:
+    using HCHeuristicUnitCost::HCHeuristicUnitCost;
     virtual int compute_heuristic(const std::vector<unsigned> &conjunction_ids)
     override;
     virtual int compute_heuristic_get_reachable_conjunctions(

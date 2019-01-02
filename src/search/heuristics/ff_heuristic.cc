@@ -69,7 +69,6 @@ int FFHeuristic::compute_heuristic(const GlobalState &global_state) {
     return h_ff;
 }
 
-
 static Heuristic *_parse(OptionParser &parser) {
     parser.document_synopsis(
         "FF heuristic",
