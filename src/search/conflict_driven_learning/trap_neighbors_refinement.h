@@ -28,7 +28,8 @@ public:
 protected:
     virtual bool learn_from_dead_end_component(StateComponent &, StateComponent &) override;
 
-    const bool c_update_hypergraph;
+    const bool c_recompute_reachability;
+
     TrapUnsatHeuristic* m_trap;
     const AbstractTask* m_task;
     std::vector<bool> m_fact_mutex_with_goal;

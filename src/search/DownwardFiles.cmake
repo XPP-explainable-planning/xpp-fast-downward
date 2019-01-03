@@ -758,6 +758,8 @@ fast_downward_plugin(
 fast_downward_plugin(
     NAME "CONFLICT_LEARNING"
     SOURCES
+        conflict_driven_learning/hash_utils
+
         conflict_driven_learning/conflict_learner
         conflict_driven_learning/state_component
         conflict_driven_learning/layered_map

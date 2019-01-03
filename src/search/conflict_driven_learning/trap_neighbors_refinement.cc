@@ -17,7 +17,7 @@ namespace traps {
 static const int INTMIN = std::numeric_limits<int>::min();
 
 TrapNeighborsRefinement::TrapNeighborsRefinement(const options::Options& opts)
-    : c_update_hypergraph(opts.get<bool>("update_hypergraph"))
+    : c_recompute_reachability(opts.get<bool>("recompute_reachability"))
     , m_trap(dynamic_cast<TrapUnsatHeuristic*>(opts.get<Evaluator*>("trap")))
     , m_task(m_trap->get_abstract_task().get())
 {
@@ -36,8 +36,8 @@ TrapNeighborsRefinement::TrapNeighborsRefinement(const options::Options& opts)
 void
 TrapNeighborsRefinement::add_options_to_parser(options::OptionParser& parser)
 {
+    parser.add_option<bool>("recompute_reachability", "", "false");
     parser.add_option<Evaluator*>("trap");
-    parser.add_option<bool>("update_hypergraph", "", "false");
 }
 
 Evaluator*
@@ -93,7 +93,6 @@ TrapNeighborsRefinement::learn_from_dead_end_component(
 
     TrapUnsatHeuristic::Formula& formula = m_trap->get_all_conjunctions_formula();
 
-    std::vector<unsigned> progression;
     std::vector<std::vector<ForwardHyperTransition> > transitions(conjunctions.size());
     std::vector<std::vector<ForwardHyperTransition> > previous_transitions;
     std::vector<int> removed_fact(conjunctions.size(), -1);
@@ -140,20 +139,22 @@ TrapNeighborsRefinement::learn_from_dead_end_component(
                 bool is_dead = m_trap->are_dead_ends(conj);
                 if (m_trap->for_every_progression_action(conj, [&](unsigned op) {
                     bool closed = is_dead;
-                    ts.emplace_back(op, -1);
+                    ts.emplace_back(op);
                     ForwardHyperTransition& t = ts.back();
-                    m_trap->progression(conj, op, progression);
-                    formula.forall_subsets(progression, [&](unsigned id) {
+                    m_trap->progression(conj, op, t.progression);
+                    formula.forall_subsets(t.progression, [&](unsigned id) {
                         t.destinations.push_back(id);
                         closed = closed || !m_trap->can_reach_goal(id);
                     });
-                    lookup.forall_subsets(progression, [&](unsigned idx) {
+                    lookup.forall_subsets(t.progression, [&](unsigned idx) {
                         if (!duplicate[idx]) {
                             closed = true;
                             t.destinations.push_back(INTMIN + idx);
                         }
                     });
-                    progression.clear();
+                    if (!closed) {
+                        closed = t.dead = m_trap->are_dead_ends(t.progression);
+                    }
                     return !closed;
                 })) {
                     satisfied = false;
@@ -202,35 +203,13 @@ TrapNeighborsRefinement::learn_from_dead_end_component(
         return false;
     }
 
-    // unsigned num = 0;
-
-    const strips::Task& task = strips::get_task();
     int old_num_conjunctions = formula.size();
-    std::vector<unsigned> regr;
-
     for (unsigned i = 0; i < duplicate.size(); i++) {
         if (duplicate[i]) {
             duplicate[i] = -1;
             continue;
         }
-        std::pair<unsigned, bool> insrt = m_trap->insert_conjunction(conjunctions[i]);
-        duplicate[i] = insrt.first;
-        if (c_update_hypergraph && insrt.second) {
-            m_trap->for_every_regression_action(conjunctions[i], [&](unsigned op) {
-                const strips::Action& action = task.get_action(op);
-                regr.insert(regr.end(), conjunctions[i].begin(), conjunctions[i].end());
-                set_utils::inplace_difference(regr, action.pre);
-                set_utils::inplace_difference(regr, action.add);
-                formula.forall_supersets(regr, [&](unsigned id) {
-                    if (id < (unsigned) old_num_conjunctions) {
-                        m_trap->add_to_transition_post(id, op, duplicate[i]); 
-                    }
-                });
-                regr.clear();
-                return false;
-            });
-        }
-        // num++;
+        duplicate[i] = m_trap->insert_conjunction(conjunctions[i]).first;
     }
 
     for (unsigned i = 0; i < duplicate.size(); i++) {
@@ -241,7 +220,6 @@ TrapNeighborsRefinement::learn_from_dead_end_component(
         std::vector<ForwardHyperTransition>& ts = transitions[i];
         for (unsigned j = 0; j < ts.size(); j++) {
             ForwardHyperTransition& t = ts[j];
-            t.source = conj_id;
             for (int k = t.destinations.size() - 1; k >= 0; k--) {
                 int ref = t.destinations[k];
                 if (ref >= 0) {
@@ -282,7 +260,7 @@ TrapNeighborsRefinement::learn_from_dead_end_component(
 
 #endif
 
-    if (c_update_hypergraph) {
+    if (c_recompute_reachability) {
         m_trap->update_reachability_insert_conjunctions();
     }
 
