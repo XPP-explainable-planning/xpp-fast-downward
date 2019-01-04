@@ -10,8 +10,6 @@
 
 namespace conflict_driven_learning
 {
-namespace hc_heuristic
-{
 namespace strips
 {
 
@@ -32,7 +30,7 @@ std::pair<int, int> get_variable_assignment(const unsigned& fact_id)
     return res;
 }
 
-unsigned get_fact_id(const int &var, const int &val)
+unsigned get_fact_id(int var, int val)
 {
     assert(_initialized);
     return variable_offset[var] + val;
@@ -153,8 +151,11 @@ void initialize(const AbstractTask& task)
         }
 
         std::sort(action.pre.begin(), action.pre.end());
+        action.pre.erase(std::unique(action.pre.begin(), action.pre.end()), action.pre.end());
         std::sort(action.add.begin(), action.add.end());
+        action.add.erase(std::unique(action.add.begin(), action.add.end()), action.add.end());
         std::sort(action.del.begin(), action.del.end());
+        action.del.erase(std::unique(action.del.begin(), action.del.end()), action.del.end());
     }
 
     update_goal_set(task);
@@ -283,6 +284,5 @@ size_t Task::generate_singleton_effect_actions(
     return num_counters;
 }
 
-}
 }
 }

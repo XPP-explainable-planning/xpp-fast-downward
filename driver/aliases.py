@@ -26,10 +26,22 @@ ALIASES["xpp_blind_uc"] = [
         "--search", "goal_relation([dfs(learn=ucrn(hc=h))], heu=[h], all_soft_goals=true)"
         ]
 
+ALIASES["xpp_blind_traps"] = [
+        "--heuristic", "h=traps(cache_estimates=false)",
+        "--search", "goal_relation([dfs(learn=trapsrn(trap=h))], heu=[h], all_soft_goals=true)"
+        ]
+
+ALIASES["xpp_hff_traps"] = [
+        "--heuristic", "h1=hc(cache_estimates=false, nogoods=true, prune_subsumed_preconditions=false)",
+        "--heuristic", "h2=traps(cache_estimates=false, evals=[h1])",
+        "--heuristic", "hff=ff(cache_estimates=false)",
+        "--search", "goal_relation([dfs(eval=hff, learn=trapsrn(trap=h2))], heu=[h1, h2, hff], all_soft_goals=true)"
+        ]
+
 ALIASES["xpp_ff_uc"] = [
         "--heuristic", "h=hc(cache_estimates=false, nogoods=true, prune_subsumed_preconditions=false)",
         "--heuristic", "hff=ff(cache_estimates=false)",
-        "--search", "goal_relation([dfs(eval=hff, learn=ucrn(hc=h), preferred=hff)], heu=[hff, h], all_soft_goals=true)"
+        "--search", "goal_relation([dfs(eval=hff, learn=trapsrn(trap=h2), preferred=hff)], heu=[hff, h], all_soft_goals=true)"
         ]
 
 ALIASES["xpp_ids_ff_hc"] = [

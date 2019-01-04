@@ -93,6 +93,7 @@ public:
     virtual int get_cached_estimate(const GlobalState &state) const override;
 
     virtual void set_abstract_task(std::shared_ptr<AbstractTask> task);
+    std::shared_ptr<AbstractTask> get_abstract_task() const;
 };
 
 #endif

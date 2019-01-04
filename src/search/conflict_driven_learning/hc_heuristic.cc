@@ -18,10 +18,11 @@
 #include <algorithm>
 #include <limits>
 
-namespace conflict_driven_learning
-{
-namespace hc_heuristic
-{
+namespace conflict_driven_learning {
+
+using namespace strips;
+
+namespace hc_heuristic {
 
 NoGoodFormula::NoGoodFormula(std::shared_ptr<AbstractTask> task,
                              HCHeuristic* hc)
@@ -79,10 +80,10 @@ HCHeuristic::HCHeuristic(const options::Options &opts)
       //                  opts.get<NoGoodFormula * >("nogoods") : NULL)
 {
     c_nogood_evaluation_enabled = m_nogood_formula != nullptr;
-    initialize();
+    initialize(opts.get<int>("m"));
 }
 
-void HCHeuristic::initialize()
+void HCHeuristic::initialize(unsigned m)
 {
     std::cout << "Initializing hC heuristic ..." << std::endl;
     strips::initialize(*task);
@@ -151,6 +152,38 @@ void HCHeuristic::initialize()
     //        m_counters.size());
 
     m_num_atomic_counters = m_counters.size();
+
+    if (m > 1) {
+        struct EnumData {
+            int var;
+            int val;
+            int succ_var;
+            EnumData(int var, int dom)
+                : var(var), val(dom), succ_var(var)
+            {}
+        };
+        std::vector<EnumData> queue;
+        std::vector<unsigned> conj;
+        for (int var = 0; var < task->get_num_variables(); var++) {
+            queue.emplace_back(var, task->get_variable_domain_size(var));
+            conj.push_back(-1);
+            while (!queue.empty()) {
+                EnumData& e = queue.back();
+                conj.pop_back();
+                if (--e.val < 0) {
+                    queue.pop_back();
+                    continue;
+                }
+                conj.push_back(strips::get_fact_id(e.var, e.val));
+                insert_conjunction_and_update_data_structures(conj);
+                if (conj.size() < m && ++e.succ_var < task->get_num_variables()) {
+                    queue.emplace_back(e.succ_var, task->get_variable_domain_size(e.succ_var));
+                    conj.push_back(-1);
+                }
+            }
+            assert(conj.empty());
+        }
+    }
 
     // std::cout << "Conjunction set initialization method: ";
     // if (m_conjunction_set_initializer != NULL) {
@@ -481,6 +514,43 @@ unsigned HCHeuristic::create_counter(unsigned action_id,
     return res;
 }
 
+int
+HCHeuristic::evaluate_partial_state(const PartialState& state)
+{
+    assert(std::is_sorted(state.begin(), state.end()));
+    std::vector<unsigned> fact_ids;
+    unsigned i = 0;
+    for (int var = 0; var < task->get_num_variables(); var++) {
+        if (i < state.size() && state[i].first == var) {
+            fact_ids.push_back(strips::get_fact_id(state[i]));
+            i++;
+        } else {
+            for (int val = 0; val < task->get_variable_domain_size(var); val++) {
+                fact_ids.push_back(strips::get_fact_id(var, val));
+            }
+        }
+    }
+    m_state.clear();
+    get_satisfied_conjunctions(fact_ids, m_state);
+    if (c_nogood_evaluation_enabled
+        && m_nogood_formula != nullptr
+        && m_nogood_formula->evaluate_formula(m_state)) {
+#ifndef NDEBUG
+        cleanup_previous_computation();
+        assert(compute_heuristic(m_state) == DEAD_END);
+#endif
+        return DEAD_END;
+    }
+    m_hc_evaluations++;
+    cleanup_previous_computation();
+    int res = compute_heuristic(m_state);
+    // TODO nogood learning currently no implemented for partial states
+    // if (res == DEAD_END && c_nogood_evaluation_enabled) {
+    //     m_nogood_formula->refine_formula(state);
+    // }
+    return res;
+}
+
 int HCHeuristic::compute_heuristic(const GlobalState &state)
 {
     m_state.clear();
@@ -804,6 +874,7 @@ void HCHeuristic::add_options_to_parser(options::OptionParser &parser)
     Heuristic::add_options_to_parser(parser);
     parser.add_option<bool>("prune_subsumed_preconditions", "", "false");
     parser.add_option<bool>("nogoods", "", "true");
+    parser.add_option<int>("m", "", "0");
     // parser.add_option<NoGoodFormula *>("nogoods", "", options::OptionParser::NONE);
 }
 

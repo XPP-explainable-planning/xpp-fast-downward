@@ -32,6 +32,9 @@ std::ostream &operator<<(std::ostream &out, const std::vector<unsigned> &v)
 
 namespace conflict_driven_learning
 {
+
+using namespace strips;
+
 namespace hc_heuristic
 {
 

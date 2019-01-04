@@ -21,9 +21,9 @@ class GoalRelationSearch : public SearchEngine {
     std::vector<Heuristic *> heuristic;
 
     int phase;
-    int algo_phase;
+    //int algo_phase;
     bool last_phase_found_solution;
-    int best_bound;
+    //int best_bound;
     bool iterated_found_solution;
 
     int num_solved_nodes = 0;

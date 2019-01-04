@@ -37,6 +37,7 @@ protected:
     virtual void refine(const GlobalState &state) override;
 public:
     using NoGoodFormula::NoGoodFormula;
+    virtual ~StateMinimizationNoGoods() = default;
     virtual void initialize() override;
     virtual void synchronize_goal(std::shared_ptr<AbstractTask> task) override;
     virtual void notify_on_new_conjunction(unsigned) override;

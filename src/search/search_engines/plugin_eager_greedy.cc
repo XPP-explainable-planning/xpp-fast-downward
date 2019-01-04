@@ -59,6 +59,7 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
     SearchEngine::add_options_to_parser(parser);
 
     Options opts = parser.parse();
+    opts.set<bool>("prune_by_f", false);
     opts.verify_list_non_empty<Evaluator *>("evals");
 
     shared_ptr<eager_search::EagerSearch> engine;

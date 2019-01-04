@@ -35,10 +35,11 @@
 //     return out;
 // }
 
-namespace conflict_driven_learning
-{
-namespace hc_heuristic
-{
+namespace conflict_driven_learning {
+
+using namespace strips;
+
+namespace hc_heuristic {
     
 static const int INF = std::numeric_limits<int>::max();
 

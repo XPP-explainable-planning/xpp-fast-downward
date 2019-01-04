@@ -24,9 +24,9 @@ GoalRelationSearch::GoalRelationSearch(const Options &opts)
       continue_on_solve(opts.get<bool>("continue_on_solve")),
       all_soft_goals(opts.get<bool>("all_soft_goals")),
       phase(0),
-      algo_phase(1),
+      //algo_phase(1),
       last_phase_found_solution(false),
-      best_bound(bound),
+      //best_bound(bound),
       iterated_found_solution(false),
       relation_tree(task_proxy.get_goals(), all_soft_goals) {
 

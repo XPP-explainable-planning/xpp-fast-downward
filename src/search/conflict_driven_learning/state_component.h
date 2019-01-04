@@ -8,6 +8,7 @@ namespace conflict_driven_learning
 
 template<typename Value>
 struct Component {
+    virtual ~Component() = default;
     virtual const Value& current() = 0;
     virtual void next(unsigned i = 1) = 0;
     virtual bool end() = 0;

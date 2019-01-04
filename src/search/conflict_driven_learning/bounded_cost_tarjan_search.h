@@ -26,7 +26,7 @@ public:
     static void add_options_to_parser(options::OptionParser& parser);
 
 protected:
-    class PerLayerData;
+    struct PerLayerData;
 
     virtual void initialize() override;
     virtual SearchStatus step() override;

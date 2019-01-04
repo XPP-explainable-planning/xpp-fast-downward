@@ -12,12 +12,12 @@
 
 namespace conflict_driven_learning
 {
+namespace strips {
+struct Task;
+}
+
 namespace hc_heuristic
 {
-
-namespace strips {
-    class Task;
-}
 
 class HCNeighborsRefinement : public HCHeuristicRefiner
 {
@@ -100,7 +100,7 @@ protected:
 public:
     HCNeighborsRefinement(const options::Options &opts);
     virtual bool requires_neighbors() override;
-    virtual void print_statistics() const;
+    virtual void print_statistics() const override;
     static void add_options_to_parser(options::OptionParser &parser);
 };
 

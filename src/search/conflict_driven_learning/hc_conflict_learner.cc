@@ -27,10 +27,10 @@ bool HCConflictLearner::size_limit_reached() const
     return m_hc->num_counters() >= c_counter_limit;
 }
 
-std::shared_ptr<Evaluator> HCConflictLearner::get_underlying_heuristic()
+Evaluator* HCConflictLearner::get_underlying_heuristic()
 {
     assert(m_hc != nullptr);
-    return m_hc;
+    return m_hc.get();
 }
 
 void HCConflictLearner::add_options_to_parser(options::OptionParser &parser)
