@@ -6,6 +6,7 @@ import logic_formula
 from sas_tasks import *
 import pddl
 import re
+import time
 
 class ParamMatcher:
 
@@ -109,6 +110,9 @@ class ActionSet:
         self.var_id = None
 
         self.number_of_contained_ops = 0
+
+    def __eq__(self, other):
+        return self.name == other.name
 
     @staticmethod
     def parse(lines):
@@ -229,6 +233,9 @@ class actionSetPropertyClass:
         self.property_def = property_def
         self.instances = instances
 
+    def __eq__(self, other):
+        return self.name == other.name
+
     @staticmethod
     def parse(lines):
         line = lines.pop(0)
@@ -329,6 +336,9 @@ class actionSetProperty:
         self.constants = constants
         self.var_id = None
 
+    def __eq__(self, other):
+        return self.name == other.name
+
     @staticmethod
     def parse(lines):
         line = lines.pop(0)
@@ -387,6 +397,10 @@ class ActionSetProperties:
         self.actionSets[actions.name]  = actions
 
     def addProperty(self, p):
+        #assert not p in self.properties, "property " + p.name + " exists multiple times."
+        if p in self.properties:
+            p.name = p.name + "_" + str(time.time())
+            print(p.name)
         self.properties.append(p)
 
 
@@ -521,6 +535,7 @@ class ActionSetProperties:
         #add the actions checking if the property ist true
         # Assumption: property is in disjunctive normal form
         #print("Actions checking satisfaction property:")
+        #print(self.actionSets)
         for prop in self.properties:
 
             #print("Clauses: \n Property: " + str(prop))
