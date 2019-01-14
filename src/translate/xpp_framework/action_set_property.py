@@ -114,6 +114,9 @@ class ActionSet:
     def __eq__(self, other):
         return self.name == other.name
 
+    def __hash__(self):
+        return hash(self.name)
+
     @staticmethod
     def parse(lines):
         line = lines.pop(0)
@@ -399,7 +402,7 @@ class ActionSetProperties:
     def addProperty(self, p):
         #assert not p in self.properties, "property " + p.name + " exists multiple times."
         if p in self.properties:
-            p.name = p.name + "_" + str(time.time())
+            p.name = p.name + "_" + str(len(self.properties))
             print(p.name)
         self.properties.append(p)
 
@@ -411,6 +414,31 @@ class ActionSetProperties:
         #for every property combination generate one file with the 
         #property p1 && ! p2
         for p1 in self.properties:
+
+            #create one file with only p1
+            DNF = p1.formula
+
+            w_file = open(folder + "/basic-" + p1.name, "w")
+
+            #comments
+            w_file.write("#" + p1.formula.toPrefixForm() + "\n")
+
+            #check which action sets we need
+            #only write the action sets definition we need to the file
+            needed_action_sets = Set()
+            for (n, actionSet) in self.actionSets.iteritems():
+                #print("ActionSet: " + n)
+                if p1.containsSet(n):
+                    needed_action_sets.add(actionSet)
+
+            for actionSet in needed_action_sets:
+                w_file.write(actionSet.genSetDefinition()) 
+
+            w_file.write("\nproperty " + p1.name + "\n")               
+            w_file.write(DNF.toPrefixForm()) 
+            w_file.close()
+
+            #create one file for every implication
             for p2 in self.properties:
                 #print("Property file: " + folder + "/" + p1.name + "-" + p2.name)
                 if p1.name == p2.name:
@@ -427,7 +455,7 @@ class ActionSetProperties:
                 f = logic_formula.LAnd(p1.formula, p2.formula.negate())
                 DNF = f.toDNF() 
 
-                w_file = open(folder + "/" + p1.name + "-" + p2.name, "w")
+                w_file = open(folder + "/entail-" + p1.name + "-" + p2.name, "w")
 
                 #comments
                 w_file.write("#" + p1.formula.toPrefixForm() + "\n")
@@ -437,7 +465,9 @@ class ActionSetProperties:
                 #only write the action sets definition we need to the file
                 needed_action_sets = Set()
                 for p in [p1,p2]:
+                    #print("Property: " + p.name)
                     for (n, actionSet) in self.actionSets.iteritems():
+                        #print("ActionSet: " + n)
                         if p.containsSet(n):
                             needed_action_sets.add(actionSet)
 
