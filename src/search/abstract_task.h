@@ -89,6 +89,9 @@ public:
     virtual int get_num_goals() const = 0;
     virtual FactPair get_goal_fact(int index) const = 0;
 
+    virtual int get_num_entailments() const = 0;
+    virtual FactPair get_entailment(int index) const = 0;
+
     virtual std::vector<int> get_initial_state_values() const = 0;
     /*
       Convert state values from an ancestor task A (ancestor) into

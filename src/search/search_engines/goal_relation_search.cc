@@ -10,10 +10,13 @@
 
 #include "../utils/timer.h"
 
+#include "../goal_relation/topdownMUGStree.h"
+#include "../goal_relation/entailmentSearch.h"
+
 #include <iostream>
 
 using namespace std;
-using namespace goalre;
+using namespace mst;
 
 namespace goal_relation_search {
 GoalRelationSearch::GoalRelationSearch(const Options &opts)
@@ -27,8 +30,21 @@ GoalRelationSearch::GoalRelationSearch(const Options &opts)
       //algo_phase(1),
       last_phase_found_solution(false),
       //best_bound(bound),
-      iterated_found_solution(false),
-      relation_tree(task_proxy.get_goals(), all_soft_goals) {
+      iterated_found_solution(false){
+      //metasearchtree(task_proxy) {
+
+          if(true){
+            //metasearchtree = new tdmugs::TopDownMUGSTree(task_proxy.get_goals(), all_soft_goals);
+            metasearchtree = new entailsearch::EntailmentSearch();
+
+            /*
+            cout << "Entailment: " << endl;
+            for(uint i = 0; i < task_proxy.get_entailments().size(); i++){
+                  FactProxy entail = task_proxy.get_entailments()[i];
+                  cout << entail.get_variable().get_id() << " -> " << entail.get_value() << endl;
+            }
+            */
+          }
 
           std::vector<Evaluator*> evaluators = opts.get_list<Evaluator*>("heu");
           for (Evaluator* eval : evaluators) {
@@ -45,11 +61,11 @@ GoalRelationSearch::GoalRelationSearch(const Options &opts)
 
 shared_ptr<SearchEngine> GoalRelationSearch::get_search_engine(int engine_configs_index) {
     //adapt goals of current task according to the current goals relation node   
-    current_node = relation_tree.get_next_node();
+    //current_node = metasearchtree->get_next_node();
 
     //cout << "Current Node: " << endl;
     //current_node->print(relation_tree.getSoftGoals());
-    tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), relation_tree.get_goals(current_node)); // current_node->get_goals());
+    tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), metasearchtree->get_next_goals()); // current_node->get_goals());
 
 
     for (Heuristic* h : heuristic) {
@@ -77,7 +93,7 @@ shared_ptr<SearchEngine> GoalRelationSearch::create_phase(int phase) {
 }
 
 SearchStatus GoalRelationSearch::step() {
-    //cout << "-------------------------------------------------------------------------------------------" << endl;
+    cout << "-------------------------------------------------------------------------------------------" << endl;
     shared_ptr<SearchEngine> current_search = create_phase(0);
 
     //TODO
@@ -121,14 +137,20 @@ SearchStatus GoalRelationSearch::step() {
 
     //stop search in this branch
     if (last_phase_found_solution) {
-        //cout << "++++++++ SOLUTION +++++++"  << endl;
+        cout << "++++++++ SOLUTION +++++++"  << endl;
+        for(OperatorID id : current_search->get_plan()){
+            cout << task_proxy.get_operators()[id.get_index()].get_name() << endl;
+        }
+        metasearchtree->current_goals_solved();
+        metasearchtree->expand(true);
         iterated_found_solution = true;
-        current_node->solved();
+       
     }
     else{
         //cout << "-------- FAILS ----------"  << endl;
-        relation_tree.expand(current_node);
-        current_node->not_solved();
+        metasearchtree->current_goals_not_solved();
+        metasearchtree->expand(false);
+        
     }
     
 
@@ -146,11 +168,11 @@ SearchStatus GoalRelationSearch::step() {
 }
 
 SearchStatus GoalRelationSearch::step_return_value() {
-    if(relation_tree.continue_search()){
+    if(metasearchtree->continue_search()){
         return IN_PROGRESS;
     }
     else{
-        relation_tree.print();
+        metasearchtree->print();
         return SOLVED;
     }
 

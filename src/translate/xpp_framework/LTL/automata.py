@@ -1,6 +1,6 @@
 import sys
 import re
-import logic_formula
+import xpp_framework.logic.logic_formula as logic_formula
 
 #automata state
 class State:

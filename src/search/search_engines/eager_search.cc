@@ -142,8 +142,10 @@ SearchStatus EagerSearch::step() {
     SearchNode node = n.first;
 
     GlobalState s = node.get_state();
-    if (check_goal_and_set_plan(s))
+    if (check_goal_and_set_plan(s)){
         return SOLVED;
+    }
+        
 
     /*
     cout << "State size: " << s.get_values().size() << endl;

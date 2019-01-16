@@ -63,6 +63,7 @@ class RootTask : public AbstractTask {
     vector<ExplicitOperator> axioms;
     vector<int> initial_state_values;
     vector<FactPair> goals;
+    vector<FactPair> entailments;
 
     const ExplicitVariable &get_variable(int var) const;
     const ExplicitEffect &get_effect(int op_id, int effect_id, bool is_axiom) const;
@@ -102,6 +103,9 @@ public:
 
     virtual int get_num_goals() const override;
     virtual FactPair get_goal_fact(int index) const override;
+
+    virtual int get_num_entailments() const override;
+    virtual FactPair get_entailment(int index) const override;
 
     virtual vector<int> get_initial_state_values() const override;
     virtual void convert_state_values(
@@ -312,6 +316,14 @@ vector<FactPair> read_goal(istream &in) {
     return goals;
 }
 
+vector<FactPair> read_entailments(istream &in) {
+    check_magic(in, "begin_entail");
+    vector<FactPair> entailments = read_facts(in);
+    check_magic(in, "end_entail");
+    
+    return entailments;
+}
+
 vector<ExplicitOperator> read_actions(
     istream &in, bool is_axiom, bool use_metric,
     const vector<ExplicitVariable> &variables) {
@@ -346,6 +358,7 @@ RootTask::RootTask(std::istream &in) {
     }
 
     goals = read_goal(in);
+    entailments = read_entailments(in);
     check_facts(goals, variables);
     operators = read_actions(in, false, use_metric, variables);
     axioms = read_actions(in, true, use_metric, variables);
@@ -478,6 +491,16 @@ FactPair RootTask::get_goal_fact(int index) const {
     assert(utils::in_bounds(index, goals));
     return goals[index];
 }
+
+int RootTask::get_num_entailments() const {
+    return entailments.size();
+}
+
+FactPair RootTask::get_entailment(int index) const {
+    assert(utils::in_bounds(index, entailments));
+    return entailments[index];
+}
+
 
 vector<int> RootTask::get_initial_state_values() const {
     return initial_state_values;

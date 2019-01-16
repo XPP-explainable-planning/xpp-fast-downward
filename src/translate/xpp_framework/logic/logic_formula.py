@@ -97,6 +97,9 @@ class Operator:
         else:
             return LConstant.parse(parts)
 
+def parseFormula(string):
+    return Operator.parse(string.split())
+
 
 class LConstant(Operator):
 

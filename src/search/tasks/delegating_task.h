@@ -50,6 +50,9 @@ public:
     virtual int get_num_goals() const override;
     virtual FactPair get_goal_fact(int index) const override;
 
+    virtual int get_num_entailments() const override;
+    virtual FactPair get_entailment(int index) const override;
+
     virtual std::vector<int> get_initial_state_values() const override;
 
     virtual void convert_state_values(

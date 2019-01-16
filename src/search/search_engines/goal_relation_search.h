@@ -3,7 +3,7 @@
 
 #include "../option_parser_util.h"
 #include "../search_engine.h"
-#include "../goal_relation/relation_tree.h"
+#include "../goal_relation/meta_search_tree.h"
 
 namespace options {
 class Options;
@@ -28,13 +28,11 @@ class GoalRelationSearch : public SearchEngine {
 
     int num_solved_nodes = 0;
 
-    goalre::RelationTree relation_tree;
+    mst::MetaSearchTree* metasearchtree;
 
     std::shared_ptr<SearchEngine> get_search_engine(int engine_config_start_index);
     std::shared_ptr<SearchEngine> create_phase(int phase);
     SearchStatus step_return_value();
-
-    goalre::Node* current_node;
 
     virtual SearchStatus step() override;
 

@@ -24,8 +24,12 @@ class SASTask:
         self.axioms = sorted(axioms, key=lambda axiom: (
             axiom.condition, axiom.effect))
         self.metric = metric
+        self.entail = SASEntailment()
         if DEBUG:
             self.validate()
+
+    def addEntailment(self, pair):
+        self.entail.pairs.append(pair)
 
     def validate(self):
         """Fail an assertion if the task is invalid.
@@ -76,6 +80,8 @@ class SASTask:
         for axiom in self.axioms:
             axiom.dump()
         print("metric: %s" % self.metric)
+        print("entailment:")
+        self.entail.dump()
 
     def output(self, stream):
         print("begin_version", file=stream)
@@ -90,12 +96,14 @@ class SASTask:
             mutex.output(stream)
         self.init.output(stream)
         self.goal.output(stream)
+        self.entail.output(stream)
         print(len(self.operators), file=stream)
         for op in self.operators:
             op.output(stream)
         print(len(self.axioms), file=stream)
         for axiom in self.axioms:
             axiom.output(stream)
+        
 
     def get_encoding_size(self):
         task_size = 0
@@ -107,6 +115,7 @@ class SASTask:
             task_size += op.get_encoding_size()
         for axiom in self.axioms:
             task_size += axiom.get_encoding_size()
+        task_size += self.entail.get_encoding_size()
         return task_size
 
 
@@ -251,6 +260,24 @@ class SASGoal:
     def get_encoding_size(self):
         return len(self.pairs)
 
+class SASEntailment:
+
+    def __init__(self):
+        self.pairs = []
+
+    def dump(self):
+        for var, val in self.pairs:
+            print("v%d: %d" % (var, val))
+
+    def output(self, stream):
+        print("begin_entail", file=stream)
+        print(len(self.pairs), file=stream)
+        for var, val in self.pairs:
+            print(var, val, file=stream)
+        print("end_entail", file=stream)
+
+    def get_encoding_size(self):
+        return len(self.pairs)
 
 class SASOperator:
     def __init__(self, name, prevail, pre_post, cost):
