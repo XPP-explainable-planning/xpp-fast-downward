@@ -95,7 +95,7 @@ int DelegatingTask::get_num_entailments() const {
     return parent->get_num_entailments();
 }
 
-FactPair DelegatingTask::get_entailment(int index) const {
+vector<FactPair> DelegatingTask::get_entailment(int index) const {
     return parent->get_entailment(index);
 }
 

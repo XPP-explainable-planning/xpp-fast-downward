@@ -44,10 +44,18 @@ std::vector<FactPair> MUGSTree::get_goals(const MUGSNode* node) const
     return current_goals;
 }
 
+void  MUGSTree::next_node(){
+     current_node = get_next_node();
+}
+
 std::vector<FactPair> MUGSTree::get_next_goals()
 {
-    current_node = get_next_node();
     return get_goals(current_node);
+}
+
+std::vector<FactPair>  MUGSTree::get_next_init(){
+    std::vector<FactPair> change_init;
+    return change_init;
 }
 
 void MUGSTree::current_goals_solved(){

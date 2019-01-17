@@ -13,24 +13,41 @@ using namespace mst;
 
 namespace entailsearch {
 
-EntailNode::EntailNode(FactPair entailment, bool basic)
-    : entailment(entailment), basic(basic){
+EntailNode::EntailNode(vector<FactPair> entail){
+    basic = true;
+    entailments.insert( entailments.end(), entail.begin()+1, entail.end() );
+    premise = entail[0];
+    additional_goals.push_back(FactPair(entail[0].var, 1));
+}
 
-    if(basic){
-        additional_goals.push_back(FactPair(entailment.var, 1));
-    }
-    else{
-        additional_goals.push_back(FactPair(entailment.var, 1));
-        additional_goals.push_back(FactPair(entailment.value, 0));
-    }
+EntailNode::EntailNode(FactPair premise, FactPair conclusion){
+    basic = false;
+    entailments.push_back(conclusion);
+    this->premise = premise;
+    additional_goals.push_back(FactPair(premise.var, 1));
+    additional_goals.push_back(FactPair(conclusion.var, 0));
 }
 
 EntailNode::~EntailNode(){
 
 }
 
-std::vector<FactPair> EntailNode::get_goals() const{
+
+std::vector<FactPair> EntailNode::get_goals() const{  
     return additional_goals;
+}
+
+std::vector<FactPair>  EntailNode::get_init() const{
+    std::vector<FactPair> change_init;
+    if(! basic){
+        change_init.push_back(FactPair(entailments[0].var, 1));   
+        cout << "change init" << endl;
+    }
+    for(FactPair fp : change_init){
+        cout << fp.var << ": " << fp.value << endl;
+    }
+
+    return change_init;
 }
 
 void printList(vector<FactPair> list){
@@ -46,11 +63,11 @@ void EntailNode::print(){
     TaskProxy taskproxy = TaskProxy(*tasks::g_root_task.get());
     if(! basic){
         cout << "\tSolvable: " << isSolvable() << endl;
-        cout << "\t" << taskproxy.get_variables()[entailment.var].get_fact(1).get_name() << " -> " << taskproxy.get_variables()[entailment.value].get_fact(1).get_name() << endl;
+        cout << "\t" << premise.var << ": " << taskproxy.get_variables()[premise.var].get_fact(1).get_name() << " -> " << entailments[0].var << ": " << taskproxy.get_variables()[entailments[0].var].get_fact(1).get_name() << endl;
     }
     else{
         cout << "\tSolvable: " << isSolvable() << endl;
-        cout << "\tBasic: " << taskproxy.get_variables()[entailment.var].get_fact(1).get_name() << endl;
+        cout << "\tBasic: " << premise.var << ": " << taskproxy.get_variables()[premise.var].get_fact(1).get_name() << endl;
     }
 }
 
@@ -58,27 +75,12 @@ void EntailNode::print(){
 std::vector<EntailNode*> EntailNode::expand(){
     std::vector<EntailNode*> children;
     if(basic && isSolvable()){
-        EntailNode* child = new EntailNode(entailment, false);
-        this->set_child(child);
+        for(FactPair fp : entailments){
+             EntailNode* child = new EntailNode(premise, fp);
+            this->add_child(child);
 
-
-        /*
-        cout << "Expand: " << endl;
-        child->print();
-        TaskProxy taskproxy = TaskProxy(*tasks::g_root_task.get());
-        cout << "Current goal facts: " <<  child->get_goals().size() << endl;
-        for(uint i = 0; i < child->get_goals().size(); i++){
-            FactPair g = child->get_goals()[i];
-            cout << taskproxy.get_variables()[g.var].get_fact(g.value).get_name();
-            if(i < child->get_goals().size()-1){
-                cout << "|";
-            }
-
-        }
-        cout << endl;
-        */
-
-        children.push_back(child);
+            children.push_back(child);
+        }      
     }
     return children;
 }
@@ -92,9 +94,14 @@ EntailmentSearch::EntailmentSearch(){
     }
 
     for(uint i = 0; i < taskproxy.get_entailments().size(); i++){
-        FactProxy fp = taskproxy.get_entailments()[i];
-        entailment_list.push_back(fp.get_pair());
-        EntailNode* new_node = new EntailNode(fp.get_pair(), true);
+        vector<FactProxy> fps = taskproxy.get_entailments()[i];
+        
+        entailment_list.push_back(fps);
+        vector<FactPair> facts;
+        for(FactProxy fp : fps){
+            facts.push_back(fp.get_pair());
+        }
+        EntailNode* new_node = new EntailNode(facts);
         root_nodes.push_back(new_node);
         open_list.push_back(new_node);
     }
@@ -108,6 +115,7 @@ void EntailmentSearch::expand(bool solved){
 }
 
 
+
 std::vector<FactPair> EntailmentSearch::get_goals(const EntailNode* node) const
 {
     std::vector<FactPair> current_goals;
@@ -117,11 +125,12 @@ std::vector<FactPair> EntailmentSearch::get_goals(const EntailNode* node) const
     return current_goals;
 }
 
+void EntailmentSearch::next_node(){
+     current_node = get_next_node();
+}
+
 std::vector<FactPair> EntailmentSearch::get_next_goals()
 {
-    
-    current_node = get_next_node();
-
     
     TaskProxy taskproxy = TaskProxy(*tasks::g_root_task.get());
     cout << "Current goal facts: " <<  get_goals(current_node).size() << endl;
@@ -145,6 +154,10 @@ std::vector<FactPair> EntailmentSearch::get_next_goals()
     return get_goals(current_node);
 }
 
+std::vector<FactPair> EntailmentSearch::get_next_init(){
+    return current_node->get_init();
+}
+
 void EntailmentSearch::current_goals_solved(){
     current_node->solved();
 }
@@ -156,15 +169,18 @@ void EntailmentSearch::current_goals_not_solved(){
 int EntailmentSearch::print_relation(){
     int num_entailments = 0;
     for(EntailNode* n : root_nodes){
-        n->print();
+        //n->print();
         if(n->isSolvable()){
-            if(! n->get_child()->isSolvable()){
-                num_entailments++;
-                      
-            }   
-             n->get_child()->print();
+            for(EntailNode* en : n->get_children()){
+                if(! en->isSolvable()){
+                    num_entailments++;
+                    en->print();     
+                    cout << "--------------------------------------" << endl;               
+                }  
+            } 
+             
         }
-        cout << "--------------------------------------" << endl;
+        
     }
     return num_entailments;
 }
@@ -178,9 +194,9 @@ void EntailmentSearch::print(){
         cout << taskproxy.get_variables()[g.var].get_fact(g.value).get_name() << endl;
     }
     cout << "Entailments: " << endl;
-    for(FactPair g : entailment_list){
-        cout << g.var << " -> " << g.value << endl;
-    }
+    //for(FactProxy g : entailment_list){
+    //    cout << g. << " -> " << g.value << endl;
+    //}
     cout << "*********************************"  << endl;
     int printed_nodes = print_relation();
     cout << "*********************************"  << endl;

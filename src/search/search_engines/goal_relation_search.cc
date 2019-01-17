@@ -3,7 +3,7 @@
 #include "../globals.h"
 #include "../option_parser.h"
 #include "../plugin.h"
-#include "../tasks/modified_goals_task.h"
+#include "../tasks/modified_goals_init_task.h"
 #include "../tasks/root_task.h"
 #include "../task_utils/successor_generator.h"
 #include "../heuristic.h"
@@ -65,7 +65,8 @@ shared_ptr<SearchEngine> GoalRelationSearch::get_search_engine(int engine_config
 
     //cout << "Current Node: " << endl;
     //current_node->print(relation_tree.getSoftGoals());
-    tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), metasearchtree->get_next_goals()); // current_node->get_goals());
+    metasearchtree->next_node();
+    tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsInitTask>(getTask(), metasearchtree->get_next_goals(), metasearchtree->get_next_init()); // current_node->get_goals());
 
 
     for (Heuristic* h : heuristic) {
@@ -93,7 +94,7 @@ shared_ptr<SearchEngine> GoalRelationSearch::create_phase(int phase) {
 }
 
 SearchStatus GoalRelationSearch::step() {
-    cout << "-------------------------------------------------------------------------------------------" << endl;
+    //cout << "-------------------------------------------------------------------------------------------" << endl;
     shared_ptr<SearchEngine> current_search = create_phase(0);
 
     //TODO

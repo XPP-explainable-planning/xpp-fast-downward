@@ -270,6 +270,33 @@ public:
     }
 };
 
+class EntailmentProxy {
+protected:
+    const AbstractTask *task;
+public:
+    using ItemType = FactProxy;
+    explicit EntailmentProxy(const AbstractTask &task)
+        : task(&task) {}
+    ~EntailmentProxy() = default;
+
+    std::size_t size() const{
+        return task->get_num_entailments();
+    }
+
+    std::vector<FactProxy> operator[](std::size_t index){
+        assert(index < size());
+        std::vector<FactProxy> list;
+        for(uint i = 0; i < task->get_entailment(index).size(); i++){
+            list.push_back(FactProxy(*task, task->get_entailment(index)[i]));
+        }
+        return list;
+    }
+
+    bool empty() const {
+        return size() == 0;
+    }
+};
+
 
 class VariableProxy {
     const AbstractTask *task;
@@ -550,22 +577,6 @@ public:
     }
 };
 
-class EntailmentsProxy : public ConditionsProxy {
-public:
-    explicit EntailmentsProxy(const AbstractTask &task)
-        : ConditionsProxy(task) {}
-    ~EntailmentsProxy() = default;
-
-    std::size_t size() const override {
-        return task->get_num_entailments();
-    }
-
-    FactProxy operator[](std::size_t index) const override {
-        assert(index < size());
-        return FactProxy(*task, task->get_entailment(index));
-    }
-};
-
 
 bool does_fire(const EffectProxy &effect, const State &state);
 bool does_fire(const EffectProxy &effect, const GlobalState &state);
@@ -682,8 +693,8 @@ public:
         return GoalsProxy(*task);
     }
 
-    EntailmentsProxy get_entailments() const {
-        return EntailmentsProxy(*task);
+    EntailmentProxy get_entailments() const {
+        return EntailmentProxy(*task);
     }
 
     State get_initial_state() const {

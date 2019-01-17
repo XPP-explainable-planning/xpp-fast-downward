@@ -53,6 +53,14 @@ class actionSetProperty:
         else:
             return [self.formula.getClauses([])]
 
+    def get_negated_Clauses(self):
+        neg_formula = self.formula.negate()
+        DNF_neg_formula = neg_formula.toDNF()
+        if(isinstance(DNF_neg_formula, logic_formula.LOr)): #TODO
+            return DNF_neg_formula.getClauses([])
+        else:
+            return [DNF_neg_formula.getClauses([])]
+
     def __eq__(self, other):
         return self.name == other.name
 

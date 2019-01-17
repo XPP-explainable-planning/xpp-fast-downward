@@ -28,8 +28,8 @@ class SASTask:
         if DEBUG:
             self.validate()
 
-    def addEntailment(self, pair):
-        self.entail.pairs.append(pair)
+    def addEntailment(self, pairs):
+        self.entail.pairs.append(pairs)
 
     def validate(self):
         """Fail an assertion if the task is invalid.
@@ -270,11 +270,15 @@ class SASEntailment:
             print("v%d: %d" % (var, val))
 
     def output(self, stream):
-        print("begin_entail", file=stream)
+        print("begin_entailments", file=stream)
         print(len(self.pairs), file=stream)
-        for var, val in self.pairs:
-            print(var, val, file=stream)
-        print("end_entail", file=stream)
+        for pair in self.pairs:
+            print("begin_entail", file=stream)
+            print(len(pair), file=stream)
+            for var, val in pair:
+                print(var, val, file=stream)
+            print("end_entail", file=stream)
+        print("end_entailments", file=stream)
 
     def get_encoding_size(self):
         return len(self.pairs)

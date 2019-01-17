@@ -112,6 +112,9 @@ class LConstant(Operator):
         self.name = name
         self.id = id
 
+    def toDNF(self):
+        return LConstant(self.name, self.id)
+
     def isTrue(self):
         return self.name == "true"
 
@@ -163,6 +166,10 @@ class LNot(Operator):
     
     def __init__(self, operand):
         self.operand = operand
+
+    def toDNF(self):
+        return LNot(self.operand)
+
 
     def getClauses(self, clauses):
         clauses.append(LLiteral(self.operand, True))
@@ -292,6 +299,9 @@ class LOr(Operator):
 
     def distribute(self):
         return LOr(self.left.distribute(), self.right.distribute()) 
+
+    def toDNF(self):
+        return LOr(self.left.toDNF(), self.right.toDNF())
 
     def addPostfix(self, fix):
         return LOr(self.left.addPostfix(fix), self.right.addPostfix(fix))

@@ -55,7 +55,9 @@ public:
     }
 
     std::vector<FactPair> get_goals(const MUGSNode* node) const;
+    virtual void next_node() override;
     std::vector<FactPair> get_next_goals() override;
+    std::vector<FactPair> get_next_init() override;
     virtual void current_goals_solved() override;
     virtual void current_goals_not_solved() override;
     virtual int print_relation() = 0;

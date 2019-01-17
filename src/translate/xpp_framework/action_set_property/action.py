@@ -132,7 +132,6 @@ class ActionSet:
         #generate action dict to check if a action in contained in the set
         self.action_dict = {}
         for a in self.actions:
-            print("Add action name: " + str(a.name))
             if not a.name in self.action_dict:
                 self.action_dict[a.name] =  ParamMatcher()
             self.action_dict[a.name].addAction(a)

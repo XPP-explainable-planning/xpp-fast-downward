@@ -12,6 +12,7 @@ class BasicProperty(Property):
     def __init(self, formula):
         super(BasicProperty, self).__init__(formula)
 
+    def compileEvalToTask(sas_task, )
     
 
 class ComposedProperty(Property):

@@ -23,7 +23,7 @@ protected:
     std::vector<EntailNode*> root_nodes;
     EntailNode* current_node;
 
-    std::vector<FactPair> entailment_list;
+    std::vector<std::vector<FactProxy>> entailment_list;
     std::vector<FactPair> hard_goal_list;
 
 public:
@@ -46,7 +46,9 @@ public:
 
     virtual void expand(bool solved) override;
     std::vector<FactPair> get_goals(const EntailNode* node) const;
+    virtual void next_node() override;
     std::vector<FactPair> get_next_goals() override;
+    std::vector<FactPair> get_next_init() override;
     virtual void current_goals_solved() override;
     virtual void current_goals_not_solved() override;
     virtual int print_relation();
@@ -57,16 +59,18 @@ public:
 
 class EntailNode {
 protected:
-    EntailNode* child;
+    std::vector<EntailNode*> children;
     std::vector<FactPair> additional_goals;
-    FactPair entailment;
+    FactPair premise = FactPair(-1, -1);
+    std::vector<FactPair> entailments;
     bool solvable = false;
     bool printed = false;
     bool basic = false;
 
 
 public:
-    EntailNode(FactPair entailment, bool basic);
+    EntailNode(std::vector<FactPair> entailments);
+    EntailNode(FactPair premise, FactPair conclusion);
     ~EntailNode();
 
     void solved(){
@@ -81,12 +85,12 @@ public:
         return solvable;
     }
 
-    void set_child(EntailNode* node){
-        child = node;
+    void add_child(EntailNode* node){
+        children.push_back(node);
     }
 
-    EntailNode* get_child(){
-        return child;
+    std::vector<EntailNode*> get_children(){
+        return children;
     }
 
     void resetPrinted(){
@@ -94,6 +98,7 @@ public:
     }
 
     virtual std::vector<FactPair>  get_goals() const;
+    virtual std::vector<FactPair>  get_init() const;
     virtual void print();
     virtual std::vector<EntailNode*> expand();
 

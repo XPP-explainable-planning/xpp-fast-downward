@@ -7,9 +7,11 @@ from sas_tasks import *
 
 def addChangePhase(sas_task):
 
-    #variable to change from execution to evaluation phase
+    #variable to change from execution to one eval phase per property
     eval_phase_var_id = len(sas_task.variables.value_names)
-    eval_var = ["not_eval", "eval"] 
+    eval_var = [] 
+    for i in range(2): 
+        eval_var.append("phase_" + str(i))
 
     sas_task.variables.value_names.append(eval_var)
     sas_task.variables.ranges.append(len(eval_var)) #binary var
@@ -25,7 +27,9 @@ def addChangePhase(sas_task):
     #action which changes from execution to evaluation phase    
     pre_post_change_phase = []
     pre_post_change_phase.append((eval_phase_var_id, 0, 1, []))
-    sas_task.operators.append(SASOperator("change_phase",[], pre_post_change_phase, 0))
+    sas_task.operators.append(SASOperator("(change_to_evaluation)",[], pre_post_change_phase, 0))
+
+    
 
     return eval_phase_var_id
 
@@ -86,7 +90,7 @@ def updateOriginalActions(sas_task, asp):
         if s.number_of_contained_ops == 0:
             print("WARNING: " + s.name + " does not contain any action, no actions maps to the definition \n" + str(s.definition))
 
-def addPropertyCheckingActions(sas_task, asp, eval_phase_var_id):
+def addPropertyCheckingActions(sas_task, asp, eval_phase_var_id, addNegativeActions=False):
     #add the actions checking if the property ist true
     # Assumption: property is in disjunctive normal form
     for prop in asp.properties:
@@ -109,13 +113,39 @@ def addPropertyCheckingActions(sas_task, asp, eval_phase_var_id):
             # as effect the property fact is set to true
             pre_post.append((prop.var_id, -1, 1, []))
 
-            #can only be executed in the evaluation phase
+            #can only be executed in its evaluation phase
             pre_post.append((eval_phase_var_id, 1, 1, []))
 
             #TODO assigning a cost of 0 does not work -> only possible in a pddl version which uses action costs
            
             #print(pre_post)
-            sas_task.operators.append(SASOperator(str(c),[], pre_post, 0))
+            sas_task.operators.append(SASOperator("(" + prop.name + "_ " + str(c) + ")",[], pre_post, 0))
+
+        if addNegativeActions:
+            clauses = prop.get_negated_Clauses()
+            #print(clauses)
+            for c in clauses:
+                pre_post = []
+                # literals form the preconditions
+                for l in c:
+                    #print(l.constant.name)
+                    if l.negated:
+                        pre_post.append((asp.actionSets[l.constant.name].var_id,0,0,[]))
+                    else:
+                        pre_post.append((asp.actionSets[l.constant.name].var_id,1,1,[]))
+                    #print(pre_post)
+
+                # as effect the property fact is set to false
+                pre_post.append((prop.var_id, -1, 0, []))
+
+                #can only be executed in its evaluation phase
+                pre_post.append((eval_phase_var_id, 1, 1, []))
+
+                #TODO assigning a cost of 0 does not work -> only possible in a pddl version which uses action costs
+            
+                #print(pre_post)
+                sas_task.operators.append(SASOperator("(neg_" + prop.name + "_ " + str(c) + ")",[], pre_post, 0))
+
 
 def specifySoftGoals(sas_task, asp):
      #specify soft goals
@@ -128,7 +158,7 @@ def specifySoftGoals(sas_task, asp):
                 if value_name.endswith(g):
                     sas_task.variables.value_names[i][j] = "soft_" + value_name
 
-def compileToTask(sas_task, asp, addPropertiesToGoal=True):
+def compileToTask(sas_task, asp, addPropertiesToGoal=True, addNegativeSatActions=False):
 
     ######################## VARIABLES ###############################
     eval_phase_var_id = addChangePhase(sas_task)
@@ -138,7 +168,7 @@ def compileToTask(sas_task, asp, addPropertiesToGoal=True):
     ######################## ACTIONS ###############################
 
     updateOriginalActions(sas_task, asp)
-    addPropertyCheckingActions(sas_task, asp, eval_phase_var_id)
+    addPropertyCheckingActions(sas_task, asp, eval_phase_var_id, addNegativeActions=addNegativeSatActions)
 
     ####################### GOALS ########################
     specifySoftGoals(sas_task, asp)

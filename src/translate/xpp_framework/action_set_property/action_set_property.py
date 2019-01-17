@@ -3,7 +3,7 @@
 import parser
 import ASPcompilation
 
-def addActionSetPropertiesToTask(path, task, sas_task, options, addGoalFacts):
+def addActionSetPropertiesToTask(path, task, sas_task, options, addGoalFacts, addNegSatActions):
     #build typeObjectMap
     typeObjectMap = {}
     for o in task.objects:
@@ -22,7 +22,7 @@ def addActionSetPropertiesToTask(path, task, sas_task, options, addGoalFacts):
 
     print("property_compilation_type: " + str(options.property_compilation_type))
     if options.property_compilation_type == None or options.property_compilation_type == 0:
-        ASPcompilation.compileToTask(sas_task, asps, addPropertiesToGoal=addGoalFacts)
+        ASPcompilation.compileToTask(sas_task, asps, addPropertiesToGoal=addGoalFacts, addNegativeSatActions=addNegSatActions)
        
         return asps
 
