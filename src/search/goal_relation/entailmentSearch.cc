@@ -41,11 +41,13 @@ std::vector<FactPair>  EntailNode::get_init() const{
     std::vector<FactPair> change_init;
     if(! basic){
         change_init.push_back(FactPair(entailments[0].var, 1));   
-        cout << "change init" << endl;
+        //cout << "change init" << endl;
     }
+    /*
     for(FactPair fp : change_init){
         cout << fp.var << ": " << fp.value << endl;
     }
+    */
 
     return change_init;
 }
@@ -131,7 +133,7 @@ void EntailmentSearch::next_node(){
 
 std::vector<FactPair> EntailmentSearch::get_next_goals()
 {
-    
+    /*
     TaskProxy taskproxy = TaskProxy(*tasks::g_root_task.get());
     cout << "Current goal facts: " <<  get_goals(current_node).size() << endl;
     for(uint i = 0; i < get_goals(current_node).size(); i++){
@@ -144,7 +146,7 @@ std::vector<FactPair> EntailmentSearch::get_next_goals()
         }
     cout << endl;
     current_node->print();
-    
+    */
 
     /*
     for(FactPair fp : get_goals(current_node)){

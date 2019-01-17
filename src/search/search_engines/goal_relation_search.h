@@ -20,6 +20,8 @@ class GoalRelationSearch : public SearchEngine {
     bool all_soft_goals;
     std::vector<Heuristic *> heuristic;
 
+    MetaSearchType meta_search_type;
+
     int phase;
     //int algo_phase;
     bool last_phase_found_solution;

@@ -23,8 +23,6 @@ int TopDownMUGSNode::print_relation(const std::vector<FactPair>& all_goals){
     }
     printed = true;
 
-    TaskProxy taskproxy = TaskProxy(*tasks::g_root_task.get());
-
     //Check if all children are solvable
     bool c_solved = true;
     for(MUGSNode* c : children){
@@ -36,22 +34,13 @@ int TopDownMUGSNode::print_relation(const std::vector<FactPair>& all_goals){
     int printed_nodes = 0;
     if((c_solved) && ! isSolvable()){
         printed_nodes++;
-        cout << "Unsolvable: " << endl;
-
-        for(uint i = 0; i < get_goals(all_goals).size(); i++){
-            FactPair g = get_goals(all_goals)[i];
-            cout << taskproxy.get_variables()[g.var].get_fact(g.value).get_name();
-            if(i < get_goals(all_goals).size()-1){
-                cout << "|";
-            }
-
-        }
+        this->print(all_goals);
         cout << endl;
     }
-
-    
-    for(MUGSNode* c : children){
-        printed_nodes += c->print_relation(all_goals);
+    else{   
+        for(MUGSNode* c : children){
+            printed_nodes += c->print_relation(all_goals);
+        }
     }
     
     return printed_nodes;
@@ -76,7 +65,7 @@ std::vector<MUGSNode*> TopDownMUGSNode::expand(std::vector<MUGSNode*>& nodes){
             MUGSNode* succ = nodes[new_goals];
             if (succ->get_goals_id() != new_goals) {
                 succ->set_goals_id(new_goals);
-                succ->isSolvable();
+                succ->solved();
             }
             children.push_back(succ);
         }
@@ -93,7 +82,7 @@ std::vector<MUGSNode*> TopDownMUGSNode::expand(std::vector<MUGSNode*>& nodes){
         }
         else{
             succ->set_goals_id(new_goals);
-            succ->isSolvable();
+            succ->solved();
         }
         children.push_back(succ);
 
@@ -153,13 +142,12 @@ void TopDownMUGSTree::expand(bool solvable){
     if(! solvable){
         vector<MUGSNode*> new_nodes = current_node->expand(nodes);
         open_list.insert(open_list.begin(), new_nodes.begin(), new_nodes.end());
-        cout << "Added new nodes to openlist" << endl;
     }
-    cout << "Size openlist: " << open_list.size() << endl;
 }
 
 int TopDownMUGSTree::print_relation(){
-    return current_node->print_relation(soft_goal_list);
+    cout << "MUGS: " << endl;
+    return root->print_relation(soft_goal_list);
 }
 
 

@@ -110,6 +110,10 @@ public:
         return children.size() > 0;
     }
 
+    std::vector<MUGSNode*> getChildren(){
+        return children;
+    }
+
     void resetPrinted(){
         printed = false;
     }

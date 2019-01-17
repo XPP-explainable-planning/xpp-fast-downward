@@ -623,8 +623,9 @@ fast_downward_plugin(
     HELP TODO
     SOURCES
         goal_relation/meta_search_tree
-		goal_relation/topdownMUGStree
 		goal_relation/mugsTree
+		goal_relation/topdownMUGStree
+		goal_relation/bottomupMUGStree
 		goal_relation/entailmentSearch
 )
 

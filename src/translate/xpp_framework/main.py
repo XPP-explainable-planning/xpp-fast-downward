@@ -9,7 +9,7 @@ def run(options, task, sas_task):
         return
     
     if options.property_type == 0:
-        action_set_property.addActionSetPropertiesToTask(path, task, sas_task, options, True)
+        action_set_property.addActionSetPropertiesToTask(path, task, sas_task, options, True, False)
         return
     
     #if options.property_type == 1:

@@ -10,7 +10,11 @@
 
 #include <deque>
 
-class State;
+enum class MetaSearchType {
+    TOPDOWNMUGSSEARCH,
+    BOTTOMUPMUGSSEARCH,
+    ENTAILMENTSEARCH
+};
 
 namespace mst {
 class MetaSearchNode;

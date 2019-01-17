@@ -31,7 +31,25 @@ void printList(vector<FactPair> list){
 }
 
 void MUGSNode::print(const std::vector<FactPair>& all_goals){
-    printList(get_goals(all_goals));
+   //cout << ".........................." << endl;
+    TaskProxy taskproxy = TaskProxy(*tasks::g_root_task.get());
+    //cout << goals << ": ";
+    //cout << goals << endl;
+    /*
+    for(FactPair l : get_goals(all_goals)){
+        cout << "var" << l.var << " = " << l.value << ", ";
+    }
+    cout << endl;
+    */
+    //cout << ".........................." << endl;
+    for(uint i = 0; i < get_goals(all_goals).size(); i++){
+        FactPair g = get_goals(all_goals)[i];
+        //cout << "var" << l.var << " = " << l.value << ", ";
+        cout << taskproxy.get_variables()[g.var].get_fact(g.value).get_name();
+        if(i < get_goals(all_goals).size()-1){
+            cout << "|";
+        }
+    }
 }
 
 

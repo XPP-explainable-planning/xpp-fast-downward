@@ -11,6 +11,7 @@
 #include "../utils/timer.h"
 
 #include "../goal_relation/topdownMUGStree.h"
+#include "../goal_relation/bottomupMUGStree.h"
 #include "../goal_relation/entailmentSearch.h"
 
 #include <iostream>
@@ -21,41 +22,46 @@ using namespace mst;
 namespace goal_relation_search {
 GoalRelationSearch::GoalRelationSearch(const Options &opts)
     : SearchEngine(opts),
-      engine_configs(opts.get_list<ParseTree>("engine_configs")),
-      repeat_last_phase(opts.get<bool>("repeat_last")),
-      continue_on_fail(opts.get<bool>("continue_on_fail")),
-      continue_on_solve(opts.get<bool>("continue_on_solve")),
-      all_soft_goals(opts.get<bool>("all_soft_goals")),
-      phase(0),
-      //algo_phase(1),
-      last_phase_found_solution(false),
-      //best_bound(bound),
-      iterated_found_solution(false){
-      //metasearchtree(task_proxy) {
+        engine_configs(opts.get_list<ParseTree>("engine_configs")),
+        repeat_last_phase(opts.get<bool>("repeat_last")),
+        continue_on_fail(opts.get<bool>("continue_on_fail")),
+        continue_on_solve(opts.get<bool>("continue_on_solve")),
+        all_soft_goals(opts.get<bool>("all_soft_goals")),
+        meta_search_type(static_cast<MetaSearchType>(opts.get<int>("metasearch"))),
+        phase(0),
+        //algo_phase(1),
+        last_phase_found_solution(false),
+        //best_bound(bound),
+        iterated_found_solution(false){
+        
+        
+        switch (meta_search_type)
+        {
+            case MetaSearchType::TOPDOWNMUGSSEARCH:
+                metasearchtree = new tdmugs::TopDownMUGSTree(task_proxy.get_goals(), all_soft_goals);
+                break;
 
-          if(true){
-            //metasearchtree = new tdmugs::TopDownMUGSTree(task_proxy.get_goals(), all_soft_goals);
-            metasearchtree = new entailsearch::EntailmentSearch();
+            case MetaSearchType::BOTTOMUPMUGSSEARCH:
+                metasearchtree = new bumugs::BottomUpMUGSTree(task_proxy.get_goals(), all_soft_goals);
+                break;
 
-            /*
-            cout << "Entailment: " << endl;
-            for(uint i = 0; i < task_proxy.get_entailments().size(); i++){
-                  FactProxy entail = task_proxy.get_entailments()[i];
-                  cout << entail.get_variable().get_id() << " -> " << entail.get_value() << endl;
-            }
-            */
-          }
+            case MetaSearchType::ENTAILMENTSEARCH:
+                metasearchtree = new entailsearch::EntailmentSearch();
+        
+            default:
+                break;
+        }
 
-          std::vector<Evaluator*> evaluators = opts.get_list<Evaluator*>("heu");
-          for (Evaluator* eval : evaluators) {
-              heuristic.push_back(dynamic_cast<Heuristic*>(eval));
-              assert(heuristic.back() != nullptr);
-          }
+        std::vector<Evaluator*> evaluators = opts.get_list<Evaluator*>("heu");
+        for (Evaluator* eval : evaluators) {
+            heuristic.push_back(dynamic_cast<Heuristic*>(eval));
+            assert(heuristic.back() != nullptr);
+        }
 
-      //current_node = relation_tree.get_root();
-      //cout << "Current Node: " << endl;
-      //current_node->print(); 
-      //tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), current_node->get_goals());
+        //current_node = relation_tree.get_root();
+        //cout << "Current Node: " << endl;
+        //current_node->print(); 
+        //tasks::g_root_task = make_shared<extra_tasks::ModifiedGoalsTask>(getTask(), current_node->get_goals());
 
 }
 
@@ -138,10 +144,12 @@ SearchStatus GoalRelationSearch::step() {
 
     //stop search in this branch
     if (last_phase_found_solution) {
+        /*
         cout << "++++++++ SOLUTION +++++++"  << endl;
         for(OperatorID id : current_search->get_plan()){
             cout << task_proxy.get_operators()[id.get_index()].get_name() << endl;
         }
+        */
         metasearchtree->current_goals_solved();
         metasearchtree->expand(true);
         iterated_found_solution = true;
@@ -233,6 +241,12 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
                             "TODO",
                             "false");
     parser.add_list_option<Evaluator*>("heu", "reference to heuristic to update abstract task");
+    vector<string> meta_search_types;
+    meta_search_types.push_back("TOPDOWNMUGSSEARCH");
+    meta_search_types.push_back("BOTTOMUPMUGSSEARCH");
+    meta_search_types.push_back("ENTAILMENTSEARCH");
+    parser.add_enum_option(
+        "metasearch", meta_search_types, "meta search type", "TOPDOWNMUGSSEARCH");
     SearchEngine::add_options_to_parser(parser);
     Options opts = parser.parse();
 
