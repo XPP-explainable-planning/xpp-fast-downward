@@ -146,11 +146,12 @@ int BottomUpMUGSTree::print_relation(){
     while(open_list.size() > 0){
         //cout << "-----------------------------------------------" << endl;
         //cout << "Current mugs: " << mugs.size() << endl;
-
+    	/*
         for(MUGSNode* n :mugs){
             n->print(soft_goal_list);
             cout << endl;
         }
+        */
 
         MUGSNode* c_node = open_list[0];
         //cout << "Current node: " << " solvable: " << c_node->isSolvable() << endl;
