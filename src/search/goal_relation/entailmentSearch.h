@@ -31,6 +31,7 @@ public:
     EntailmentSearch();
 
     bool continue_search() override{
+    	std::cout << "Continue Search size openlist: "  << open_list.size() << std::endl;
         return ! open_list.empty();
     }
 

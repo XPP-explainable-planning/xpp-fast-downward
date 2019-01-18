@@ -27,6 +27,13 @@ std::vector<FactPair> BottomUpMUGSNode::get_goals(const std::vector<FactPair>& a
     return res;
 }
 
+void printList(vector<FactPair> list){
+    for(FactPair l : list){
+        cout << "var" << l.var << " = " << l.value << ", ";
+    }
+    cout << endl;
+}
+
 
 //generate all possible children nodes
 std::vector<MUGSNode*> BottomUpMUGSNode::expand(std::vector<MUGSNode*>& nodes){
@@ -35,7 +42,7 @@ std::vector<MUGSNode*> BottomUpMUGSNode::expand(std::vector<MUGSNode*>& nodes){
     //printList(goals);
     
 
-    //cout << "Expand(" << goals << ", " << sleep_set_i << ")" << std::endl;
+    cout << "Expand(" << goals << ", " << sleep_set_i << ")" << std::endl;
 
     // successors who have been expanded before
     for (uint i = 0; i < sleep_set_i; i++) {
@@ -47,7 +54,7 @@ std::vector<MUGSNode*> BottomUpMUGSNode::expand(std::vector<MUGSNode*>& nodes){
                 succ->not_solved();
             }
             children.push_back(succ);
-            //std::cout << goals << " -> " << new_goals << " exists already " << std::endl;
+            std::cout << goals << " -> " << new_goals << " exists already " << std::endl;
             
         }
     }
@@ -56,7 +63,7 @@ std::vector<MUGSNode*> BottomUpMUGSNode::expand(std::vector<MUGSNode*>& nodes){
     for(uint i = sleep_set_i; ((goals >> i) & 1U); i++){
         uint new_goals = goals & ~(1U << i);
         MUGSNode* succ = nodes[new_goals];
-        if(new_goals != 0){
+        if(new_goals != ((1U << 31) -1)){ //TODO correct?
             new_nodes.push_back(succ);
             new_nodes.back()->set_sleep_set_id(i + 1);
             new_nodes.back()->set_goals_id(new_goals);
@@ -68,10 +75,10 @@ std::vector<MUGSNode*> BottomUpMUGSNode::expand(std::vector<MUGSNode*>& nodes){
         //cout << succ->goals << endl;
         children.push_back(succ);
 
-        //std::cout << goals << " -> " << new_goals << std::endl;
+        std::cout << goals << " -> " << new_goals << std::endl;
 
         
-        // cout << "Expand next node in relation tree" << endl;
+        //cout << "Expand next node in relation tree" << endl;
         //cout << "Successor node in relation tree (i=" << i << "):" << endl << "  ";
         //printList(new_goals);
         
@@ -123,7 +130,9 @@ BottomUpMUGSTree::BottomUpMUGSTree(GoalsProxy goals, bool all_soft_goals){
 
 void BottomUpMUGSTree::expand(bool solvable){
     if(solvable){
+
         vector<MUGSNode*> new_nodes = current_node->expand(nodes);
+        cout << "Expand: " << new_nodes.size() << endl;
         open_list.insert(open_list.begin(), new_nodes.begin(), new_nodes.end());
     }
 }
@@ -135,18 +144,18 @@ int BottomUpMUGSTree::print_relation(){
     open_list.push_back(root);
 
     while(open_list.size() > 0){
-        //cout << "-----------------------------------------------" << endl;
-        //cout << "Current mugs: " << mugs.size() << endl;
-        /*
-        for(Node* n :mugs){
+        cout << "-----------------------------------------------" << endl;
+        cout << "Current mugs: " << mugs.size() << endl;
+
+        for(MUGSNode* n :mugs){
             n->print(soft_goal_list);
             cout << endl;
         }
-        */
+
         MUGSNode* c_node = open_list[0];
-        //cout << "Current node: " << " solvable: " << c_node->isSolvable() << endl;
-        //c_node->print(soft_goal_list);
-        //cout << endl;
+        cout << "Current node: " << " solvable: " << c_node->isSolvable() << endl;
+        c_node->print(soft_goal_list);
+        cout << endl;
         open_list.pop_front();
 
         if(! c_node->isSolvable()){

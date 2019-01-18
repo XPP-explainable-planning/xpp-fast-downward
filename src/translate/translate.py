@@ -597,7 +597,9 @@ def pddl_to_sas(task):
                 sas_task, options.reorder_variables,
                 options.filter_unimportant_vars)
 
-    assert(len(goal_list) == len(sas_task.goal.pairs))
+    #print(goal_list)
+    #print(sas_task.goal.pairs)
+    #assert(len(goal_list) == len(sas_task.goal.pairs))
 
     return sas_task
 
