@@ -42,7 +42,7 @@ std::vector<MUGSNode*> BottomUpMUGSNode::expand(std::vector<MUGSNode*>& nodes){
     //printList(goals);
     
 
-    cout << "Expand(" << goals << ", " << sleep_set_i << ")" << std::endl;
+    //cout << "Expand(" << goals << ", " << sleep_set_i << ")" << std::endl;
 
     // successors who have been expanded before
     for (uint i = 0; i < sleep_set_i; i++) {
@@ -54,7 +54,7 @@ std::vector<MUGSNode*> BottomUpMUGSNode::expand(std::vector<MUGSNode*>& nodes){
                 succ->not_solved();
             }
             children.push_back(succ);
-            std::cout << goals << " -> " << new_goals << " exists already " << std::endl;
+            //std::cout << goals << " -> " << new_goals << " exists already " << std::endl;
             
         }
     }
@@ -75,7 +75,7 @@ std::vector<MUGSNode*> BottomUpMUGSNode::expand(std::vector<MUGSNode*>& nodes){
         //cout << succ->goals << endl;
         children.push_back(succ);
 
-        std::cout << goals << " -> " << new_goals << std::endl;
+        //std::cout << goals << " -> " << new_goals << std::endl;
 
         
         //cout << "Expand next node in relation tree" << endl;
@@ -132,7 +132,7 @@ void BottomUpMUGSTree::expand(bool solvable){
     if(solvable){
 
         vector<MUGSNode*> new_nodes = current_node->expand(nodes);
-        cout << "Expand: " << new_nodes.size() << endl;
+        //cout << "Expand: " << new_nodes.size() << endl;
         open_list.insert(open_list.begin(), new_nodes.begin(), new_nodes.end());
     }
 }
@@ -144,8 +144,8 @@ int BottomUpMUGSTree::print_relation(){
     open_list.push_back(root);
 
     while(open_list.size() > 0){
-        cout << "-----------------------------------------------" << endl;
-        cout << "Current mugs: " << mugs.size() << endl;
+        //cout << "-----------------------------------------------" << endl;
+        //cout << "Current mugs: " << mugs.size() << endl;
 
         for(MUGSNode* n :mugs){
             n->print(soft_goal_list);
@@ -153,9 +153,9 @@ int BottomUpMUGSTree::print_relation(){
         }
 
         MUGSNode* c_node = open_list[0];
-        cout << "Current node: " << " solvable: " << c_node->isSolvable() << endl;
-        c_node->print(soft_goal_list);
-        cout << endl;
+        //cout << "Current node: " << " solvable: " << c_node->isSolvable() << endl;
+        //c_node->print(soft_goal_list);
+        //cout << endl;
         open_list.pop_front();
 
         if(! c_node->isSolvable()){
