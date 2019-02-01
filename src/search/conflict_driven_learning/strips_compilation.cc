@@ -17,6 +17,7 @@ static bool _initialized = false;
 static size_t _num_facts = -1;
 static Task strips_task;
 static std::vector<unsigned> variable_offset;
+static const AbstractTask* abstract_task_ref = NULL;
 
 std::pair<int, int> get_variable_assignment(const unsigned& fact_id)
 {
@@ -50,10 +51,23 @@ const Task &get_task()
 
 void initialize(const AbstractTask& task)
 {
-    if (_initialized) {
+    if (&task == abstract_task_ref) {
         return;
     }
+
+    if (_initialized) {
+        strips_task.m_actions.clear();
+        strips_task.m_actions_with_add.clear();
+        strips_task.m_actions_with_del.clear();
+        strips_task.m_actions_with_mutex_regression.clear();
+        strips_task.m_goal.clear();
+        strips_task.m_mutexes.clear();
+        variable_offset.clear();
+        _num_facts = -1;
+    }
+
     _initialized = true;
+    abstract_task_ref = &task;
 
     /* std::cout << "Converting FDR to STRIPS ..." << std::endl; */
     /* utils::Timer tconversion; */
