@@ -1,1 +1,1 @@
-from action_set_property import addActionSetPropertiesToTask
+from .action_set_property import addActionSetPropertiesToTask

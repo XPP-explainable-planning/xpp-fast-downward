@@ -144,12 +144,14 @@ SearchStatus GoalRelationSearch::step() {
 
     //stop search in this branch
     if (last_phase_found_solution) {
-
+        
         //cout << "++++++++ SOLUTION +++++++"  << endl;
         /*
         for(OperatorID id : current_search->get_plan()){
-            cout << task_proxy.get_operators()[id.get_index()].get_name() << endl;
+            cout << task_proxy.get_operators()[id.get_index()].get_name() << "  ";
+            cout << task_proxy.get_operators()[id.get_index()].get_cost() << endl;
         }
+         cout << "++++++++ SOLUTION +++++++"  << endl;
         */
         metasearchtree->current_goals_solved();
         metasearchtree->expand(true);

@@ -1,4 +1,3 @@
-from sets import Set
 import xpp_framework.logic.logic_formula as logic_formula
 
 

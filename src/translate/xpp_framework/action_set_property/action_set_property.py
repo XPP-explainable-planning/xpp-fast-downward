@@ -1,7 +1,5 @@
-#! /usr/bin/env python3
-
-import parser
-import ASPcompilation
+from . import parser
+from . import ASPcompilation
 
 def addActionSetPropertiesToTask(path, task, sas_task, options, addGoalFacts, addNegSatActions):
     #build typeObjectMap

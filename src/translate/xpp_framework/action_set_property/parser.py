@@ -1,5 +1,5 @@
-from action import *
-from property import *
+from .action import *
+from .property import *
 
 
 # typeObjectMap maps from a type to a list of objects which have this type

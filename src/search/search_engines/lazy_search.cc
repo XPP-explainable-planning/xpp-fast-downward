@@ -35,6 +35,7 @@ LazySearch::LazySearch(const Options &opts)
       We initialize current_eval_context in such a way that the initial node
       counts as "preferred".
     */
+    //cout << "Conducting lazy best first search, (real) bound = " << bound << endl;
 }
 
 void LazySearch::set_preferred_operator_evaluators(
@@ -104,7 +105,7 @@ void LazySearch::generate_successors() {
         int new_g = current_g + get_adjusted_cost(op);
         int new_real_g = current_real_g + op.get_cost();
         bool is_preferred = preferred_operators.contains(op_id);
-        if (new_real_g < bound) {
+        if (new_real_g <= bound) {
             EvaluationContext new_eval_context(
                 current_eval_context.get_cache(), new_g, is_preferred, nullptr);
             open_list->insert(new_eval_context, make_pair(current_state.get_id(), op_id));
@@ -146,6 +147,7 @@ SearchStatus LazySearch::fetch_next_state() {
 }
 
 SearchStatus LazySearch::step() {
+
     // Invariants:
     // - current_state is the next state for which we want to compute the heuristic.
     // - current_predecessor is a permanent pointer to the predecessor of that state.

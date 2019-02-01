@@ -1,5 +1,5 @@
-import action_set_property
-import entailment
+from . import action_set_property
+from . import entailment
 
 def run(options, task, sas_task):
     path = options.plan_property
@@ -17,6 +17,7 @@ def run(options, task, sas_task):
     #    return
 
     if options.property_type == 2:
+        print("--------------------------- ENTAILMENT COMPILATION ------------------------------------------------")
         properties = action_set_property.addActionSetPropertiesToTask(path, task, sas_task, options, False, True)
         #entailment.entailCompilation.addEntailmentsToTask(sas_task, properties)
         entailment.entailCompilation.addEntailmentsToTask(sas_task, properties)

@@ -95,6 +95,7 @@ EntailmentSearch::EntailmentSearch(){
 
     }
 
+    cout << "Num of entailments: " << taskproxy.get_entailments().size() << endl;
     for(uint i = 0; i < taskproxy.get_entailments().size(); i++){
         vector<FactProxy> fps = taskproxy.get_entailments()[i];
         
@@ -107,6 +108,7 @@ EntailmentSearch::EntailmentSearch(){
         root_nodes.push_back(new_node);
         open_list.push_back(new_node);
     }
+
 }
 
 void EntailmentSearch::expand(bool solved){

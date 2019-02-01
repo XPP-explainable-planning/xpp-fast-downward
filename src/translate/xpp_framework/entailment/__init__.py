@@ -1,1 +1,1 @@
-import entailCompilation
+from  .entailCompilation import addEntailmentsToTask

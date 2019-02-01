@@ -69,6 +69,7 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
         vector<Evaluator *> preferred_list = opts.get_list<Evaluator *>("preferred");
         engine->set_preferred_operator_evaluators(preferred_list);
     }
+
     return engine;
 }
 

@@ -1,4 +1,4 @@
-from parameter_matcher import ParamMatcher
+from .parameter_matcher import ParamMatcher
 
 class Action:
 
@@ -24,7 +24,7 @@ class Action:
                 # if the param is an object just use the object
                 #check if the object exists in the planning instance
                 found = False
-                for (o_type, objects) in typeObjectMap.iteritems():
+                for (o_type, objects) in typeObjectMap.items():
                     if param in objects:
                         found = True
                         break

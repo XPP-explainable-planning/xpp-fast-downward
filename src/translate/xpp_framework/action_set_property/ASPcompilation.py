@@ -62,7 +62,7 @@ def addPropertySatVariables(sas_task, asp, addToGoal):
 def addActionSetIndicators(sas_task, asp):
 
     #for every action set add an variable which indicates if one of the actions in the set has been used
-    for (n,s) in asp.actionSets.iteritems():
+    for (n,s) in asp.actionSets.items():
         
         new_vars =  ["not_used_" + s.name, "used_" + s.name]
 
@@ -77,7 +77,7 @@ def addActionSetIndicators(sas_task, asp):
 
 def updateOriginalActions(sas_task, asp):
     # every action in the set assigns the corresponsing variable to true
-    for (n,s) in asp.actionSets.iteritems():
+    for (n,s) in asp.actionSets.items():
         #print("-------------------------------------------------------------------")
         #print(s)
         for op in sas_task.operators:        
@@ -86,7 +86,7 @@ def updateOriginalActions(sas_task, asp):
                 #print(op.name)
                 op.pre_post.append((s.var_id, -1, 1, []))
     
-    for (n,s) in asp.actionSets.iteritems():
+    for (n,s) in asp.actionSets.items():
         if s.number_of_contained_ops == 0:
             print("WARNING: " + s.name + " does not contain any action, no actions maps to the definition \n" + str(s.definition))
 

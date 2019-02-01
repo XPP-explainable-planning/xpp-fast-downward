@@ -68,8 +68,11 @@ void  MUGSTree::next_node(){
 
 std::vector<FactPair> MUGSTree::get_next_goals()
 {
-	//cout << "Current node: " << endl;
-	//current_node->print(soft_goal_list);
+    /*
+	cout << "Current node: " << endl;
+	current_node->print(soft_goal_list);
+    cout << endl;
+    */
     return get_goals(current_node);
 }
 
