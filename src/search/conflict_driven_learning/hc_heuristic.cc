@@ -87,6 +87,7 @@ void HCHeuristic::initialize(unsigned m)
 {
     std::cout << "Initializing hC heuristic ..." << std::endl;
     strips::initialize(*task);
+    update_goal_set(*task);
 
     utils::Timer timer_init;
 

@@ -51,6 +51,7 @@ const Task &get_task()
 
 void initialize(const AbstractTask& task)
 {
+#if 0
     if (&task == abstract_task_ref) {
         return;
     }
@@ -65,6 +66,11 @@ void initialize(const AbstractTask& task)
         variable_offset.clear();
         _num_facts = -1;
     }
+#else
+    if (_initialized) {
+        return;
+    }
+#endif
 
     _initialized = true;
     abstract_task_ref = &task;
