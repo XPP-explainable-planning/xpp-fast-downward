@@ -169,7 +169,7 @@ SearchStatus LazySearch::step() {
                     parent_state, current_operator_id, current_state);
         }
         statistics.inc_evaluated_states();
-        if (! (open_list->is_dead_end(current_eval_context) || current_g >= bound)) {
+        if (! (open_list->is_dead_end(current_eval_context) || current_g > bound)) {
             // TODO: Generalize code for using multiple evaluators.
             if (current_predecessor_id == StateID::no_state) {
                 node.open_initial();
