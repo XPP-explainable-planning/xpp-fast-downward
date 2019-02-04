@@ -68,6 +68,10 @@ void initialize(const AbstractTask& task)
     }
 #else
     if (_initialized) {
+        if (abstract_task_ref != &task) {
+            abstract_task_ref = &task;
+            update_goal_set(task);
+        }
         return;
     }
 #endif
