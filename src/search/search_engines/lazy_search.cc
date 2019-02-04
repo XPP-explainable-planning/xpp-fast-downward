@@ -147,6 +147,8 @@ SearchStatus LazySearch::fetch_next_state() {
 }
 
 SearchStatus LazySearch::step() {
+    if (check_goal_and_set_plan(current_state))
+                return SOLVED;
 
     // Invariants:
     // - current_state is the next state for which we want to compute the heuristic.
@@ -170,7 +172,7 @@ SearchStatus LazySearch::step() {
         }
         statistics.inc_evaluated_states();
             // TODO: Generalize code for using multiple evaluators.
-        if (! (open_list->is_dead_end(current_eval_context) || current_g >= bound)) {
+        if (! (open_list->is_dead_end(current_eval_context) || current_real_g >= bound)) {
             if (current_predecessor_id == StateID::no_state) {
                 node.open_initial();
                 if (search_progress.check_progress(current_eval_context))
