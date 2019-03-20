@@ -1,5 +1,6 @@
 from . import action_set_property
 from . import entailment
+from . import LTL
 
 def run(options, task, sas_task):
     path = options.plan_property
@@ -12,9 +13,9 @@ def run(options, task, sas_task):
         action_set_property.addActionSetPropertiesToTask(path, task, sas_task, options, True, False)
         return
     
-    #if options.property_type == 1:
-    #    xpp_framework.addLTLPlanProperties(sas_task, path)    
-    #    return
+    if options.property_type == 1:
+        LTL.addLTLPlanProperties(sas_task, path)    
+        return
 
     if options.property_type == 2:
         print("--------------------------- ENTAILMENT COMPILATION ------------------------------------------------")

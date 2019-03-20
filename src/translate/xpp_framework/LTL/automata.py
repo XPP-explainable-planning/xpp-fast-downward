@@ -14,6 +14,9 @@ class State:
         #outgoing transitions
         self.transitions = []
 
+    def get_name(self):
+        return self.name
+
     def isBlocking(self):
         return len(self.transitions) == 1 and not self.transitions[0].guard.isTrue()
 
@@ -73,6 +76,10 @@ class Automata:
         self.transitions = []
 
 
+    def get_states(self):
+        return self.states.values()
+
+
     def addState(self, s):
         if(s.name in self.states):
             return
@@ -83,6 +90,7 @@ class Automata:
 
         #store state
         self.states[s.name] = s
+
 
     def replaceConstantsName(self, map):
         for name, s in self.states.items():

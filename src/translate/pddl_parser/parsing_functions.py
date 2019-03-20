@@ -252,7 +252,7 @@ def parse_assignment(alist):
 def parse_action(alist, type_dict, predicate_dict):
     iterator = iter(alist)
     action_tag = next(iterator)
-    assert action_tag == ":action"
+    assert action_tag == ":action", "Tag was: " + action_tag
     name = next(iterator)
     parameters_tag_opt = next(iterator)
     if parameters_tag_opt == ":parameters":

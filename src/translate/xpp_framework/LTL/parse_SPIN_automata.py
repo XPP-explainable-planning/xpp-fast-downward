@@ -1,5 +1,5 @@
-from automata import *
-from logic_formula import *
+from .automata import *
+import xpp_framework.logic.logic_formula as logic_formula
 import re
 
 
@@ -8,9 +8,9 @@ def parseGuard(guard_string):
     #print("Parse guard: ")  
     guard_string = guard_string.replace("(", " ( ").replace(")", " ) ")
     #print(guard_string)
-    parts = shuntingYard(guard_string.split())
+    parts = logic_formula.shuntingYard(guard_string.split())
     #print(parts)
-    guard, rest, constants = Operator.parse(parts)
+    guard, rest, constants = logic_formula.Operator.parse(parts)
     assert len(rest) == 0, "Parse LTL property failed:\n\tresult: " + str(guard) + "\n\trest is not empty: " + str(rest)
 
     return guard, constants

@@ -47,9 +47,10 @@ class PrimitiveNumericExpression(FunctionalExpression):
     def instantiate(self, var_mapping, init_facts):
         args = [var_mapping.get(arg, arg) for arg in self.args]
         pne = PrimitiveNumericExpression(self.symbol, args)
+        print(pne)
         assert self.symbol != "total-cost"
         # We know this expression is constant. Substitute it by corresponding
-        # initialization from task.
+        # initialization from task.      
         for fact in init_facts:
             if isinstance(fact, FunctionAssignment):
                 if fact.fluent == pne:

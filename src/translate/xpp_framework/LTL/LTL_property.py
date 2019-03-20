@@ -1,5 +1,5 @@
-import parse_SPIN_automata
-import logic_formula
+from .parse_SPIN_automata import *
+import xpp_framework.logic.logic_formula as logic_formula
 import re
 import os
 
@@ -54,7 +54,7 @@ class LTLProperty:
         cmd = "ltl2tgba -C -s \'" + str(self.genericFormula) + "\' > " + temp_folder + "/" + self.name
         os.system(cmd)
 
-        self.automata = parse_SPIN_automata.parseNFA(temp_folder + "/" + self.name)
+        self.automata = parseNFA(temp_folder + "/" + self.name)
         self.automata.name = self.name
 
         #print(self.automata)

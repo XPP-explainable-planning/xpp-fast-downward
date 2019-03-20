@@ -78,9 +78,10 @@ def addActionSetIndicators(sas_task, asp):
 def updateOriginalActions(sas_task, asp):
     # every action in the set assigns the corresponsing variable to true
     for (n,s) in asp.actionSets.items():
-        #print("-------------------------------------------------------------------")
-        #print(s)
-        for op in sas_task.operators:        
+        print("-------------------------------------------------------------------")
+        print(s)
+        for op in sas_task.operators:   
+            print(op.name)     
             #if the action is in the action set than is assigns the variable to True/Used              
             if s.containsOperator(op):
                 #print(op.name)

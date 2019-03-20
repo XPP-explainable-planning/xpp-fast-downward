@@ -1,15 +1,53 @@
 from sas_tasks import *
-from logic_formula import *
-from parse_SPIN_automata import parseNFA
-import LTL_property
-from automata import compStates
+import xpp_framework.logic.logic_formula as logic_formula
+from .parse_SPIN_automata import parseNFA
+from .LTL_property import parse as parse_LTL
+from .automata import State
 import os
+
+auxillary_vars = {}
+
+class AuxillaryVariable:
+
+    def __init__(self, constant, sas_task):
+        self.name = "aux_" + constant.name
+        self.id = len(sas_task.variables.value_names)
+        self.domain = ["false_" + self.name, "true_" + self.name]
+
+        sas_task.variables.value_names.append(self.domain)
+        sas_task.variables.ranges.append(len(self.domain))
+        sas_task.variables.axiom_layers.append(-1)
+        
+        print(self.name)
+        (var_id, value_id) = literalVarValue(sas_task, constant, False)[0]
+
+        eff_false_con = (self.id, -1, 0, [])
+        eff_true_con = (self.id, -1, 1, [])
+
+        for o in sas_task.operators:
+            for (id, pc, e, ce) in o.pre_post:
+                if id == var_id:
+                    if e == value_id:
+                        print(o.name)
+                        print("\t->true")
+                        o.pre_post.append(eff_true_con)
+                        print(o.pre_post)
+                    else:
+                        o.pre_post.append(eff_false_con) 
+
+        #init state: 
+        if sas_task.init.values[var_id] == value_id:
+            sas_task.init.values.append(0)
+        else:
+            sas_task.init.values.append(0)
 
 # adds the fluents which describe the state of automata
 def addFluents(automata, id, sas_task):
-    states_sorted = list(automata.states.values())
-    #sort the states according to their id
-    states_sorted.sort(compStates)
+    states_sorted = list(automata.get_states())
+    #sort the states according to their id TODO which ID ?
+    print("-----------------------------------------")
+    print(states_sorted)
+    states_sorted.sort(key=State.get_name)
 
     variable = []
     #if the automata has more than one state one value per state is added
@@ -37,7 +75,7 @@ def addFluents(automata, id, sas_task):
     #variable to indicate if the automata is currently in an accepting state -> later used in the "goal fact dependencies"
     # id of the accepting var in the encoding to the variables 
     automata.accept_var = len(sas_task.variables.value_names)
-    accept_var_domain = ["not_accepting(" + automata.name +")", "accepting(" + automata.name + ")"]
+    accept_var_domain = ["not_accepting(" + automata.name +")", "soft_accepting(" + automata.name + ")"]
     sas_task.variables.value_names.append(accept_var_domain)
     sas_task.variables.ranges.append(len(accept_var_domain))
     sas_task.variables.axiom_layers.append(-1)
@@ -61,7 +99,7 @@ def addFluents(automata, id, sas_task):
 #add the transitions of the automata to the planning task
 def automataTransitionOperators(automata, sas_task):
     new_operators = []
-    for name, s in automata.states.iteritems():
+    for name, s in automata.states.items():
         for t in s.transitions:
             #print("Process action: " + t.name) 
 
@@ -84,14 +122,27 @@ def automataTransitionOperators(automata, sas_task):
             #encode the guard of the transition in the precondition of the action
             if not t.guard.isTrue():
                 # returns a disjunction of pre_post, such that every pre_post belongs to one action
-                #guard_pre_post = t.guard.generateActionCondition(sas_task.variables.value_names)
                 clauses = t.getClauses()
-                #print(guard_pre_post)
+                print("Clauses: ")
+                print(clauses)
                 for clause in clauses:
                     con = [[]]
                     for l in clause:
                         new_con = []
-                        new_values = literalVarValue(sas_task, l.constant, l.negated)
+                        if l.negated:
+                            if not l.constant.name in auxillary_vars:
+                                # create new auxillary var
+                                new_aux_var = AuxillaryVariable(l.constant, sas_task)
+                                auxillary_vars[l.constant.name] = new_aux_var
+
+                            aux_var = auxillary_vars[l.constant.name]
+                            new_values = [(aux_var.id, 0)]
+
+                        else:       
+                            new_values = literalVarValue(sas_task, l.constant, l.negated)
+
+                        #print("Literal values:")
+                        #print(new_values)
                         assert new_values and len(new_values) > 0, "value not found: " + str(l.constant)
                         for var, value in new_values:
                             for c in con:
@@ -162,7 +213,7 @@ def addLTLPlanProperties(sas_task, path_propertyfile):
 
     #parseProperties and transform the input to a format the LTL2B program can read 
     #the constants are only allowed to consist of letters and numbers
-    properties, constants = LTL_property.parse(path_propertyfile)     
+    properties, constants = parse_LTL(path_propertyfile)     
 
     constant_name_map = {}
     constant_id_map = {}
