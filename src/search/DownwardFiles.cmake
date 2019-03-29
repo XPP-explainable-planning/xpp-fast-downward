@@ -335,6 +335,14 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+    NAME MUGS_PRUNING
+    HELP "TODO"
+    SOURCES
+        pruning/mugs_pruning
+    DEPENDS TASK_PROPERTIES
+)
+
+fast_downward_plugin(
     NAME SEARCH_COMMON
     HELP "Basic classes used for all search engines"
     SOURCES
@@ -358,6 +366,14 @@ fast_downward_plugin(
     SOURCES
         search_engines/plugin_astar
     DEPENDS EAGER_SEARCH SEARCH_COMMON
+)
+
+fast_downward_plugin(
+    NAME MUGS_SEARCH
+    HELP "MUGS search"
+    SOURCES
+        search_engines/mugs_search
+    DEPENDS SEARCH_COMMON
 )
 
 fast_downward_plugin(

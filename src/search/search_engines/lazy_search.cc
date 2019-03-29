@@ -23,8 +23,9 @@ LazySearch::LazySearch(const Options &opts)
                 create_edge_open_list()),
       reopen_closed_nodes(opts.get<bool>("reopen_closed")),
       randomize_successors(opts.get<bool>("randomize_successors")),
-      preferred_successors_first(opts.get<bool>("preferred_successors_first")),
+      preferred_successors_first(opts.get<bool>("preferred_successors_first")),    
       rng(utils::parse_rng_from_options(opts)),
+      pruning_method(opts.get<shared_ptr<PruningMethod>>("pruning")),
       current_state(state_registry.get_initial_state()),
       current_predecessor_id(StateID::no_state),
       current_operator_id(OperatorID::no_operator),
@@ -61,6 +62,8 @@ void LazySearch::initialize() {
     for (Evaluator *evaluator : path_dependent_evaluators) {
         evaluator->notify_initial_state(initial_state);
     }
+
+    pruning_method->initialize(task);
 }
 
 vector<OperatorID> LazySearch::get_successor_operators(
@@ -114,34 +117,44 @@ void LazySearch::generate_successors() {
 }
 
 SearchStatus LazySearch::fetch_next_state() {
-    if (open_list->empty()) {
-        cout << "Completely explored state space -- no solution!" << endl;
-        return FAILED;
+    while(true){
+        if (open_list->empty()) {
+            cout << "Completely explored state space -- no solution!" << endl;
+            return FAILED;
+        }
+
+        EdgeOpenListEntry next = open_list->remove_min();
+
+        current_predecessor_id = next.first;
+        current_operator_id = next.second;
+        GlobalState current_predecessor = state_registry.lookup_state(current_predecessor_id);
+        OperatorProxy current_operator = task_proxy.get_operators()[current_operator_id];
+        assert(task_properties::is_applicable(
+                current_operator, State(*task, current_predecessor.get_values())));
+        current_state = state_registry.get_successor_state(current_predecessor, current_operator);
+
+        if(pruning_method->prune_state(current_state)){
+            cout << "State pruned" << endl;
+            //continue;
+        }
+    
+
+        SearchNode pred_node = search_space.get_node(current_predecessor);
+        current_g = pred_node.get_g() + get_adjusted_cost(current_operator);
+        current_real_g = pred_node.get_real_g() + current_operator.get_cost();
+
+        /*
+        Note: We mark the node in current_eval_context as "preferred"
+        here. This probably doesn't matter much either way because the
+        node has already been selected for expansion, but eventually we
+        should think more deeply about which path information to
+        associate with the expanded vs. evaluated nodes in lazy search
+        and where to obtain it from.
+        */
+        current_eval_context = EvaluationContext(current_state, current_g, true, &statistics);
+
+        break;
     }
-
-    EdgeOpenListEntry next = open_list->remove_min();
-
-    current_predecessor_id = next.first;
-    current_operator_id = next.second;
-    GlobalState current_predecessor = state_registry.lookup_state(current_predecessor_id);
-    OperatorProxy current_operator = task_proxy.get_operators()[current_operator_id];
-    assert(task_properties::is_applicable(
-               current_operator, State(*task, current_predecessor.get_values())));
-    current_state = state_registry.get_successor_state(current_predecessor, current_operator);
-
-    SearchNode pred_node = search_space.get_node(current_predecessor);
-    current_g = pred_node.get_g() + get_adjusted_cost(current_operator);
-    current_real_g = pred_node.get_real_g() + current_operator.get_cost();
-
-    /*
-      Note: We mark the node in current_eval_context as "preferred"
-      here. This probably doesn't matter much either way because the
-      node has already been selected for expansion, but eventually we
-      should think more deeply about which path information to
-      associate with the expanded vs. evaluated nodes in lazy search
-      and where to obtain it from.
-    */
-    current_eval_context = EvaluationContext(current_state, current_g, true, &statistics);
 
     return IN_PROGRESS;
 }
@@ -159,10 +172,8 @@ SearchStatus LazySearch::step() {
 
 
     SearchNode node = search_space.get_node(current_state);
-    bool reopen = reopen_closed_nodes && !node.is_new() &&
-                  !node.is_dead_end() && (current_g < node.get_g());
 
-    if (node.is_new() || reopen) {
+    if (node.is_new()) {
         if (current_operator_id != OperatorID::no_operator) {
             assert(current_predecessor_id != StateID::no_state);
             GlobalState parent_state = state_registry.lookup_state(current_predecessor_id);
@@ -171,8 +182,8 @@ SearchStatus LazySearch::step() {
                     parent_state, current_operator_id, current_state);
         }
         statistics.inc_evaluated_states();
-            // TODO: Generalize code for using multiple evaluators.
-        if (! (open_list->is_dead_end(current_eval_context) || current_real_g >= bound)) {
+        // TODO: Generalize code for using multiple evaluators.
+        //if (! (open_list->is_dead_end(current_eval_context) || current_real_g >= bound)) {
             if (current_predecessor_id == StateID::no_state) {
                 node.open_initial();
                 if (search_progress.check_progress(current_eval_context))
@@ -181,13 +192,10 @@ SearchStatus LazySearch::step() {
                 GlobalState parent_state = state_registry.lookup_state(current_predecessor_id);
                 SearchNode parent_node = search_space.get_node(parent_state);
                 OperatorProxy current_operator = task_proxy.get_operators()[current_operator_id];
-                if (reopen) {
-                    node.reopen(parent_node, current_operator);
-                    statistics.inc_reopened();
-                } else {
-                    node.open(parent_node, current_operator);
-                }
+
+                node.open(parent_node, current_operator);                
             }
+
             node.close();
             if (check_goal_and_set_plan(current_state))
                 return SOLVED;
@@ -197,10 +205,12 @@ SearchStatus LazySearch::step() {
             }
             generate_successors();
             statistics.inc_expanded();
+        /*
         } else {
             node.mark_as_dead_end();
             statistics.inc_dead_ends();
         }
+        */
         if (current_predecessor_id == StateID::no_state) {
             print_initial_evaluator_values(current_eval_context);
         }
@@ -209,7 +219,7 @@ SearchStatus LazySearch::step() {
 }
 
 void LazySearch::reward_progress() {
-    open_list->boost_preferred();
+    //open_list->boost_preferred();
 }
 
 void LazySearch::print_checkpoint_line(int g) const {

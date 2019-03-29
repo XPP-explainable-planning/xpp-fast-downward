@@ -101,6 +101,22 @@ int HSPMaxHeuristic::compute_heuristic(const GlobalState &global_state) {
     return total_cost;
 }
 
+uint HSPMaxHeuristic::compute_relaxed_reachable_goal_facts(const State &state){
+
+    setup_exploration_queue();
+    setup_exploration_queue_state(state);
+    relaxed_exploration();
+
+    uint reachable = 0;
+    for (Proposition *prop : goal_propositions) {
+        int prop_cost = prop->cost;
+        //cout << "prop_cost: "  << prop->id << ": " << prop_cost << " " << (prop_cost != -1) << endl;
+        reachable = (reachable << 1) | (prop_cost != -1);
+    }
+
+    return reachable;
+}
+
 static Heuristic *_parse(OptionParser &parser) {
     parser.document_synopsis("Max heuristic", "");
     parser.document_language_support("action costs", "supported");

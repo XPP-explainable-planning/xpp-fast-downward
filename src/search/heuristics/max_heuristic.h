@@ -28,9 +28,11 @@ class HSPMaxHeuristic : public relaxation_heuristic::RelaxationHeuristic {
     }
 protected:
     virtual int compute_heuristic(const GlobalState &global_state);
+    
 public:
     HSPMaxHeuristic(const options::Options &options);
     ~HSPMaxHeuristic();
+    virtual uint compute_relaxed_reachable_goal_facts(const State &state);
 
 };
 }

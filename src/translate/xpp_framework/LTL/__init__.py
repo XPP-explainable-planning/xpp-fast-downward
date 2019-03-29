@@ -1,1 +1,0 @@
-from  .LTLCompilation import addLTLPlanProperties

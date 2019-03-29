@@ -28,6 +28,9 @@ public:
     virtual void prune_operators(const GlobalState &state,
                                  std::vector<OperatorID> &op_ids);
 
+    virtual bool prune_state(const State &state);
+    virtual bool prune_state(const GlobalState &state);
+
     virtual void print_statistics() const = 0;
 };
 

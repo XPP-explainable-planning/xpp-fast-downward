@@ -34,6 +34,7 @@ EagerSearch::EagerSearch(const Options &opts)
         cerr << "lazy_evaluator must cache its estimates" << endl;
         utils::exit_with(utils::ExitCode::SEARCH_INPUT_ERROR);
     }
+
 }
 
 void EagerSearch::initialize() {
@@ -45,7 +46,7 @@ void EagerSearch::initialize() {
     */
     assert(open_list);
 
-    /*
+    
     cout << "**************** EAGER SEARCH Goals ****************"  << endl;
     for(uint i = 0; i < task_proxy.get_goals().size(); i++){
         FactProxy gp = task_proxy.get_goals()[i];
@@ -53,7 +54,7 @@ void EagerSearch::initialize() {
     }
     cout << "Num operators: " << task_proxy.get_operators().size() << endl;
     cout << "**************** EAGER SEARCH Goals ****************" << endl;
-    */
+    
 
     set<Evaluator *> evals;
     open_list->get_path_dependent_evaluators(evals);
@@ -114,6 +115,7 @@ void EagerSearch::initialize() {
     print_initial_evaluator_values(eval_context);
 
     pruning_method->initialize(task);
+    pruning_method->prune_state(initial_state);
 
     //cout << "Init finished" << endl;
 }
@@ -154,11 +156,12 @@ SearchStatus EagerSearch::step() {
     */
 
     bool expand = true;
+    /*
     if (prune_by_f && f_evaluator->does_cache_estimates()) {
         EvaluationContext eval_context(s, node.get_real_g(), false, &statistics, true);
         EvaluationResult res = f_evaluator->compute_result(eval_context);
         expand = res.get_evaluator_value() < bound;
-    }
+    }*/
 
     if (expand) {
         vector<OperatorID> applicable_ops;
@@ -168,7 +171,7 @@ SearchStatus EagerSearch::step() {
           TODO: When preferred operators are in use, a preferred operator will be
           considered by the preferred operator queues even when it is pruned.
         */
-        pruning_method->prune_operators(s, applicable_ops);
+        //pruning_method->prune_operators(s, applicable_ops);
     
         // This evaluates the expanded state (again) to get preferred ops
         EvaluationContext eval_context(s, node.get_g(), false, &statistics, true);
@@ -177,8 +180,14 @@ SearchStatus EagerSearch::step() {
     
         for (OperatorID op_id : applicable_ops) {
             OperatorProxy op = task_proxy.get_operators()[op_id];
-            if ((node.get_real_g() + op.get_cost()) >= bound)
-                continue;
+            //if ((node.get_real_g() + op.get_cost()) >= bound)
+            //    continue;
+
+            if(pruning_method->prune_state(s)){
+                cout << "State pruned" << endl;
+                //continue;
+            }
+        
     
             //cout << op.get_name() << endl;
     
@@ -193,8 +202,8 @@ SearchStatus EagerSearch::step() {
             }
     
             // Previously encountered dead end. Don't re-evaluate.
-            if (succ_node.is_dead_end())
-                continue;
+            //if (succ_node.is_dead_end())
+            //    continue;
     
             if (succ_node.is_new()) {
                 // We have not seen this state before.
@@ -209,11 +218,13 @@ SearchStatus EagerSearch::step() {
                     succ_state, succ_g, is_preferred, &statistics);
                 statistics.inc_evaluated_states();
     
+                /*
                 if (open_list->is_dead_end(eval_context)) {
                     succ_node.mark_as_dead_end();
                     statistics.inc_dead_ends();
                     continue;
-                }
+                }*/
+                
                 succ_node.open(node, op);
     
                 open_list->insert(eval_context, succ_state.get_id());
@@ -295,52 +306,14 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
         GlobalState s = state_registry.lookup_state(id);
         SearchNode node = search_space.get_node(s);
 
-        if (node.is_closed())
-            continue;
+        //if (node.is_closed())
+        //    continue;
 
         if (!lazy_evaluator)
             assert(!node.is_dead_end());
 
-        if (lazy_evaluator) {
-            /*
-              With lazy evaluators (and only with these) we can have dead nodes
-              in the open list.
-
-              For example, consider a state s that is reached twice before it is expanded.
-              The first time we insert it into the open list, we compute a finite
-              heuristic value. The second time we insert it, the cached value is reused.
-
-              During first expansion, the heuristic value is recomputed and might become
-              infinite, for example because the reevaluation uses a stronger heuristic or
-              because the heuristic is path-dependent and we have accumulated more
-              information in the meantime. Then upon second expansion we have a dead-end
-              node which we must ignore.
-            */
-            if (node.is_dead_end())
-                continue;
-
-            if (lazy_evaluator->is_estimate_cached(s)) {
-                int old_h = lazy_evaluator->get_cached_estimate(s);
-                /*
-                  We can pass calculate_preferred=false here
-                  since preferred operators are computed when the state is expanded.
-                */
-                EvaluationContext eval_context(s, node.get_g(), false, &statistics);
-                int new_h = eval_context.get_evaluator_value_or_infinity(lazy_evaluator);
-                if (open_list->is_dead_end(eval_context)) {
-                    node.mark_as_dead_end();
-                    statistics.inc_dead_ends();
-                    continue;
-                }
-                if (new_h != old_h) {
-                    open_list->insert(eval_context, id);
-                    continue;
-                }
-            }
-        }
-
         node.close();
-        assert(!node.is_dead_end());
+        //assert(!node.is_dead_end());
         update_f_value_statistics(node);
         statistics.inc_expanded();
         return make_pair(node, true);

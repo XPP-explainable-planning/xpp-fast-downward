@@ -59,6 +59,7 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
         DEFAULT_LAZY_BOOST);
     SearchEngine::add_succ_order_options(parser);
     SearchEngine::add_options_to_parser(parser);
+    SearchEngine::add_pruning_option(parser);
     Options opts = parser.parse();
 
     shared_ptr<lazy_search::LazySearch> engine;
