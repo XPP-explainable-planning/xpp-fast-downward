@@ -64,6 +64,7 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
 
     shared_ptr<lazy_search::LazySearch> engine;
     if (!parser.dry_run()) {
+        opts.set("insert_deadends", false);
         opts.set("open", search_common::create_greedy_open_list_factory(opts));
         engine = make_shared<lazy_search::LazySearch>(opts);
         // TODO: The following two lines look fishy. See similar comment in _parse.

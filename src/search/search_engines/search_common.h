@@ -33,7 +33,7 @@ namespace search_common {
   "pref_only" options.
 */
 extern std::shared_ptr<OpenListFactory> create_standard_scalar_open_list_factory(
-    Evaluator *eval, bool pref_only);
+    Evaluator *eval, bool pref_only, bool insert_deadends);
 
 /*
   Create open list factory for the eager_greedy or lazy_greedy plugins.

@@ -21,10 +21,11 @@ using SumEval = sum_evaluator::SumEvaluator;
 using WeightedEval = weighted_evaluator::WeightedEvaluator;
 
 shared_ptr<OpenListFactory> create_standard_scalar_open_list_factory(
-    Evaluator *eval, bool pref_only) {
+    Evaluator *eval, bool pref_only, bool insert_deadends) {
     Options options;
     options.set("eval", eval);
     options.set("pref_only", pref_only);
+    options.set("insert_deadends", insert_deadends);
     return make_shared<standard_scalar_open_list::StandardScalarOpenListFactory>(options);
 }
 
@@ -45,17 +46,17 @@ static shared_ptr<OpenListFactory> create_alternation_open_list_factory_aux(
     const vector<Evaluator *> &preferred_evaluators,
     int boost) {
     if (evals.size() == 1 && preferred_evaluators.empty()) {
-        return create_standard_scalar_open_list_factory(evals[0], false);
+        return create_standard_scalar_open_list_factory(evals[0], false, false);
     } else {
         vector<shared_ptr<OpenListFactory>> subfactories;
         for (Evaluator *evaluator : evals) {
             subfactories.push_back(
                 create_standard_scalar_open_list_factory(
-                    evaluator, false));
+                    evaluator, false, false));
             if (!preferred_evaluators.empty()) {
                 subfactories.push_back(
                     create_standard_scalar_open_list_factory(
-                        evaluator, true));
+                        evaluator, true, false));
             }
         }
         return create_alternation_open_list_factory(subfactories, boost);
@@ -119,6 +120,8 @@ create_astar_open_list_factory_and_f_eval(const Options &opts) {
     Options options;
     options.set("evals", evals);
     options.set("pref_only", false);
+    options.set("insert_deadends", opts.get<bool>("insert_deadends"));
+    cout << "Insert deadends: " << opts.get<bool>("insert_deadends") << endl;
     options.set("unsafe_pruning", false);
     shared_ptr<OpenListFactory> open =
         make_shared<tiebreaking_open_list::TieBreakingOpenListFactory>(options);

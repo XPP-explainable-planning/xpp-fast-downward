@@ -7,6 +7,8 @@
 
 #include "meta_search_tree.h"
 
+#include "bitset"
+
 using namespace std;
 using namespace options;
 using namespace mst;
@@ -50,6 +52,15 @@ void MUGSNode::print(const std::vector<FactPair>& all_goals){
             cout << "|";
         }
     }
+    /*
+    uint print_id=0;
+    uint goals_id = this->get_goals_id();
+    for(uint i = 0; i < all_goals.size(); i++){
+        print_id = (print_id << 1) | ( goals_id & (1U));
+        goals_id = goals_id  >> 1;
+    }
+    cout << endl << "\t->" << std::bitset<32>(print_id);
+    */
 }
 
 

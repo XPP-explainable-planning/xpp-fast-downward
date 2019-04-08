@@ -41,6 +41,7 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
 
     shared_ptr<eager_search::EagerSearch> engine;
     if (!parser.dry_run()) {
+        opts.set("insert_deadends", false);
         auto temp = search_common::create_astar_open_list_factory_and_f_eval(opts);
         opts.set("open", temp.first);
         opts.set("f_eval", temp.second);

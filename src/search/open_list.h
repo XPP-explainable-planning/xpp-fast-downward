@@ -13,6 +13,7 @@ class StateID;
 template<class Entry>
 class OpenList {
     bool only_preferred;
+    bool insert_deadends;
 
 protected:
     /*
@@ -26,7 +27,7 @@ protected:
                               const Entry &entry) = 0;
 
 public:
-    explicit OpenList(bool preferred_only = false);
+    explicit OpenList(bool preferred_only = false, bool in_deadends = false);
     virtual ~OpenList() = default;
 
     /*
@@ -135,8 +136,9 @@ using EdgeOpenList = OpenList<EdgeOpenListEntry>;
 
 
 template<class Entry>
-OpenList<Entry>::OpenList(bool only_preferred)
-    : only_preferred(only_preferred) {
+OpenList<Entry>::OpenList(bool only_preferred, bool insert_deadends)
+    : only_preferred(only_preferred),
+      insert_deadends(insert_deadends) {
 }
 
 template<class Entry>
@@ -148,7 +150,8 @@ void OpenList<Entry>::insert(
     EvaluationContext &eval_context, const Entry &entry) {
     if (only_preferred && !eval_context.is_preferred())
         return;
-    if (!is_dead_end(eval_context))
+    //std::cout << "Insert deadends: " << insert_deadends << std::endl;
+    if (insert_deadends || !is_dead_end(eval_context))
         do_insertion(eval_context, entry);
 }
 
