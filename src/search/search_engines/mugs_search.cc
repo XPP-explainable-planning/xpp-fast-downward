@@ -185,9 +185,8 @@ SearchStatus MugsSearch::step() {
             //if ((node.get_real_g() + op.get_cost()) >= bound)
             //    continue;
 
-            if(pruning_method->prune_state(s)){
-                cout << "State pruned" << endl;
-                //continue;
+            if(pruning_method->prune_state(s)){               
+                continue;
             }
         
     
@@ -387,6 +386,7 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
 
     shared_ptr<mugs_search::MugsSearch> engine;
     if (!parser.dry_run()) {
+        opts.set("insert_deadends", true);
         auto temp = search_common::create_astar_open_list_factory_and_f_eval(opts);
         opts.set("open", temp.first);
         opts.set("f_eval", temp.second);
