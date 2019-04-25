@@ -44,19 +44,19 @@ static shared_ptr<OpenListFactory> create_alternation_open_list_factory(
 static shared_ptr<OpenListFactory> create_alternation_open_list_factory_aux(
     const vector<Evaluator *> &evals,
     const vector<Evaluator *> &preferred_evaluators,
-    int boost) {
+    int boost, bool insert_deadends) {
     if (evals.size() == 1 && preferred_evaluators.empty()) {
-        return create_standard_scalar_open_list_factory(evals[0], false, false);
+        return create_standard_scalar_open_list_factory(evals[0], false, insert_deadends);
     } else {
         vector<shared_ptr<OpenListFactory>> subfactories;
         for (Evaluator *evaluator : evals) {
             subfactories.push_back(
                 create_standard_scalar_open_list_factory(
-                    evaluator, false, false));
+                    evaluator, false, insert_deadends));
             if (!preferred_evaluators.empty()) {
                 subfactories.push_back(
                     create_standard_scalar_open_list_factory(
-                        evaluator, true, false));
+                        evaluator, true, insert_deadends));
             }
         }
         return create_alternation_open_list_factory(subfactories, boost);
@@ -65,10 +65,11 @@ static shared_ptr<OpenListFactory> create_alternation_open_list_factory_aux(
 
 shared_ptr<OpenListFactory> create_greedy_open_list_factory(
     const Options &options) {
+    cout << "Greedy open list factory: insert deadends: "  << options.get<bool>("insert_deadends") << endl;
     return create_alternation_open_list_factory_aux(
         options.get_list<Evaluator *>("evals"),
         options.get_list<Evaluator *>("preferred"),
-        options.get<int>("boost"));
+        options.get<int>("boost"), options.get<bool>("insert_deadends"));
 }
 
 /*
@@ -107,7 +108,7 @@ shared_ptr<OpenListFactory> create_wastar_open_list_factory(
     return create_alternation_open_list_factory_aux(
         f_evals,
         options.get_list<Evaluator *>("preferred"),
-        options.get<int>("boost"));
+        options.get<int>("boost"), options.get<bool>("insert_deadend"));
 }
 
 pair<shared_ptr<OpenListFactory>, Evaluator *>

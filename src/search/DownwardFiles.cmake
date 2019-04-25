@@ -361,6 +361,15 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+    NAME MUGS_SEARCH
+    HELP "mugs search"
+    SOURCES
+        search_engines/mugs_search
+    DEPENDS NULL_PRUNING_METHOD ORDERED_SET SUCCESSOR_GENERATOR
+    DEPENDENCY_ONLY
+)
+
+fast_downward_plugin(
     NAME PLUGIN_ASTAR
     HELP "A* search"
     SOURCES
@@ -369,11 +378,19 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
-    NAME MUGS_SEARCH
+    NAME MUGS_ATAR_SEARCH
     HELP "MUGS search"
     SOURCES
-        search_engines/mugs_search
-    DEPENDS SEARCH_COMMON
+        search_engines/plugin_mugs_astar
+    DEPENDS MUGS_SEARCH SEARCH_COMMON
+)
+
+fast_downward_plugin(
+    NAME MUGS_GREEDY_SEARCH
+    HELP "MUGS search greedy"
+    SOURCES
+        search_engines/plugin_mugs_greedy
+    DEPENDS MUGS_SEARCH SEARCH_COMMON
 )
 
 fast_downward_plugin(

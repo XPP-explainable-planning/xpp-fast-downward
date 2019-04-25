@@ -133,12 +133,6 @@ SearchStatus LazySearch::fetch_next_state() {
                 current_operator, State(*task, current_predecessor.get_values())));
         current_state = state_registry.get_successor_state(current_predecessor, current_operator);
 
-        if(pruning_method->prune_state(current_state)){
-            cout << "State pruned" << endl;
-            //continue;
-        }
-    
-
         SearchNode pred_node = search_space.get_node(current_predecessor);
         current_g = pred_node.get_g() + get_adjusted_cost(current_operator);
         current_real_g = pred_node.get_real_g() + current_operator.get_cost();
@@ -183,7 +177,7 @@ SearchStatus LazySearch::step() {
         }
         statistics.inc_evaluated_states();
         // TODO: Generalize code for using multiple evaluators.
-        //if (! (open_list->is_dead_end(current_eval_context) || current_real_g >= bound)) {
+        if (! (open_list->is_dead_end(current_eval_context) || current_real_g >= bound)) {
             if (current_predecessor_id == StateID::no_state) {
                 node.open_initial();
                 if (search_progress.check_progress(current_eval_context))
@@ -205,12 +199,12 @@ SearchStatus LazySearch::step() {
             }
             generate_successors();
             statistics.inc_expanded();
-        /*
+        
         } else {
             node.mark_as_dead_end();
             statistics.inc_dead_ends();
         }
-        */
+        
         if (current_predecessor_id == StateID::no_state) {
             print_initial_evaluator_values(current_eval_context);
         }
@@ -219,7 +213,7 @@ SearchStatus LazySearch::step() {
 }
 
 void LazySearch::reward_progress() {
-    //open_list->boost_preferred();
+    open_list->boost_preferred();
 }
 
 void LazySearch::print_checkpoint_line(int g) const {
