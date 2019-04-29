@@ -56,7 +56,7 @@ def parse(path, typeObjectMap):
         assert(False)
 
     #print(actionSetProperties)
-    print(">>>>>>>>>>>>>>>>>>>Parse finished>>>>>>>>>>>>>>>>>>>>>>>>>><")
+    #print(">>>>>>>>>>>>>>>>>>>Parse finished>>>>>>>>>>>>>>>>>>>>>>>>>><")
 
     return (actionSets, AS_properties, LTL_properties)
 

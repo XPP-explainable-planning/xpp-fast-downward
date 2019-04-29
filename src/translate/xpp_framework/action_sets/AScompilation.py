@@ -19,7 +19,7 @@ def addActionSetIndicators(sas_task, s):
 
 def updateOriginalActions(sas_task, s):
     # every action in the set assigns the corresponsing variable to true
-    print("-------------------------------------------------------------------")
+    #print("-------------------------------------------------------------------")
     #print(s)
     for op in sas_task.operators:   
         #print(op.name)     
