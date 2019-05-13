@@ -11,9 +11,9 @@ class GlobalState;
 namespace mugs_pruning {
 class MugsPruning : public PruningMethod {
 
-int num_goal_facts;
-uint hard_goals;
-bool all_soft_goals;
+int num_goal_facts = 0;
+uint hard_goals = 0;
+bool all_soft_goals = false;
 std::unordered_set<uint> msgs;
 std::vector<std::string> goal_fact_names;
 Evaluator* max_heuristic;
