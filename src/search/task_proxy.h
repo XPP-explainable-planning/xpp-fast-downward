@@ -24,6 +24,7 @@ class EffectsProxy;
 class FactProxy;
 class FactsProxy;
 class GoalsProxy;
+class QuestionProxy;
 class OperatorProxy;
 class OperatorsProxy;
 class PreconditionsProxy;
@@ -577,6 +578,22 @@ public:
     }
 };
 
+class QuestionProxy : public ConditionsProxy {
+public:
+    explicit QuestionProxy(const AbstractTask &task)
+        : ConditionsProxy(task) {}
+    ~QuestionProxy() = default;
+
+    std::size_t size() const override {
+        return task->get_num_question();
+    }
+
+    FactProxy operator[](std::size_t index) const override {
+        assert(index < size());
+        return FactProxy(*task, task->get_question_fact(index));
+    }
+};
+
 
 bool does_fire(const EffectProxy &effect, const State &state);
 bool does_fire(const EffectProxy &effect, const GlobalState &state);
@@ -691,6 +708,10 @@ public:
 
     GoalsProxy get_goals() const {
         return GoalsProxy(*task);
+    }
+
+    QuestionProxy get_Question() const {
+        return QuestionProxy(*task);
     }
 
     EntailmentProxy get_entailments() const {

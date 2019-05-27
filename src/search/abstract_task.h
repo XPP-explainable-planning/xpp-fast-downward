@@ -89,6 +89,9 @@ public:
     virtual int get_num_goals() const = 0;
     virtual FactPair get_goal_fact(int index) const = 0;
 
+    virtual int get_num_question() const = 0;
+    virtual FactPair get_question_fact(int index) const = 0;
+
     virtual int get_num_entailments() const = 0;
     virtual std::vector<FactPair> get_entailment(int index) const = 0;
 

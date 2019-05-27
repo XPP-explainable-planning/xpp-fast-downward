@@ -63,6 +63,7 @@ class RootTask : public AbstractTask {
     vector<ExplicitOperator> axioms;
     vector<int> initial_state_values;
     vector<FactPair> goals;
+    vector<FactPair> question;
     vector<vector<FactPair>> entailments;
 
     const ExplicitVariable &get_variable(int var) const;
@@ -103,6 +104,9 @@ public:
 
     virtual int get_num_goals() const override;
     virtual FactPair get_goal_fact(int index) const override;
+
+    virtual int get_num_question() const override;
+    virtual FactPair get_question_fact(int index) const override;
 
     virtual int get_num_entailments() const override;
     virtual vector<FactPair> get_entailment(int index) const override;
@@ -316,6 +320,17 @@ vector<FactPair> read_goal(istream &in) {
     return goals;
 }
 
+vector<FactPair> read_question(istream &in) {
+    check_magic(in, "begin_question");
+    vector<FactPair> question = read_facts(in);
+    check_magic(in, "end_question");
+    /*if (question.empty()) {
+        cerr << "Task has no question condition!" << endl;
+        utils::exit_with(ExitCode::SEARCH_INPUT_ERROR);
+    }*/
+    return question;
+}
+
 vector<vector<FactPair>> read_entailments(istream &in) {
     vector<vector<FactPair>> entailments;
     check_magic(in, "begin_entailments");
@@ -366,6 +381,7 @@ RootTask::RootTask(std::istream &in) {
     }
 
     goals = read_goal(in);
+    question = read_question(in);
     entailments = read_entailments(in);
     check_facts(goals, variables);
     operators = read_actions(in, false, use_metric, variables);
@@ -498,6 +514,15 @@ int RootTask::get_num_goals() const {
 FactPair RootTask::get_goal_fact(int index) const {
     assert(utils::in_bounds(index, goals));
     return goals[index];
+}
+
+int RootTask::get_num_question() const {
+    return question.size();
+}
+
+FactPair RootTask::get_question_fact(int index) const {
+    assert(utils::in_bounds(index, question));
+    return question[index];
 }
 
 int RootTask::get_num_entailments() const {

@@ -91,6 +91,14 @@ FactPair DelegatingTask::get_goal_fact(int index) const {
     return parent->get_goal_fact(index);
 }
 
+int DelegatingTask::get_num_question() const {
+    return parent->get_num_question();
+}
+
+FactPair DelegatingTask::get_question_fact(int index) const {
+    return parent->get_question_fact(index);
+}
+
 int DelegatingTask::get_num_entailments() const {
     return parent->get_num_entailments();
 }

@@ -3,34 +3,41 @@ from . import action_sets
 from . import entailment
 from . import LTL_property
 from .parser import parse
+from . import question
 
 def run(options, task, sas_task):
-    path = options.plan_property
+    properties_path = options.plan_property
     print("----------------------------------------------------------------------------------------------")
-    print("Plan property path: ", path)
-    if path == "None":
-        return
 
-    #build typeObjectMap
-    typeObjectMap = {}
-    for o in task.objects:
-        if not o.type_name in typeObjectMap:
-            typeObjectMap[o.type_name] = []
+    if properties_path != "None":
+        print("---> compile properties")
+        
+        #build typeObjectMap
+        typeObjectMap = {}
+        for o in task.objects:
+            if not o.type_name in typeObjectMap:
+                typeObjectMap[o.type_name] = []
 
-        typeObjectMap[o.type_name].append(o.name)
+            typeObjectMap[o.type_name].append(o.name)
 
-    #print("++++++++++ typeObjectMap ++++++++++")
-    #print(typeObjectMap)
+        #print("++++++++++ typeObjectMap ++++++++++")
+        #print(typeObjectMap)
+
+        (actionSets, AS_properties, LTL_properties) = parse(properties_path, typeObjectMap)
+
+        for s in actionSets.values():
+            action_sets.compileActionSet(sas_task, s)
+
+        AS_property.compileActionSetProperties(sas_task, AS_properties, actionSets)
+
+        LTL_property.compileLTLProperties(sas_task, LTL_properties, actionSets)
+    
 
 
-    (actionSets, AS_properties, LTL_properties) = parse(path, typeObjectMap)
-
-    for s in actionSets.values():
-        action_sets.compileActionSet(sas_task, s)
-
-    AS_property.compileActionSetProperties(sas_task, AS_properties, actionSets)
-
-    LTL_property.compileLTLProperties(sas_task, LTL_properties, actionSets)
+    # add question (subset of goal facts) for online explanation
+    if options.question != "None":
+        print("---> add question")
+        question.add_question(options.question, sas_task)
     
     #TODO
     #if options.property_type == 2:

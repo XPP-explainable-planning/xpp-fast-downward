@@ -16,6 +16,8 @@ def parse_args():
     argparser.add_argument(
         "--properties_folder", dest="properties_folder", type=str, help="folder to store the generated property files")
     argparser.add_argument(
+        "--question", dest="question", type=str, help="path to question file")
+    argparser.add_argument(
         "--relaxed", dest="generate_relaxed_task", action="store_true",
         help="output relaxed task (no delete effects)")
     argparser.add_argument(

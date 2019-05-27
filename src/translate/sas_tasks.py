@@ -25,11 +25,15 @@ class SASTask:
             axiom.condition, axiom.effect))
         self.metric = metric
         self.entail = SASEntailment()
+        self.question = SASQuestion()
         if DEBUG:
             self.validate()
 
     def addEntailment(self, pairs):
         self.entail.pairs.append(pairs)
+
+    def addQuestionElem(self, pair):
+        self.question.pairs.append(pair)
 
     def validate(self):
         """Fail an assertion if the task is invalid.
@@ -82,6 +86,8 @@ class SASTask:
         print("metric: %s" % self.metric)
         print("entailment:")
         self.entail.dump()
+        print("question:")
+        self.question.dump()
 
     def output(self, stream):
         print("begin_version", file=stream)
@@ -96,7 +102,9 @@ class SASTask:
             mutex.output(stream)
         self.init.output(stream)
         self.goal.output(stream)
+        self.question.output(stream)
         self.entail.output(stream)
+        
         print(len(self.operators), file=stream)
         for op in self.operators:
             op.output(stream)
@@ -116,6 +124,7 @@ class SASTask:
         for axiom in self.axioms:
             task_size += axiom.get_encoding_size()
         task_size += self.entail.get_encoding_size()
+        task_size += self.question.get_encoding_size()
         return task_size
 
 
@@ -279,6 +288,25 @@ class SASEntailment:
                 print(var, val, file=stream)
             print("end_entail", file=stream)
         print("end_entailments", file=stream)
+
+    def get_encoding_size(self):
+        return len(self.pairs)
+
+class SASQuestion:
+
+    def __init__(self):
+        self.pairs = []
+
+    def dump(self):
+        for var, val in self.pairs:
+            print("v%d: %d" % (var, val))
+
+    def output(self, stream):        
+        print("begin_question", file=stream)
+        print(len(self.pairs), file=stream)
+        for var, val in self.pairs:
+            print(var, val, file=stream)
+        print("end_question", file=stream)
 
     def get_encoding_size(self):
         return len(self.pairs)

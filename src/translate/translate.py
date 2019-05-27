@@ -688,9 +688,11 @@ def dump_statistics(sas_task):
 def main():
     options.setup()
     path = options.plan_property
-    print("Plan property path: ", path)
+    
     print("domain: ", options.domain)
     print("problem: ", options.task)
+    print("plan properties: ", path)
+    print("question: ", options.question)
 
     timer = timers.Timer()
     with timers.timing("Parsing", True):
@@ -723,13 +725,12 @@ def main():
     #for o in sas_task.operators:
     #    print(o.name)
 
-    if options.plan_property:
-        xpp_framework.run(options, task, sas_task)
+    xpp_framework.run(options, task, sas_task)
 
     #take a look
     #print("------------------------------------")
     #for v in sas_task.variables.value_names:
-        #print(v)
+    #    print(v)
 
     #print("Operators:")
     #for o in sas_task.operators:

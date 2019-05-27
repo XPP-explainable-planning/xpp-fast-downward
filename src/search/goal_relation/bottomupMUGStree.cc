@@ -104,12 +104,21 @@ int BottomUpMUGSNode::print_relation(const std::vector<FactPair>&){
 BottomUpMUGSTree::BottomUpMUGSTree(GoalsProxy goals, bool all_soft_goals){
     TaskProxy taskproxy = TaskProxy(*tasks::g_root_task.get());
     for(uint i = 0; i < goals.size(); i++){
-        if(all_soft_goals || taskproxy.get_variables()[goals[i].get_pair().var].get_fact(goals[i].get_pair().value).get_name().find("soft") == 0){
+        //if(all_soft_goals || taskproxy.get_variables()[goals[i].get_pair().var].get_fact(goals[i].get_pair().value).get_name().find("soft") == 0){
+        if(all_soft_goals){
             soft_goal_list.push_back(goals[i].get_pair());
+            continue;
         }
-        else{
-            hard_goal_list.push_back(goals[i].get_pair());
-        }
+        
+        QuestionProxy questproxy = taskproxy.get_Question();
+        for(uint j = 0; j < questproxy.size(); j++){
+            if(questproxy[j].get_value() == goals[i].get_value() && questproxy[j].get_variable().get_id() == goals[i].get_variable().get_id()){
+                hard_goal_list.push_back(goals[i].get_pair());
+            }
+            else{
+                soft_goal_list.push_back(goals[i].get_pair());
+            }
+        } 
         
     }
     std::sort(soft_goal_list.begin(), soft_goal_list.end());

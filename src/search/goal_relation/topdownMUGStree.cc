@@ -110,17 +110,31 @@ std::vector<MUGSNode*> TopDownMUGSNode::expand(std::vector<MUGSNode*>& nodes){
 
 TopDownMUGSTree::TopDownMUGSTree(GoalsProxy goals, bool all_soft_goals){
     TaskProxy taskproxy = TaskProxy(*tasks::g_root_task.get());
-    for(uint i = 0; i < goals.size(); i++){
-        if(all_soft_goals || 
-            taskproxy.get_variables()[goals[i].get_pair().var].get_fact(goals[i].get_pair().value).get_name().find("soft") == 0){
-
+    //if(all_soft_goals || taskproxy.get_variables()[goals[i].get_pair().var].get_fact(goals[i].get_pair().value).get_name().find("soft") == 0){
+    if (all_soft_goals){
+        for(uint i = 0; i < goals.size(); i++){
             soft_goal_list.push_back(goals[i].get_pair());
         }
-        else{
-            hard_goal_list.push_back(goals[i].get_pair());
-        }
-        
     }
+    else{
+        for(uint i = 0; i < goals.size(); i++){
+            QuestionProxy questproxy = taskproxy.get_Question();
+            //cout << goals[i].get_value() << " " << goals[i].get_variable().get_id() << endl;
+            bool found = false;
+            for(uint j = 0; j < questproxy.size(); j++){
+                if(questproxy[j].get_value() == goals[i].get_value() && questproxy[j].get_variable().get_id() == goals[i].get_variable().get_id()){
+                    hard_goal_list.push_back(goals[i].get_pair());
+                    found = true;
+                    break;
+                    cout << "hard" << endl;
+                }
+            }
+            if (!found){
+                soft_goal_list.push_back(goals[i].get_pair());
+            }
+        }
+    }
+
     std::sort(soft_goal_list.begin(), soft_goal_list.end());
     if (soft_goal_list.size() > 31) {
         std::cerr << "too many goal facts, aborting" << std::endl;
