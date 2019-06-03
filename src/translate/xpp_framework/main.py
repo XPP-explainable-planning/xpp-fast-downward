@@ -9,7 +9,7 @@ def run(options, task, sas_task):
     properties_path = options.plan_property
     print("----------------------------------------------------------------------------------------------")
 
-    if properties_path != "None":
+    if properties_path != "None" and properties_path != "PROPERTY":
         print("---> compile properties")
         
         #build typeObjectMap
