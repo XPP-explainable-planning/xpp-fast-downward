@@ -31,7 +31,7 @@ def add_question(path, sas_task):
 # neg indicates if the literal is used in a negated context
 #TODO this function exists twice (LTLCompilation) move this function to a utils file
 def literalVarValue(sas_task, constant, neg):
-    #print("Literal: " + str(literal))
+    constant = constant.lower()
     # the literal has to be mapped from "l_id" back to e.g. "ontable(a)" to be able to find it
     for var in range(len(sas_task.variables.value_names)):
         values = sas_task.variables.value_names[var]
