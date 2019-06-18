@@ -111,9 +111,14 @@ std::vector<MUGSNode*> TopDownMUGSNode::expand(std::vector<MUGSNode*>& nodes){
 TopDownMUGSTree::TopDownMUGSTree(GoalsProxy goals, bool all_soft_goals){
     TaskProxy taskproxy = TaskProxy(*tasks::g_root_task.get());
     //if(all_soft_goals || taskproxy.get_variables()[goals[i].get_pair().var].get_fact(goals[i].get_pair().value).get_name().find("soft") == 0){
-    if (all_soft_goals){
+    if (taskproxy.get_Question().size() == 0){
         for(uint i = 0; i < goals.size(); i++){
-            soft_goal_list.push_back(goals[i].get_pair());
+            if(all_soft_goals || taskproxy.get_variables()[goals[i].get_pair().var].get_fact(goals[i].get_pair().value).get_name().find("soft") == 0){
+                soft_goal_list.push_back(goals[i].get_pair());
+            }
+            else{
+                hard_goal_list.push_back(goals[i].get_pair());
+            }
         }
     }
     else{
@@ -134,6 +139,7 @@ TopDownMUGSTree::TopDownMUGSTree(GoalsProxy goals, bool all_soft_goals){
             }
         }
     }
+    
 
     std::sort(soft_goal_list.begin(), soft_goal_list.end());
     if (soft_goal_list.size() > 31) {
