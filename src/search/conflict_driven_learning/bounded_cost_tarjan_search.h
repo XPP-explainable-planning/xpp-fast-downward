@@ -30,7 +30,7 @@ protected:
 
     virtual void initialize() override;
     virtual SearchStatus step() override;
-    bool evaluate(const GlobalState& state, Evaluator* eval);
+    bool evaluate(const GlobalState& state, Evaluator* eval, int g);
     bool expand(const GlobalState& state);
     bool expand(const GlobalState& state,
                 PerLayerData* layer);
