@@ -38,34 +38,40 @@ public:
     bool insert_element(unsigned id, const std::vector<unsigned> &, unsigned elem,
                         bool)
     {
+        assert(d_initialized);
         m_sizes[id]++;
         set_utils::insert(m_rel[elem], id);
         return true;
     }
     bool delete_element(unsigned id, const std::vector<unsigned> &, unsigned elem)
     {
+        assert(d_initialized);
         m_sizes[id]--;
         set_utils::remove(m_rel[elem], id);
         return true;
     }
     void erase(unsigned id, const std::vector<unsigned> &set)
     {
+        assert(d_initialized);
         for (const unsigned &x : set) {
             set_utils::remove(m_rel[x], id);
         }
     }
     template<typename Callback>
-    void forall_subsets(const std::vector<unsigned> &set, const Callback &callback)
+    bool forall_subsets(const std::vector<unsigned> &set, const Callback &callback)
     {
         assert(d_initialized);
         std::fill(m_subset.begin(), m_subset.end(), 0);
         for (const unsigned &x : set) {
             for (const unsigned &y : m_rel[x]) {
                 if (++m_subset[y] == m_sizes[y]) {
-                    callback(y);
+                    if (callback(y)) {
+                        return true;
+                    }
                 }
             }
         }
+        return false;
     }
     template<typename Callback>
     void forall_supersets(const std::vector<unsigned> &set, const Callback &callback)

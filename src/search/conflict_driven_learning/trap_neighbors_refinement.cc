@@ -145,12 +145,14 @@ TrapNeighborsRefinement::learn_from_dead_end_component(
                     formula.forall_subsets(t.progression, [&](unsigned id) {
                         t.destinations.push_back(id);
                         closed = closed || !m_trap->can_reach_goal(id);
+                        return false;
                     });
                     lookup.forall_subsets(t.progression, [&](unsigned idx) {
                         if (!duplicate[idx]) {
                             closed = true;
                             t.destinations.push_back(INTMIN + idx);
                         }
+                        return false;
                     });
                     if (!closed) {
                         closed = t.dead = m_trap->are_dead_ends(t.progression);

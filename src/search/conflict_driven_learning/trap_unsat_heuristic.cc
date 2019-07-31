@@ -155,6 +155,7 @@ TrapUnsatHeuristic::initialize(unsigned k)
                     m_formula_all.forall_subsets(prog, [&](unsigned id) {
                         m_dest_to_transition_ids[id].push_back(num_transitions);
                         num++;
+                        return false;
                     });
                     m_transitions.push_back(HyperTransitionInfo(num));
                     num_transitions++;
@@ -397,6 +398,7 @@ TrapUnsatHeuristic::insert_conjunction(
         if (m_conjunctions[id].size() == conj.size()) {
             conj_id = id;
         }
+        return false;
     });
     if (conj_id != (unsigned) -1) {
         assert(m_mutex_with_goal[conj_id]);

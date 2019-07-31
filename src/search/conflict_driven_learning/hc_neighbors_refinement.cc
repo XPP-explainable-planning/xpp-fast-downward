@@ -106,7 +106,7 @@ bool HCNeighborsRefinement::refine_heuristic(
             }
             std::cout << ", bound=" << bound << ")" << std::endl;
 #endif
-            int res = m_hc->evaluate(state);
+            int res = m_hc->evaluate(state, std::max(0, m_hc->get_cost_bound() - bound));
             if (res == HCHeuristic::DEAD_END || res >= bound) {
                 terminate = true;
                 result = true;
@@ -140,7 +140,7 @@ bool HCNeighborsRefinement::refine_heuristic(
 #ifndef NDEBUG
             int res =
 #endif
-            m_hc->evaluate(succ.second);
+            m_hc->evaluate(succ.second, std::max(0, m_hc->get_cost_bound() - bound + succ.first));
             assert(res == HCHeuristic::DEAD_END || res + succ.first >= bound);
             m_successor_to_conjunctions.emplace_back();
             for (unsigned cid = 0; cid < m_conjunction_to_successors.size(); cid++) {

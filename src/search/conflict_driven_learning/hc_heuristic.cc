@@ -1,9 +1,11 @@
 #include "hc_heuristic.h"
 
 #include "state_minimization_nogoods.h"
+#include "quantitative_state_minimization_nogoods.h"
 #include "strips_compilation.h"
 #include "set_utils.h"
 
+#include "../evaluation_context.h"
 #include "../abstract_task.h"
 #include "../global_state.h"
 #include "../option_parser.h"
@@ -48,6 +50,30 @@ bool NoGoodFormula::evaluate_formula(
 }
 
 void NoGoodFormula::refine_formula(
+    const GlobalState &state,
+    int bound)
+{
+    if (m_hc == NULL) {
+        return;
+    }
+    m_refinement_timer.resume();
+    refine_quantitative(state, bound);
+    m_refinement_timer.stop();
+}
+
+int NoGoodFormula::evaluate_formula_quantitative(
+    const std::vector<unsigned> &conjunction_ids)
+{
+    if (m_hc == NULL) {
+        return false;
+    }
+    m_evaluation_timer.resume();
+    int res = evaluate_quantitative(conjunction_ids);
+    m_evaluation_timer.stop();
+    return res;
+}
+
+void NoGoodFormula::refine_formula(
     const GlobalState &state)
 {
     if (m_hc == NULL) {
@@ -75,11 +101,20 @@ HCHeuristic::HCHeuristic(const options::Options &opts)
       c_prune_subsumed_preconditions(opts.get<bool>("prune_subsumed_preconditions")),
       c_early_termination(true),
       m_hc_evaluations(0),
-      m_nogood_formula(opts.get<bool>("nogoods") ? std::unique_ptr<StateMinimizationNoGoods>(new StateMinimizationNoGoods(task, this)) : nullptr)
+      cost_bound_(opts.get<int>("cost_bound")),
+      m_nogood_formula(nullptr)
       // m_nogood_formula(opts.contains("nogoods") ?
       //                  opts.get<NoGoodFormula * >("nogoods") : NULL)
 {
-    c_nogood_evaluation_enabled = m_nogood_formula != nullptr;
+    if (opts.get<bool>("nogoods")) {
+        c_nogood_evaluation_enabled = true;
+        if (cost_bound_ >= 0) {
+            m_nogood_formula = std::unique_ptr<NoGoodFormula>(new QuantitativeStateMinimizationNoGoods(task, this));
+        } else {
+            m_nogood_formula = std::unique_ptr<NoGoodFormula>(new StateMinimizationNoGoods(task, this));
+        }
+        assert(m_nogood_formula != nullptr);
+    }
     initialize(opts.get<int>("m"));
 }
 
@@ -515,6 +550,34 @@ unsigned HCHeuristic::create_counter(unsigned action_id,
 }
 
 int
+HCHeuristic::compute_heuristic_for_facts(const std::vector<unsigned>& fact_ids)
+{
+    m_state.clear();
+    get_satisfied_conjunctions(fact_ids, m_state);
+    if (c_nogood_evaluation_enabled
+        && m_nogood_formula != nullptr) {
+        int h = m_nogood_formula->evaluate_formula_quantitative(fact_ids);
+        if (h == DEAD_END) {
+#ifndef NDEBUG
+            cleanup_previous_computation();
+            assert(compute_heuristic(m_state) == DEAD_END);
+#endif
+            return DEAD_END;
+        }
+        if (cost_bound_ >= 0 && cost_bound_ - g_value_ < h) {
+#ifndef NDEBUG
+            cleanup_previous_computation();
+            assert(compute_heuristic(m_state) >= h);
+#endif
+            return h;
+        }
+    }
+    m_hc_evaluations++;
+    cleanup_previous_computation();
+    return compute_heuristic(m_state);
+}
+
+int
 HCHeuristic::evaluate_partial_state(const PartialState& state)
 {
     assert(std::is_sorted(state.begin(), state.end()));
@@ -530,45 +593,24 @@ HCHeuristic::evaluate_partial_state(const PartialState& state)
             }
         }
     }
-    m_state.clear();
-    get_satisfied_conjunctions(fact_ids, m_state);
-    if (c_nogood_evaluation_enabled
-        && m_nogood_formula != nullptr
-        && m_nogood_formula->evaluate_formula(m_state)) {
-#ifndef NDEBUG
-        cleanup_previous_computation();
-        assert(compute_heuristic(m_state) == DEAD_END);
-#endif
-        return DEAD_END;
-    }
-    m_hc_evaluations++;
-    cleanup_previous_computation();
-    int res = compute_heuristic(m_state);
     // TODO nogood learning currently no implemented for partial states
     // if (res == DEAD_END && c_nogood_evaluation_enabled) {
     //     m_nogood_formula->refine_formula(state);
     // }
-    return res;
+    return compute_heuristic_for_facts(fact_ids);
 }
 
 int HCHeuristic::compute_heuristic(const GlobalState &state)
 {
-    m_state.clear();
-    get_satisfied_conjunctions(state, m_state);
-    if (c_nogood_evaluation_enabled
-        && m_nogood_formula != nullptr
-        && m_nogood_formula->evaluate_formula(m_state)) {
-#ifndef NDEBUG
-        cleanup_previous_computation();
-        assert(compute_heuristic(m_state) == DEAD_END);
-#endif
-        return DEAD_END;
+    std::vector<unsigned> fact_ids;
+    for (int var = 0; var < task->get_num_variables(); var++) {
+        fact_ids.push_back(strips::get_fact_id(var, state[var]));
     }
-    m_hc_evaluations++;
-    cleanup_previous_computation();
-    int res = compute_heuristic(m_state);
-    if (res == DEAD_END && c_nogood_evaluation_enabled) {
-        m_nogood_formula->refine_formula(state);
+    int res = compute_heuristic_for_facts(fact_ids);
+    if (c_nogood_evaluation_enabled) {
+        if (res == DEAD_END || (cost_bound_ >= 0 && cost_bound_ - g_value_ < res)) {
+            m_nogood_formula->refine_formula(state, res == DEAD_END ? -1 : (cost_bound_ - g_value_));
+        }
     }
     return res;
 }
@@ -765,9 +807,26 @@ bool HCHeuristic::supports_partial_state_evaluation() const
     return true;
 }
 
-int HCHeuristic::evaluate(const GlobalState& state)
+int HCHeuristic::evaluate(const GlobalState& state, int g)
 {
+    g_value_ = g;
     return compute_heuristic(state);
+}
+
+EvaluationResult 
+HCHeuristic::compute_result(
+    EvaluationContext &eval_context)
+{
+    EvaluationResult result;
+    const GlobalState &state = eval_context.get_state();
+    g_value_ = eval_context.get_g_value();
+    int heuristic = compute_heuristic(state);
+    result.set_count_evaluation(true);
+    if (heuristic == DEAD_END) {
+        heuristic = EvaluationResult::INFTY;
+    }
+    result.set_evaluator_value(heuristic);
+    return result;
 }
 
 void HCHeuristic::set_abstract_task(std::shared_ptr<AbstractTask> task)
@@ -875,6 +934,7 @@ void HCHeuristic::add_options_to_parser(options::OptionParser &parser)
     parser.add_option<bool>("prune_subsumed_preconditions", "", "false");
     parser.add_option<bool>("nogoods", "", "true");
     parser.add_option<int>("m", "", "0");
+    parser.add_option<int>("cost_bound", "", "-1");
     // parser.add_option<NoGoodFormula *>("nogoods", "", options::OptionParser::NONE);
 }
 

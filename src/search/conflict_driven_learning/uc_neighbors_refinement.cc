@@ -80,7 +80,7 @@ bool UCNeighborsRefinement::learn_from_dead_end_component(
     while (!component.end()) {
         const GlobalState &state = component.current();
         if (m_component_size == 0) {
-            int res = m_hc->evaluate(state);
+            int res = m_hc->evaluate(state, 0);
             if (res == HCHeuristic::DEAD_END) {
                 terminate = true;
                 result = true;
@@ -117,7 +117,7 @@ bool UCNeighborsRefinement::learn_from_dead_end_component(
 #ifndef NDEBUG
             int res =
 #endif
-            m_hc->evaluate(state);
+            m_hc->evaluate(state, 0);
             assert(res == HCHeuristic::DEAD_END);
             m_successor_to_conjunctions.emplace_back();
             for (unsigned cid = 0; cid < m_conjunction_to_successors.size(); cid++) {

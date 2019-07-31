@@ -71,8 +71,24 @@ private:
 protected:
     std::shared_ptr<AbstractTask> m_task;
     HCHeuristic *m_hc;
-    virtual bool evaluate(const std::vector<unsigned> &conjunction_ids) = 0;
-    virtual void refine(const GlobalState &state) = 0;
+    virtual int evaluate_quantitative(const std::vector<unsigned> &conjunction_ids)
+    {
+        return evaluate(conjunction_ids) ? -1 : 0;
+    }
+    virtual void refine_quantitative(const GlobalState &state, int bound)
+    {
+        if (bound < 0) {
+            refine(state);
+        }
+    }
+    virtual void refine(const GlobalState &state)
+    {
+        refine_quantitative(state, -1);
+    }
+    virtual bool evaluate(const std::vector<unsigned> &conjunction_ids)
+    {
+        return evaluate_quantitative(conjunction_ids) == -1;
+    }
 public:
     NoGoodFormula(std::shared_ptr<AbstractTask> task,
                   HCHeuristic *hc);
@@ -82,6 +98,8 @@ public:
     virtual void notify_on_new_conjunction(unsigned) {}
     bool evaluate_formula(const std::vector<unsigned> &conjunction_ids);
     void refine_formula(const GlobalState &state);
+    int evaluate_formula_quantitative(const std::vector<unsigned> &conjunction_ids);
+    void refine_formula(const GlobalState &state, int bound);
     const utils::Timer &get_refinement_timer() const;
     const utils::Timer &get_evaluation_timer() const;
     virtual void print_statistics() const = 0;
@@ -95,6 +113,8 @@ protected:
     bool c_nogood_evaluation_enabled;
     size_t m_hc_evaluations;
 
+    int cost_bound_;
+    int g_value_;
     std::unique_ptr<NoGoodFormula> m_nogood_formula;
 
     size_t m_num_atomic_counters;
@@ -130,6 +150,7 @@ protected:
         unsigned conjid);
 
     virtual int compute_heuristic(const GlobalState &state) override;
+    int compute_heuristic_for_facts(const std::vector<unsigned>& fact_ids);
 
     void initialize(unsigned m);
 public:
@@ -139,8 +160,11 @@ public:
 
     virtual void set_abstract_task(std::shared_ptr<AbstractTask> task) override;
 
-    int evaluate(const GlobalState& state);
+    int get_cost_bound() const { return cost_bound_; }
+    int evaluate(const GlobalState& state, int g);
     virtual int evaluate_partial_state(const PartialState& state) override;
+    virtual EvaluationResult compute_result(
+        EvaluationContext &eval_context) override;
 
     bool set_early_termination(bool t);
     bool set_early_termination_and_nogoods(bool e);

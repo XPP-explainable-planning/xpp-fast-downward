@@ -137,7 +137,7 @@ BoundedCostTarjanSearch::initialize()
         std::cout << "Initial state satisfies goal condition!" << std::endl;
         m_solved = true;
     } else {
-        if (evaluate(istate, m_expansion_evaluator)
+        if (evaluate(istate, m_expansion_evaluator, 0)
                 && !expand(istate) && !increment_bound_and_push_initial_state()) {
             std::cout << "Initial state is dead-end!" << std::endl;
         }
@@ -145,13 +145,14 @@ BoundedCostTarjanSearch::initialize()
 }
 
 bool BoundedCostTarjanSearch::evaluate(const GlobalState& state, 
-                                           Evaluator* eval)
+                                           Evaluator* eval,
+                                           int g)
 {
     if (eval == NULL) {
         m_eval_result.set_evaluator_value(0);
         return true;
     }
-    EvaluationContext ctxt(state);
+    EvaluationContext ctxt(state, g, false, nullptr);
     m_eval_result = eval->compute_result(ctxt);
     if (m_eval_result.is_infinite()) {
         return false;
@@ -177,7 +178,7 @@ BoundedCostTarjanSearch::expand(const GlobalState& state,
 
     // TODO check if already computed after last refinement, and if so skip
     // evaluation
-    if (!evaluate(state, m_pruning_evaluator)) {
+    if (!evaluate(state, m_pruning_evaluator, m_current_g)) {
         _set_bound(status, INF);
         // std::cout << "Dead end -> " << _get_bound(status) << std::endl;
         return false;
@@ -200,7 +201,7 @@ BoundedCostTarjanSearch::expand(const GlobalState& state,
     g_successor_generator->generate_applicable_ops(state, aops);
     statistics.inc_generated(aops.size());
     if (m_preferred) {
-        if (evaluate(state, m_preferred)) {
+        if (evaluate(state, m_preferred, m_current_g)) {
             const std::vector<OperatorID>& pref = m_eval_result.get_preferred_operators();
             for (int i = pref.size() - 1; i >= 0; i--) {
                 preferred.insert(pref[i]);
@@ -215,7 +216,7 @@ BoundedCostTarjanSearch::expand(const GlobalState& state,
         for (Evaluator* pde : m_path_dependent_evaluators) {
             pde->notify_state_transition(state, aops[i], succ);
         }
-        if (evaluate(succ, m_expansion_evaluator)) {
+        if (evaluate(succ, m_expansion_evaluator, m_current_g + op.get_cost())) {
             has_zero_cost = has_zero_cost || op.get_cost() == 0;
             std::pair<bool, int> key(
                     !preferred.contains(aops[i]),
@@ -470,13 +471,13 @@ BoundedCostTarjanSearch::step()
                     m_last_layer = m_layers.empty() ? NULL : &m_layers.back();
                 }
             }
-#if DEBUG_BOUNDED_COST_DFS_ASSERT_LEARNING
-            if (c_refinement_toggle) {
-                bool dead = !evaluate(locals.state, m_pruning_evaluator);
-                // std::cout << "refinement result => dead=" << dead << " h=" << m_eval_result.get_evaluator_value() << std::endl;
-                assert(dead || m_current_g + m_eval_result.get_evaluator_value() >= bound);
-            }
-#endif
+// #if DEBUG_BOUNDED_COST_DFS_ASSERT_LEARNING
+//             if (c_refinement_toggle) {
+//                 bool dead = !evaluate(locals.state, m_pruning_evaluator);
+//                 // std::cout << "refinement result => dead=" << dead << " h=" << m_eval_result.get_evaluator_value() << std::endl;
+//                 assert(dead || m_current_g + m_eval_result.get_evaluator_value() >= bound);
+//             }
+// #endif
             component_neighbors.clear();
             if (locals.neighbors_size != m_neighbors.size()) {
                 m_neighbors.erase(m_neighbors.begin() + locals.neighbors_size, m_neighbors.end());

@@ -809,6 +809,7 @@ fast_downward_plugin(
         conflict_driven_learning/hc_heuristic
         conflict_driven_learning/formula
         conflict_driven_learning/state_minimization_nogoods
+        conflict_driven_learning/quantitative_state_minimization_nogoods
         conflict_driven_learning/hc_conflict_learner
         conflict_driven_learning/uc_neighbors_refinement
 
