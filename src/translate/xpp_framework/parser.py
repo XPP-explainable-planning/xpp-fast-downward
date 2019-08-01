@@ -30,7 +30,7 @@ def parse(path, typeObjectMap):
             actionSets[newActionSet.name] = newActionSet
             continue
 
-        if line.startswith("AS_property ") or line.startswith("soft-AS_property "):
+        if line.startswith("AS_property ") or line.startswith("soft-AS_property ") or line.startswith("soft-property "):
             property_def = lines_until_empty_line(lines)
             asProperty = parse_action_set_property(property_def)
             AS_properties.append(asProperty)
@@ -53,7 +53,7 @@ def parse(path, typeObjectMap):
         #    continue
 
         #print("nothing done")
-        assert(False)
+        assert False, line
 
     #print(actionSetProperties)
     #print(">>>>>>>>>>>>>>>>>>>Parse finished>>>>>>>>>>>>>>>>>>>>>>>>>><")
