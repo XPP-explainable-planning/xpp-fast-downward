@@ -111,7 +111,7 @@ SearchStatus GoalRelationSearch::step() {
 
     static unsigned num_executed_searched = 0;
     static unsigned num_satisfied = 0;
-    //static unsigned last_satisfied = 0;
+    static unsigned last_satisfied = 0;
     static const unsigned print_status_every = 1;
     static utils::Timer search_timer; search_timer.resume();
 
@@ -126,7 +126,7 @@ SearchStatus GoalRelationSearch::step() {
     }
 
     if (num_executed_searched % print_status_every == 0) {
-        /*
+        
         std::cout << "properties=" << num_executed_searched
                   << ", satisfied=+" << (num_satisfied - last_satisfied) << "(" << num_satisfied  << ")"
                   << ", time/property="
@@ -134,7 +134,7 @@ SearchStatus GoalRelationSearch::step() {
                   << "s"
                   << " [t=" << utils::g_timer << "]"
                   << std::endl;
-        */
+        
         search_timer.reset();
         search_timer.stop();
         //last_satisfied = num_satisfied;
