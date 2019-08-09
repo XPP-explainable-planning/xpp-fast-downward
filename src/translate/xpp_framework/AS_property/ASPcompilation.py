@@ -71,6 +71,7 @@ def addPropertyCheckingActions(sas_task, prop, actionSets, eval_phase_var_id):
         pre_post = []
         # literals form the preconditions
         for l in c:
+            assert l.constant.name in actionSets, "action set " + l.constant.name + " does not exist."
             #print(l.constant.name)
             if l.negated:
                 pre_post.append((actionSets[l.constant.name].var_id,0,0,[]))

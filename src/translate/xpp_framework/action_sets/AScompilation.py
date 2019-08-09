@@ -28,5 +28,4 @@ def updateOriginalActions(sas_task, s):
             #print(op.name)
             op.pre_post.append((s.var_id, -1, 1, []))    
 
-    if s.number_of_contained_ops == 0:
-            print("WARNING: " + s.name + " does not contain any action, no actions maps to the definition \n")
+    assert s.number_of_contained_ops == 0, "WARNING: " + s.name + " does not contain any action"

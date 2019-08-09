@@ -111,8 +111,8 @@ SearchStatus GoalRelationSearch::step() {
 
     static unsigned num_executed_searched = 0;
     static unsigned num_satisfied = 0;
-    static unsigned last_satisfied = 0;
-    static const unsigned print_status_every = 1;
+    //static unsigned last_satisfied = 0;
+    //static const unsigned print_status_every = 1;
     static utils::Timer search_timer; search_timer.resume();
 
     std::cout.setstate(std::ios::failbit);
@@ -125,6 +125,7 @@ SearchStatus GoalRelationSearch::step() {
         num_satisfied++;
     }
 
+    /*
     if (num_executed_searched % print_status_every == 0) {
         
         std::cout << "properties=" << num_executed_searched
@@ -137,12 +138,16 @@ SearchStatus GoalRelationSearch::step() {
         
         search_timer.reset();
         search_timer.stop();
-        //last_satisfied = num_satisfied;
+        last_satisfied = num_satisfied;
     }
+    */
 
     //Plan found_plan;
     last_phase_found_solution = current_search->found_solution();
     num_solved_nodes++;
+    if(num_solved_nodes == 1){
+        std::cout << "Root node solved!" << std::endl;
+    }
 
     //stop search in this branch
     if (last_phase_found_solution) {
