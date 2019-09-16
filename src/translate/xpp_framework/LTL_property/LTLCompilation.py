@@ -32,7 +32,7 @@ class AuxillaryVariable:
 
         #init state: 
         if sas_task.init.values[var_id] == value_id:
-            sas_task.init.values.append(0)
+            sas_task.init.values.append(1)
         else:
             sas_task.init.values.append(0)
 
@@ -80,14 +80,14 @@ def addFluents(automata, id, sas_task):
 
 
     #variable which indicates if a transition in the automata should be executed
-    automata.sync_var = len(sas_task.variables.value_names)
-    sync_var_domain = ["not_sync(" + automata.name +")", "syn(" + automata.name + ")"]
-    sas_task.variables.value_names.append(sync_var_domain)
-    sas_task.variables.ranges.append(len(sync_var_domain))
-    sas_task.variables.axiom_layers.append(-1)
-
+    # world an automaton sync vars are merged
+    #automata.sync_var = len(sas_task.variables.value_names)
+    #sync_var_domain = ["not_sync(" + automata.name +")", "syn(" + automata.name + ")"]
+    #sas_task.variables.value_names.append(sync_var_domain)
+    #sas_task.variables.ranges.append(len(sync_var_domain))
+    #sas_task.variables.axiom_layers.append(-1)
     #initially we are in a wold state
-    sas_task.init.values.append(0)
+    #sas_task.init.values.append(0)
 
 #add the transitions of the automata to the planning task
 def automataTransitionOperators(automata, sas_task, actionSets):
@@ -196,38 +196,34 @@ def literalVarValue(sas_task, constant, neg):
 
     return None
 
-def addWorldSyncvar(sas_task):
+def addWorldSyncvar(sas_task, properties):
     world_sync_var = len(sas_task.variables.value_names)
-    sync_var_domain = ["not_sync(world)", "syn(world)"]
+    sync_var_domain = ["sync(world)"]
+    for p in properties:
+        sync_var_domain.append("sync(" + p.automata.name + ")")
+
     sas_task.variables.value_names.append(sync_var_domain)
     sas_task.variables.ranges.append(len(sync_var_domain))
     sas_task.variables.axiom_layers.append(-1)
 
     #initially we are in a wold state
-    sas_task.init.values.append(1)
+    sas_task.init.values.append(0)
 
     return world_sync_var
 
 def add_sync_conditions(sas_task, operators, properties, world_sync_var):
+
+    operators_phases = [sas_task.operators] + operators
+
     #add the synchronization precondition and effects to the different operator sets
-    for i in range(-1, len(properties)):
+    for i in range(len(properties)+1):
 
-        pre_sync_var = None
-        if(i == -1):
-            pre_sync_var = world_sync_var
-        else:
-            pre_sync_var = properties[i].automata.sync_var
+        sync_con = (world_sync_var, i, (i+1)%(len(properties)+1), [])
 
-        eff_sync_var = None
-        if(i+1 < len(properties)):
-            eff_sync_var = properties[i+1].automata.sync_var
-        else:
-            eff_sync_var = world_sync_var
+        for o in operators_phases[i]:
+            o.pre_post.append(sync_con)
 
-        if i == -1:
-            addSyncPreconditionEffects(pre_sync_var, eff_sync_var, sas_task.operators)
-        else:
-            addSyncPreconditionEffects(pre_sync_var, eff_sync_var, operators[i])
+
 
 def add_reset_state_sets(last_ops, actionSets):
     for s in actionSets.values():
@@ -244,7 +240,7 @@ def compileLTLProperties(sas_task, properties, actionSets):
     new_operators = []
 
     #each automata and the world itself have a synchronization variable to constrain the execution order
-    world_sync_var = addWorldSyncvar(sas_task)
+    world_sync_var = addWorldSyncvar(sas_task, properties)
 
     for i in range(len(properties)):
         automata = properties[i].automata
@@ -260,5 +256,5 @@ def compileLTLProperties(sas_task, properties, actionSets):
         for o in ol:
             sas_task.operators.append(o)
 
-    print("Number of auxillary variables: " + str(len(auxillary_vars)))
+    print("Number of auxiliary variables: " + str(len(auxillary_vars)))
 
