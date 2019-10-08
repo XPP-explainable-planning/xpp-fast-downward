@@ -34,6 +34,7 @@ protected:
     std::shared_ptr<AbstractTask> task;
     // Use task_proxy to access task information.
     TaskProxy task_proxy;
+    
 
     PlanManager plan_manager;
     StateRegistry state_registry;
@@ -82,6 +83,7 @@ public:
         */
     }
     const std::shared_ptr<AbstractTask> & getTask() {return task;}
+    virtual double get_heuristic_refinement_time() const { return 0; }
 
     /* The following three methods should become functions as they
        do not require access to private/protected class members. */

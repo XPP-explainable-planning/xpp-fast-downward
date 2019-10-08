@@ -18,6 +18,8 @@ void ConflictLearner::initialize()
 
 void ConflictLearner::print_statistics() const
 {
+    std::cout << "Heuristic refinement time: "
+    << m_refinement_timer << std::endl;
 }
 
 bool ConflictLearner::requires_recognized_neighbors() const

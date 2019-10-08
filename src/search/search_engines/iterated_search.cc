@@ -19,6 +19,7 @@ IteratedSearch::IteratedSearch(const Options &opts)
       last_phase_found_solution(false),
       best_bound(bound),
       iterated_found_solution(false) {
+          heuristic_refinement_time_ = 0;
 }
 
 shared_ptr<SearchEngine> IteratedSearch::get_search_engine(
@@ -80,6 +81,7 @@ SearchStatus IteratedSearch::step() {
     }
     current_search->print_statistics();
 
+    heuristic_refinement_time_ += current_search->get_heuristic_refinement_time();
     const SearchStatistics &current_stats = current_search->get_statistics();
     statistics.inc_expanded(current_stats.get_expanded());
     statistics.inc_evaluated_states(current_stats.get_evaluated_states());
@@ -117,6 +119,7 @@ SearchStatus IteratedSearch::step_return_value() {
 void IteratedSearch::print_statistics() const {
     cout << "Cumulative statistics:" << endl;
     statistics.print_detailed_statistics();
+    cout << "Heuristic refinement time: " << heuristic_refinement_time_ << "s" << std::endl;
 }
 
 void IteratedSearch::save_plan_if_necessary() {

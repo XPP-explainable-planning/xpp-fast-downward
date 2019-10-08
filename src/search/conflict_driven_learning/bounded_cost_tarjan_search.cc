@@ -499,6 +499,9 @@ void BoundedCostTarjanSearch::print_statistics() const
     SearchEngine::print_statistics();
     std::cout << "Registered: " << state_registry.size() << " state(s)" << std::endl;
     statistics.print_detailed_statistics();
+    if (m_refiner != nullptr) {
+        m_refiner->print_statistics();
+    }
     
 #ifndef NDEBUG
     hc_heuristic::HCHeuristic* h = dynamic_cast<hc_heuristic::HCHeuristic*>(m_pruning_evaluator);
@@ -507,6 +510,13 @@ void BoundedCostTarjanSearch::print_statistics() const
     }
 #endif
 }
+
+double
+BoundedCostTarjanSearch::get_heuristic_refinement_time() const
+{
+    return m_refiner != nullptr ? m_refiner->get_refinement_timer()() : 0;
+}
+
 
 void
 BoundedCostTarjanSearch::add_options_to_parser(options::OptionParser& parser)

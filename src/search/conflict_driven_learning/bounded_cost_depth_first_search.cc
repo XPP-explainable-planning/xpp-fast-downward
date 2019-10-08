@@ -238,6 +238,9 @@ void BoundedCostDepthFirstSearch::print_statistics() const
     SearchEngine::print_statistics();
     std::cout << "Registered: " << state_registry.size() << " state(s)" << std::endl;
     statistics.print_detailed_statistics();
+    if (m_learner != nullptr) {
+        m_learner->print_statistics();
+    }
     
 #ifndef NDEBUG
     hc_heuristic::HCHeuristic* h = dynamic_cast<hc_heuristic::HCHeuristic*>(m_pruning_evaluator);
@@ -245,6 +248,11 @@ void BoundedCostDepthFirstSearch::print_statistics() const
         h->dump_conjunctions();
     }
 #endif
+}
+
+double BoundedCostDepthFirstSearch::get_heuristic_refinement_time() const
+{
+    return m_learner != nullptr ? m_learner->get_refinement_timer()() : 0;
 }
 
 void

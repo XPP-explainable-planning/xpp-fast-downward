@@ -21,6 +21,7 @@ public:
     BoundedCostDepthFirstSearch(const options::Options& opts);
     virtual ~BoundedCostDepthFirstSearch() = default;
     virtual void print_statistics() const override;
+    virtual double get_heuristic_refinement_time() const override;
     static void add_options_to_parser(options::OptionParser& parser);
 
 protected:

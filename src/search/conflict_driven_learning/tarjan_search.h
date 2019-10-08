@@ -28,6 +28,7 @@ class TarjanSearch : public SearchEngine
 public:
     TarjanSearch(const options::Options &opts);
     virtual void print_statistics() const override;
+    virtual double get_heuristic_refinement_time() const override;
     static void add_options_to_parser(options::OptionParser &parser);
 protected:
     virtual void initialize() override;

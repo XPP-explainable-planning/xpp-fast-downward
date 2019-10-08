@@ -408,6 +408,15 @@ void TarjanSearch::print_statistics() const
     SearchEngine::print_statistics();
     std::cout << "Registered: " << state_registry.size() << " state(s)" << std::endl;
     statistics.print_detailed_statistics();
+    if (m_learner != nullptr) {
+        m_learner->print_statistics();
+    }
+}
+
+double
+TarjanSearch::get_heuristic_refinement_time() const
+{
+    return m_learner != nullptr ? m_learner->get_refinement_timer()() : 0;
 }
 
 void TarjanSearch::add_options_to_parser(options::OptionParser &parser)

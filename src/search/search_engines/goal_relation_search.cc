@@ -34,6 +34,7 @@ GoalRelationSearch::GoalRelationSearch(const Options &opts)
         //best_bound(bound),
         iterated_found_solution(false){
         
+        heuristic_refinement_time_ = 0;
         
         switch (meta_search_type)
         {
@@ -174,6 +175,7 @@ SearchStatus GoalRelationSearch::step() {
     
 
     //current_search->print_statistics();
+    heuristic_refinement_time_ += current_search->get_heuristic_refinement_time();
 
     const SearchStatistics &current_stats = current_search->get_statistics();
     statistics.inc_expanded(current_stats.get_expanded());
@@ -202,6 +204,7 @@ void GoalRelationSearch::print_statistics() const {
     cout << "Cumulative statistics:" << endl;
     cout << "Number of solved nodes: " << num_solved_nodes << endl;
     statistics.print_detailed_statistics();
+    cout << "Heuristic refinement time: " << heuristic_refinement_time_ << "s" << std::endl;
 }
 
 void GoalRelationSearch::save_plan_if_necessary() {
