@@ -725,10 +725,12 @@ def main():
     #for o in sas_task.operators:
     #    print(o.name)
 
+    dump_statistics(sas_task)
+
     xpp_framework.run(options, task, sas_task)
 
     #take a look
-    #print("------------------------------------")
+    #print("-------------- Properties compilied ----------------------")
     #for v in sas_task.variables.value_names:
     #    print(v)
 

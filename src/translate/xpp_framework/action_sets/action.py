@@ -58,6 +58,11 @@ class ActionSet:
                 return True
         return False
 
+    def intersect(self, other):
+        my_actions = set(self.actions)
+        other_actions = set(other.actions)
+        return my_actions & other_actions
+
 
     def genSetDefinition(self):
         #TODO 

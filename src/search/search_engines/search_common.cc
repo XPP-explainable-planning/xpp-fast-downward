@@ -122,7 +122,7 @@ create_astar_open_list_factory_and_f_eval(const Options &opts) {
     options.set("evals", evals);
     options.set("pref_only", false);
     options.set("insert_deadends", opts.get<bool>("insert_deadends"));
-    cout << "Insert deadends: " << opts.get<bool>("insert_deadends") << endl;
+    //cout << "Insert deadends: " << opts.get<bool>("insert_deadends") << endl;
     options.set("unsafe_pruning", false);
     shared_ptr<OpenListFactory> open =
         make_shared<tiebreaking_open_list::TieBreakingOpenListFactory>(options);

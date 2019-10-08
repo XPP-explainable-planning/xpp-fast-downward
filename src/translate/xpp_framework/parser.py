@@ -1,6 +1,6 @@
 from .action_sets.parser import parse_action_set 
 from .AS_property.parser import parse_action_set_property
-from.LTL_property.parser import parse_LTL_property
+from .LTL_property.parser import parse_LTL_property
 
 # typeObjectMap maps from a type to a list of objects which have this type
 def parse(path, typeObjectMap):
@@ -26,7 +26,7 @@ def parse(path, typeObjectMap):
         if line.startswith("set") or line.startswith("state_set"):
             set_def = lines_until_empty_line(lines)
             newActionSet = parse_action_set(set_def, typeObjectMap)
-            assert(newActionSet.name not in actionSets)
+            assert newActionSet.name not in actionSets, "Not unique action set name: " + newActionSet.name
             actionSets[newActionSet.name] = newActionSet
             continue
 

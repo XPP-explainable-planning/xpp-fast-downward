@@ -10,7 +10,7 @@ def run(options, task, sas_task):
     print("----------------------------------------------------------------------------------------------")
 
     if properties_path != "None" and properties_path != "PROPERTY":
-        print("---> compile properties")
+        print("Compile properties")
         
         #build typeObjectMap
         typeObjectMap = {}
@@ -36,7 +36,7 @@ def run(options, task, sas_task):
 
     # add question (subset of goal facts) for online explanation
     if options.question != "None":
-        print("---> add question")
+        print("Add questions")
         question.add_question(options.question, sas_task)
     
     #TODO

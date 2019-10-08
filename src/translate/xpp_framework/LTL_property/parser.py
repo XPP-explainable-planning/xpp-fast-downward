@@ -13,6 +13,6 @@ def parse_LTL_property(lines):
     (formula, rest, c) = logic_formula.Operator.parse(parts)
     #TODO constants
  
-    assert len(rest) == 0, "Parse LTL property failed:\n\tresult: " + str(formula) + "\n\trest is not empty: " + str(rest)
+    assert len(rest) == 0, "Parse LTL property " + name + " failed:\n\tresult: " + str(formula) + "\n\trest is not empty: " + str(rest)
 
     return LTLProperty(name, formula, c)

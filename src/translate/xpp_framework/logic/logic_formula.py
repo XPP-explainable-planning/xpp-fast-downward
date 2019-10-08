@@ -106,6 +106,7 @@ class LConstant(Operator):
     @staticmethod
     def parse(parts):
         operand = parts.pop(0)
+        assert not '(' in operand or ')' in operand, "Missing bracket in " + operand
         return (LConstant(operand, None), parts, [operand])
 
     def __init__(self, name, id):
@@ -140,6 +141,12 @@ class LConstant(Operator):
     def __repr__(self):
         return self.name
 
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __hash__(self):
+        return hash(self.name)
+
 #Literals are used to generate the actions which decide if a property is satisfied
 class LLiteral(Operator):
 
@@ -152,6 +159,12 @@ class LLiteral(Operator):
             return "! " + self.constant.name
         else:   
             return self.constant.name
+
+    def __eq__(self, other):
+        return self.negated == other.negated and self.constant == other.constant
+
+    def __hash__(self):
+        return hash(self.negated) + hash(self.constant)
 
 
 class LNot(Operator):

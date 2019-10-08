@@ -26,7 +26,7 @@ def parse_action(string, typeObjectMap):
                 if param in objects:
                     found = True
                     break
-            assert found, "Param: " + param + " not found in planning task."
+            assert found, "Param: " + param + " of action " + string + " not found in planning task."
             
             action.addParam(param)
 

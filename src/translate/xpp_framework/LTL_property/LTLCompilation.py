@@ -2,6 +2,7 @@ from sas_tasks import *
 import xpp_framework.logic.logic_formula as logic_formula
 from .automata import State
 import os
+import copy
 
 auxillary_vars = {}
 
@@ -91,9 +92,12 @@ def addFluents(automata, id, sas_task):
 
 #add the transitions of the automata to the planning task
 def automataTransitionOperators(automata, sas_task, actionSets):
+    #print("----------------------------------------------------------")
     new_operators = []
     for name, s in automata.states.items():
         for t in s.transitions:
+            #print(t)
+
             #print("Process action: " + t.name) 
 
             #encoding of the precondition and effect (var, pre, post, cond)
@@ -101,14 +105,13 @@ def automataTransitionOperators(automata, sas_task, actionSets):
                 
             #automata state: from state source to state target
             pre_post.append((automata.pos_var, t.source.id, t.target.id, []))
+            #print("Var: " + str(automata.pos_var) + " Source: " + str(t.source.id) + " -> Target: " + str(t.target.id))
 
             #accepting
-            # if the target state is accepting than the variable which indicates the acceptance of the #TODO why if
+            # if the target state is accepting than the variable which indicates the acceptance of the
             # automata is set to true
-            #if t.target.accepting:
             pre_post.append((automata.accept_var, int(t.source.accepting), int(t.target.accepting), []))
-            #sync: condition for the alternating execution of task and automata actions
-            #pre_post.append((automata.sync_var, 1, 0, []))
+            #print("Var: " + str(automata.accept_var) + " Source: " + str(t.source.accepting) + " -> " + str(t.target.accepting))
 
             #transition name:
             t_name = automata.name + ": " + t.name
@@ -116,45 +119,96 @@ def automataTransitionOperators(automata, sas_task, actionSets):
             if not t.guard.isTrue():
                 # returns a disjunction of pre_post, such that every pre_post belongs to one action
                 clauses = t.getClauses()
-                #print("Clauses: ")
+                #print("Clauses:")
                 #print(clauses)
+                #clauses = remove_unnecessary_clauses(clauses, sas_task, actionSets)
+                #print("Simplified: ")
+                #print(clauses)
+
                 for clause in clauses:
-                    con = [[]]
+                    con = []
+                    # for every literal find the corresponding variable
                     for l in clause:
                         new_con = []
 
-                        #print(actionSets)
+                        # action set variables
                         if l.constant.name in actionSets:
                             if l.negated:
                                 new_values = [(actionSets[l.constant.name].var_id, 0)]
                             else:
                                 new_values = [(actionSets[l.constant.name].var_id, 1)]
+                        # world variables
                         else:
                             new_values = literalVarValue(sas_task, l.constant, l.negated)
+                            assert new_values, "Constant " + str(l.constant) + " does not exist."
+                            # check if auxiliary variable is necessary
                             if l.negated and len(new_values) > 2:
-                                if not l.constant.name in auxillary_vars:
-                                    # create new auxillary var
+                                if l.constant.name not in auxillary_vars:
+                                    # create new auxiliary var
                                     new_aux_var = AuxillaryVariable(l.constant, sas_task)
                                     auxillary_vars[l.constant.name] = new_aux_var
 
                                 aux_var = auxillary_vars[l.constant.name]
                                 new_values = [(aux_var.id, 0)]
 
-
-                        #print("Literal values:")
-                        #print(new_values)
+                        # make sure that a a variable for the literal was found
                         assert new_values and len(new_values) > 0, "value not found: " + str(l.constant)
+
+                        # from var, value to pre_post tuple
                         for var, value in new_values:
-                            for c in con:
-                                new_con.append(c + [(var, value, value, [])])
-                        con = new_con
-                    for c in con:
-                        final_pre_post = pre_post + c
-                        new_operators.append(SASOperator(t_name,[], final_pre_post, 0))
+                            con.append((var, value, value, []))
+
+                    # combine the conditions of the guard with the state transition and accepting condition
+                    final_pre_post = pre_post + con     # TODO check if this is still correct
+                    #print(final_pre_post)
+                    op = SASOperator(t_name,[], final_pre_post, 0)
+                    new_operators.append(op)
             else:
+                # if the guard is true no other conditions are necessary
+                #print("Guard True")
                 new_operators.append(SASOperator(t_name,[], pre_post, 0))
 
+    #print("Num operators: " + str(len(new_operators)))
     return new_operators
+
+
+# TODO equ for literals
+def remove_unnecessary_clauses(clauses, sas_task, actionSets):
+    # TODO also implement for world variables
+    result_clauses = []
+    for clause in clauses:
+        num_pos_literals = 0
+        result_clause = copy.copy(clause)
+        # remove negative literals which are implied by positive once
+        for literal in result_clause:
+            if not literal.negated and literal.constant.name in actionSets:
+                num_pos_literals += 1
+                #print("_________")
+                #print("Checking: " + str(literal))
+                # check if any of the negative literals is implied
+                for comp_literal in result_clause:
+                    #print("Next: " + str(comp_literal))
+                    if literal != comp_literal and comp_literal.negated and comp_literal.constant.name in actionSets:
+                        #print("Check Implication with: " + str(comp_literal))
+                        # only if the intersection is empty literal -> comp_literal
+                        intersection = actionSets[literal.constant.name].intersect(actionSets[comp_literal.constant.name])
+                        #print(intersection)
+                        if len(intersection) == 0:
+                            result_clause.remove(comp_literal)
+                            #print("Remove")
+                            #print(result_clause)
+                            break
+        result_clauses.append(result_clause)
+        index1 = 0
+        for rc in result_clauses:
+            index2 = 0
+            for comp_rc in result_clauses:
+                if index1 != index2 and set(rc) == set(comp_rc):
+                    result_clauses.remove(comp_rc)
+                index2 += 1
+            index1 += 1
+    return result_clauses
+
 
 
 #add to every action in the original planning task the syn variable as precondition

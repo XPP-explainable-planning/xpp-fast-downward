@@ -37,8 +37,8 @@ class LTLProperty:
         # -s state based acceptance
         # -D deterministic
         #cmd = "ltl2tgba -C -D -s \'" + str(self.genericFormula) + "\' > " + self.name
-        cmd = "/mnt/data_server/eifler/LTL2BA/spot-2.6.3/bin/ltl2tgba -C -D -s \'" + str(self.genericFormula) + "\' > " + self.name
-        #cmd = "~/Uni/XAI/programms/Spot/spot-2.6.3/bin/ltl2tgba -C -D -s \'" + str(self.genericFormula) + "\' > " + self.name
+        #cmd = "/mnt/data_server/eifler/LTL2BA/spot-2.6.3/bin/ltl2tgba -C -D -s \'" + str(self.genericFormula) + "\' > " + self.name
+        cmd = "~/Uni/XAI/programms/Spot/spot-2.6.3/bin/ltl2tgba -C -D -s \'" + str(self.genericFormula) + "\' > " + self.name
         os.system(cmd)
 
         self.automata = parseNFA(self.name)
