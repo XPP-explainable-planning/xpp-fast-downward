@@ -79,17 +79,6 @@ def addFluents(automata, id, sas_task):
     #in the goal the automata has to be in an accepting state
     sas_task.goal.pairs.append((automata.accept_var, 1))
 
-
-    #variable which indicates if a transition in the automata should be executed
-    # world an automaton sync vars are merged
-    #automata.sync_var = len(sas_task.variables.value_names)
-    #sync_var_domain = ["not_sync(" + automata.name +")", "syn(" + automata.name + ")"]
-    #sas_task.variables.value_names.append(sync_var_domain)
-    #sas_task.variables.ranges.append(len(sync_var_domain))
-    #sas_task.variables.axiom_layers.append(-1)
-    #initially we are in a wold state
-    #sas_task.init.values.append(0)
-
 #add the transitions of the automata to the planning task
 def automataTransitionOperators(automata, sas_task, actionSets):
     #print("----------------------------------------------------------")
@@ -119,8 +108,11 @@ def automataTransitionOperators(automata, sas_task, actionSets):
             if not t.guard.isTrue():
                 # returns a disjunction of pre_post, such that every pre_post belongs to one action
                 clauses = t.getClauses()
+                #print("--------------------------------------------------------")
+                #print(t.guard)
                 #print("Clauses:")
                 #print(clauses)
+                #print("-----")
                 #clauses = remove_unnecessary_clauses(clauses, sas_task, actionSets)
                 #print("Simplified: ")
                 #print(clauses)
@@ -142,7 +134,7 @@ def automataTransitionOperators(automata, sas_task, actionSets):
                             new_values = literalVarValue(sas_task, l.constant, l.negated)
                             assert new_values, "Constant " + str(l.constant) + " does not exist."
                             # check if auxiliary variable is necessary
-                            if l.negated and len(new_values) > 2:
+                            if l.negated and len(new_values) > 1:
                                 if l.constant.name not in auxillary_vars:
                                     # create new auxiliary var
                                     new_aux_var = AuxillaryVariable(l.constant, sas_task)
