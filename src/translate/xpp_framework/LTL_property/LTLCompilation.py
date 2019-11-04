@@ -253,7 +253,9 @@ def addWorldSyncvar(sas_task, properties):
     sas_task.variables.axiom_layers.append(-1)
 
     #initially we are in a wold state
-    sas_task.init.values.append(0)
+    #sas_task.init.values.append(0)
+    #initially we evaluate the first automaton in the initial state
+    sas_task.init.values.append(1)
 
     return world_sync_var
 
