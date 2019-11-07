@@ -42,7 +42,7 @@ class LTLProperty:
         formula = str(self.genericFormula)
         output_file = self.name
         cmd = spot_bin + "ltlfilt --from-ltlf -f '" + formula + "' | " + spot_bin + "ltl2tgba -B -D -s -C | " + spot_bin + "autfilt --remove-ap=alive -B -D -C -s --small > " + output_file
-        print("**************************************")
+
         os.system(cmd)
 
         self.automata = parseNFA(self.name)
