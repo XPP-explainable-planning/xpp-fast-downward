@@ -12,6 +12,7 @@
 #include "../task_utils/successor_generator.h"
 #include "../task_utils/task_properties.h"
 #include "../algorithms/ordered_set.h"
+#include "../pruning_method.h"
 
 #include "../option_parser.h"
 #include "../plugin.h"
@@ -52,6 +53,7 @@ TarjanSearch::TarjanSearch(const options::Options &opts)
     , m_guidance(opts.contains("eval") ? opts.get<Evaluator *>("eval") : nullptr)
     , m_preferred(opts.contains("preferred") ? opts.get<Evaluator*>("preferred") : nullptr)
     , m_learner(opts.contains("learn") ? opts.get<std::shared_ptr<ConflictLearner>>("learn") : nullptr)
+    , m_pruning_method(opts.get<std::shared_ptr<PruningMethod>>("pruning"))
     , m_search_space(&state_registry)
     , m_current_index(0)
     , m_result(DFSResult::FAILED)
@@ -93,6 +95,7 @@ void TarjanSearch::initialize()
         if (task_properties::is_goal_state(task_proxy, istate)) {
             m_result = DFSResult::SOLVED;
         } else {
+            m_pruning_method->initialize(task);
             expand(istate);
         }
     }
@@ -162,6 +165,7 @@ bool TarjanSearch::expand(const GlobalState& state)
 
     m_open_list.push_layer();
     g_successor_generator->generate_applicable_ops(state, aops);
+    m_pruning_method->prune_operators(state, aops);
     statistics.inc_generated(aops.size());
     if (m_preferred) {
         if (evaluate(state, m_preferred)) {
@@ -411,6 +415,7 @@ void TarjanSearch::print_statistics() const
     if (m_learner != nullptr) {
         m_learner->print_statistics();
     }
+    m_pruning_method->print_statistics();
 }
 
 double
@@ -429,6 +434,12 @@ void TarjanSearch::add_options_to_parser(options::OptionParser &parser)
                             "recompute dead-end detection heuristic after each refinement",
                             "true");
     parser.add_option<bool>("refine_initial_state", "", "false");
+    parser.add_option<std::shared_ptr<PruningMethod>>(
+        "pruning",
+        "Pruning methods can prune or reorder the set of applicable operators in "
+        "each state and thereby influence the number and order of successor states "
+        "that are considered.",
+        "null()");
 }
 
 }

@@ -13,6 +13,7 @@
 #include "../operator_cost.h"
 #include "../tasks/cost_adapted_task.h"
 #include "../algorithms/ordered_set.h"
+#include "../pruning_method.h"
 
 #include "hc_heuristic.h"
 
@@ -78,6 +79,7 @@ BoundedCostTarjanSearch::BoundedCostTarjanSearch(const options::Options& opts)
     , m_preferred(opts.contains("preferred") ? opts.get<Evaluator*>("preferred") : nullptr)
     , m_pruning_evaluator(NULL)
     , m_refiner(opts.contains("learn") ? opts.get<std::shared_ptr<HeuristicRefiner> >("learn") : nullptr)
+    , m_pruning_method(opts.get<std::shared_ptr<PruningMethod>>("pruning"))
     , m_state_information(UNDEFINED)
     , m_solved(false)
     , m_last_state(StateID::no_state)
@@ -137,7 +139,11 @@ BoundedCostTarjanSearch::initialize()
         std::cout << "Initial state satisfies goal condition!" << std::endl;
         m_solved = true;
     } else {
-        if (evaluate(istate, m_expansion_evaluator, 0)
+        auto initp = [this]() {
+            m_pruning_method->initialize(task);
+            return true;
+        };
+        if (evaluate(istate, m_expansion_evaluator, 0) && initp()
                 && !expand(istate) && !increment_bound_and_push_initial_state()) {
             std::cout << "Initial state is dead-end!" << std::endl;
         }
@@ -199,6 +205,7 @@ BoundedCostTarjanSearch::expand(const GlobalState& state,
     Locals& locals = m_call_stack.back();
 
     g_successor_generator->generate_applicable_ops(state, aops);
+    m_pruning_method->prune_operators(state, aops);
     statistics.inc_generated(aops.size());
     if (m_preferred) {
         if (evaluate(state, m_preferred, m_current_g)) {
@@ -509,6 +516,7 @@ void BoundedCostTarjanSearch::print_statistics() const
         h->dump_conjunctions();
     }
 #endif
+    m_pruning_method->print_statistics();
 }
 
 double
@@ -528,6 +536,12 @@ BoundedCostTarjanSearch::add_options_to_parser(options::OptionParser& parser)
     parser.add_option<double>("step", "", "2.0");
     // parser.add_option<int>("learning_belt", "", options::OptionParser::NONE);
     parser.add_option<Evaluator *>("preferred", "", options::OptionParser::NONE);
+    parser.add_option<std::shared_ptr<PruningMethod>>(
+        "pruning",
+        "Pruning methods can prune or reorder the set of applicable operators in "
+        "each state and thereby influence the number and order of successor states "
+        "that are considered.",
+        "null()");
     add_cost_type_option_to_parser(parser);
     SearchEngine::add_options_to_parser(parser);
 }

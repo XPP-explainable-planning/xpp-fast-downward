@@ -16,6 +16,8 @@
 #include <deque>
 #include <set>
 
+class PruningMethod;
+
 namespace conflict_driven_learning
 {
 namespace tarjan_search
@@ -66,6 +68,8 @@ protected:
     std::set<Evaluator*> m_path_dependent_evaluators;
     Evaluator* m_dead_end_identifier;
     std::shared_ptr<ConflictLearner> m_learner;
+
+    std::shared_ptr<PruningMethod> m_pruning_method;
 
     SearchSpace m_search_space;
 

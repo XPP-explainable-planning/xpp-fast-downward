@@ -12,6 +12,7 @@
 #include "../utils/system.h"
 #include "../operator_cost.h"
 #include "../tasks/cost_adapted_task.h"
+#include "../pruning_method.h"
 
 
 #include "hc_heuristic.h"
@@ -41,6 +42,7 @@ BoundedCostDepthFirstSearch::BoundedCostDepthFirstSearch(const options::Options&
     , m_expansion_evaluator(opts.get<Evaluator *>("eval"))
     , m_pruning_evaluator(NULL)
     , m_refiner(opts.contains("learn") ? opts.get<std::shared_ptr<HeuristicRefiner> >("learn") : nullptr)
+    , m_pruning_method(opts.get<std::shared_ptr<PruningMethod>>("pruning"))
     , m_bounds(-1)
     , m_solved(false)
 {
@@ -69,10 +71,15 @@ BoundedCostDepthFirstSearch::initialize()
 {
     GlobalState istate = state_registry.get_initial_state();
     m_bounds[istate] = 0;
+    auto initp = [this]() {
+        m_pruning_method->initialize(task);
+        return true;
+    };
     if (task_properties::is_goal_state(m_task_proxy, istate)) {
         std::cout << "Initial state satisfies goal condition!" << std::endl;
         m_solved = true;
     } else if (!evaluate(istate, m_expansion_evaluator) 
+            || !initp()
             || !expand(istate)) {
         std::cout << "Initial state is dead-end!" << std::endl;
     }
@@ -125,6 +132,7 @@ BoundedCostDepthFirstSearch::expand(const GlobalState& state)
     Locals& locals = m_call_stack.back();
 
     g_successor_generator->generate_applicable_ops(state, aops);
+    m_pruning_method->prune_operators(state, aops);
     statistics.inc_generated(aops.size());
     for (unsigned i = 0; i < aops.size(); i++) {
         GlobalState succ = state_registry.get_successor_state(
@@ -248,6 +256,7 @@ void BoundedCostDepthFirstSearch::print_statistics() const
         h->dump_conjunctions();
     }
 #endif
+    m_pruning_method->print_statistics();
 }
 
 double BoundedCostDepthFirstSearch::get_heuristic_refinement_time() const
@@ -260,6 +269,12 @@ BoundedCostDepthFirstSearch::add_options_to_parser(options::OptionParser& parser
 {
     parser.add_option<Evaluator *>("eval");
     parser.add_option<std::shared_ptr<HeuristicRefiner> >("learn", "", options::OptionParser::NONE);
+    parser.add_option<std::shared_ptr<PruningMethod>>(
+        "pruning",
+        "Pruning methods can prune or reorder the set of applicable operators in "
+        "each state and thereby influence the number and order of successor states "
+        "that are considered.",
+        "null()");
     add_cost_type_option_to_parser(parser);
     SearchEngine::add_options_to_parser(parser);
 }

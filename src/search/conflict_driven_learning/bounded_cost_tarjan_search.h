@@ -14,6 +14,8 @@
 #include <deque>
 #include <set>
 
+class PruningMethod;
+
 namespace conflict_driven_learning {
 namespace bounded_cost {
 
@@ -84,6 +86,8 @@ protected:
     Evaluator* m_pruning_evaluator;
     std::set<Evaluator*> m_path_dependent_evaluators;
     std::shared_ptr<HeuristicRefiner> m_refiner;
+
+    std::shared_ptr<PruningMethod> m_pruning_method;
 
     // PerStateInformation<PerStateInfo> m_state_infos;
     PerStateInformation<int> m_state_information;
