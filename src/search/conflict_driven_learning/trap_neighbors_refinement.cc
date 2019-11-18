@@ -68,11 +68,28 @@ TrapNeighborsRefinement::learn_from_dead_end_component(
 #ifndef NDEBUG
     std::unordered_set<int> state_ids;
 #endif
+
+    auto task = m_trap->get_abstract_task();
     while (!component.end()) {
         conjunctions.emplace_back(m_task->get_num_variables());
         std::vector<unsigned>& conj = conjunctions.back();
         conj.clear();
         const GlobalState& state = component.current();
+
+        // the following code is required if goal in search is different from
+        // goal in heuristic
+        bool is_goal_state = true;
+        for (int i = 0; i < task->get_num_goals(); i++) {
+            FactPair g = task->get_goal_fact(i);
+            if (state[g.var] != g.value) {
+                is_goal_state = false;
+                break;
+            }
+        }
+        if (is_goal_state) {
+            return false;
+        }
+
         for (int var = 0; var < m_task->get_num_variables(); var++) {
             conj.push_back(strips::get_fact_id(var, state[var]));
         }

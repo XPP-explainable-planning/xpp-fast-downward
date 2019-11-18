@@ -59,6 +59,7 @@ protected:
 
     const bool c_recompute_u;
     const bool c_refine_initial_state;
+    const bool c_prune_eval_dead_ends;
     bool c_dead_end_refinement;
     bool c_compute_recognized_neighbors;
 
@@ -66,8 +67,8 @@ protected:
     Evaluator* m_guidance;
     Evaluator* m_preferred;
     std::set<Evaluator*> m_path_dependent_evaluators;
-    Evaluator* m_dead_end_identifier;
     std::shared_ptr<ConflictLearner> m_learner;
+    Evaluator* m_dead_end_identifier;
 
     std::shared_ptr<PruningMethod> m_pruning_method;
 
