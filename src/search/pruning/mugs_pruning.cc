@@ -26,7 +26,7 @@ void MugsPruning::initialize(const shared_ptr<AbstractTask> &task) {
     }
     cout <<  "Hard goals: "  << std::bitset<32>(hard_goals) << endl;
         
-    cout << "pruning method: mugs_pruning" << endl;
+    cout << "pruning method: mugs_pruning prune: " << prune << endl;
 }
 
 MugsPruning::MugsPruning(const options::Options &opts)
@@ -201,12 +201,13 @@ bool MugsPruning::prune_state(const State &state){
     add_goal_to_msgs(state);
 
     bool prune_state = check_reachable(state);
-    if(prune_state){
-        pruned_states++;
-    }
 
-    if(prune)
+    if(prune) {
+        if (prune_state) {
+            pruned_states++;
+        }
         return prune_state;
+    }
     else
         return false;
 }
