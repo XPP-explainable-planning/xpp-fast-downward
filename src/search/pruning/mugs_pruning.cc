@@ -163,7 +163,7 @@ bool MugsPruning::prune_state(const State &state){
 
     //if a hard goal is not reachable prune the state
     if((hard_goals & reachable_gs) != hard_goals){
-        cout << "Hard goal not reachable" << endl;
+        //cout << "Hard goal not reachable" << endl;
         return true;
     }
 
