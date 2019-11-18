@@ -100,6 +100,7 @@ HCHeuristic::HCHeuristic(const options::Options &opts)
     : Heuristic(opts),
       c_prune_subsumed_preconditions(opts.get<bool>("prune_subsumed_preconditions")),
       c_early_termination(true),
+      c_nogood_evaluation_enabled(false),
       m_hc_evaluations(0),
       cost_bound_(opts.get<int>("cost_bound")),
       m_nogood_formula(nullptr)
@@ -1035,6 +1036,17 @@ bool HCHeuristicGeneralCost::enqueue_if_necessary(
     return res;
 }
 
+bool HCHeuristicGeneralCost::enqueue_if_necessary(
+    ConjunctionData *eff)
+{
+    bool res = !eff->achieved();
+    if (!eff->achieved()) {
+        eff->cost = 0;
+        m_open.push(0, eff);
+    }
+    return res;
+}
+
 void HCHeuristicGeneralCost::cleanup_previous_computation()
 {
     // clear data structures
@@ -1080,23 +1092,19 @@ int HCHeuristicGeneralCost::compute_heuristic_get_reachable_conjunctions(
     std::vector<unsigned> &reachable_conjunctions)
 {
     assert(m_open.empty());
-    enqueue_if_necessary(&m_true_conjunction, 0);
+    enqueue_if_necessary(&m_true_conjunction);
     for (const unsigned &p : reachable_conjunctions) {
-        enqueue_if_necessary(&m_conjunction_data[p], 0);
+        enqueue_if_necessary(&m_conjunction_data[p]);
     }
     while (!m_open.empty()) {
         std::pair<int, ConjunctionData *> elem = m_open.pop();
-        if (elem.second->cost < elem.first) {
-            continue;
-        }
         if (c_early_termination && elem.second == &m_goal_conjunction) {
             break;
         }
         for (Counter *counter : elem.second->pre_of) {
             if (--(counter->unsat) == 0) {
                 counter->max_pre = elem.second;
-                if (enqueue_if_necessary(counter->effect,
-                                         elem.first + counter->action_cost)
+                if (enqueue_if_necessary(counter->effect)
                     && counter->effect != &m_goal_conjunction) {
                     reachable_conjunctions.push_back(counter->effect->id);
                 }

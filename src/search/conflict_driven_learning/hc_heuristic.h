@@ -287,6 +287,7 @@ class HCHeuristicGeneralCost : public HCHeuristic
 protected:
     priority_queues::AdaptiveQueue<ConjunctionData *> m_open;
     bool enqueue_if_necessary(ConjunctionData *conj, const int &cost);
+    bool enqueue_if_necessary(ConjunctionData *conj);
 public:
     using HCHeuristic::HCHeuristic;
     virtual void cleanup_previous_computation() override;

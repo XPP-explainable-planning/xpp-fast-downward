@@ -77,6 +77,7 @@ bool UCNeighborsRefinement::learn_from_dead_end_component(
     m_component_size = 0;
     m_current_state_unreached.resize(m_hc->num_conjunctions(), false);
     m_fact_to_negated_component.resize(strips::num_facts());
+    auto task = m_hc->get_abstract_task();
     while (!component.end()) {
         const GlobalState &state = component.current();
         if (m_component_size == 0) {
@@ -93,6 +94,24 @@ bool UCNeighborsRefinement::learn_from_dead_end_component(
             //     root_state[var] = state[var];
             // }
         }
+
+
+        // the following code is required if goal in search is different from
+        // goal in heuristic
+        bool is_goal_state = true;
+        for (int i = 0; i < task->get_num_goals(); i++) {
+            FactPair g = task->get_goal_fact(i);
+            if (state[g.var] != g.value) {
+                is_goal_state = false;
+                break;
+            }
+        }
+        if (is_goal_state) {
+            terminate = true;
+            result = false;
+            break;
+        }
+
         m_negated_component_to_facts.emplace_back();
         unsigned p = 0;
         for (int var = 0; var < m_task->get_num_variables(); var++) {

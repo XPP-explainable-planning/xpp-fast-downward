@@ -48,11 +48,13 @@ TarjanSearch::TarjanSearch(const options::Options &opts)
     : SearchEngine(opts)
     , c_recompute_u(opts.get<bool>("recompute_u"))
     , c_refine_initial_state(opts.get<bool>("refine_initial_state"))
+    , c_prune_eval_dead_ends(opts.get<bool>("prune_eval_dead_ends"))
     , c_dead_end_refinement(opts.contains("learn"))
     , c_compute_recognized_neighbors(c_dead_end_refinement)
     , m_guidance(opts.contains("eval") ? opts.get<Evaluator *>("eval") : nullptr)
     , m_preferred(opts.contains("preferred") ? opts.get<Evaluator*>("preferred") : nullptr)
     , m_learner(opts.contains("learn") ? opts.get<std::shared_ptr<ConflictLearner>>("learn") : nullptr)
+    , m_dead_end_identifier(opts.contains("u_eval") ? opts.get<Evaluator *>("u_eval") : nullptr)
     , m_pruning_method(opts.get<std::shared_ptr<PruningMethod>>("pruning"))
     , m_search_space(&state_registry)
     , m_current_index(0)
@@ -60,7 +62,6 @@ TarjanSearch::TarjanSearch(const options::Options &opts)
     , m_open_states(1)
 {
     c_compute_recognized_neighbors = m_learner != nullptr && m_learner->requires_recognized_neighbors();
-    m_dead_end_identifier = m_learner == nullptr ? nullptr : m_learner->get_underlying_heuristic();
     if (m_guidance) {
         m_guidance->get_path_dependent_evaluators(m_path_dependent_evaluators);
     }
@@ -87,6 +88,7 @@ void TarjanSearch::initialize()
         pde->notify_initial_state(istate);
     }
     SearchNode inode = m_search_space[istate];
+    m_pruning_method->initialize(task);
     if (!evaluate(istate)) {
         std::cout << "Initial state is dead-end!" << std::endl;
         inode.mark_recognized_dead_end();
@@ -95,7 +97,6 @@ void TarjanSearch::initialize()
         if (task_properties::is_goal_state(task_proxy, istate)) {
             m_result = DFSResult::SOLVED;
         } else {
-            m_pruning_method->initialize(task);
             expand(istate);
         }
     }
@@ -104,7 +105,12 @@ void TarjanSearch::initialize()
 bool TarjanSearch::evaluate(const GlobalState& state)
 {
     statistics.inc_evaluated_states();
-    return evaluate(state, m_guidance);
+    bool res = evaluate(state, m_guidance);
+    if (!res && !c_prune_eval_dead_ends) {
+        m_eval_result.set_evaluator_value(0);
+        return true;
+    }
+    return res;
 }
 
 bool TarjanSearch::evaluate(const GlobalState& state, Evaluator* eval)
@@ -114,7 +120,7 @@ bool TarjanSearch::evaluate(const GlobalState& state, Evaluator* eval)
         m_eval_result.set_evaluator_value(0);
         return true;
     }
-    EvaluationContext ctxt(state);
+    EvaluationContext ctxt(state, 0, false, nullptr);
     m_eval_result = eval->compute_result(ctxt);
     if (m_eval_result.is_infinite()) {
         return false;
@@ -127,7 +133,7 @@ bool TarjanSearch::evaluate_dead_end_heuristic(const GlobalState& state)
     if (m_dead_end_identifier == nullptr) {
         return false;
     }
-    EvaluationContext ctxt(state);
+    EvaluationContext ctxt(state, 0, false, nullptr);
     EvaluationResult res = m_dead_end_identifier->compute_result(ctxt);
     if (res.is_infinite()) {
         return true;
@@ -153,6 +159,11 @@ bool TarjanSearch::expand(const GlobalState& state)
         return false;
     }
 
+    if (m_pruning_method->prune_state(state)) {
+        node.mark_dead_end();
+        return false;
+    }
+
     statistics.inc_expanded();
 
     node.close(m_current_index);
@@ -165,7 +176,12 @@ bool TarjanSearch::expand(const GlobalState& state)
 
     m_open_list.push_layer();
     g_successor_generator->generate_applicable_ops(state, aops);
+    unsigned num_all_aops = aops.size();
     m_pruning_method->prune_operators(state, aops);
+    if (aops.size() < num_all_aops) {
+        m_call_stack.back().succ_result = DFSResult::UNRECOGNIZED;
+    }
+
     statistics.inc_generated(aops.size());
     if (m_preferred) {
         if (evaluate(state, m_preferred)) {
@@ -197,6 +213,8 @@ bool TarjanSearch::expand(const GlobalState& state)
             m_open_list.push(
                     std::pair<bool, int>(!preferred.contains(aops[i]), node.get_h()),
                     succ.get_id());
+        } else if (!succ_node.is_recognized_dead_end()) {
+            m_call_stack.back().succ_result = DFSResult::UNRECOGNIZED;
         } else if (c_compute_recognized_neighbors) {
             m_recognized_neighbors.push_back(succ.get_id());
         }
@@ -265,7 +283,9 @@ SearchStatus TarjanSearch::step()
         SearchNode succ_node = m_search_space[succ];
 
         if (succ_node.is_dead_end()) {
-            if (c_compute_recognized_neighbors) {
+            if (!succ_node.is_recognized_dead_end()) {
+                elem.succ_result = std::max(elem.succ_result, DFSResult::UNRECOGNIZED);
+            } else if (c_compute_recognized_neighbors) {
                 m_recognized_neighbors.push_back(succ_id);
             }
         } else if (!succ_node.is_closed()) {
@@ -279,8 +299,9 @@ SearchStatus TarjanSearch::step()
                 elem.last_successor_id = succ_id;
                 fully_expanded = false;
                 break;
+            } else if (!succ_node.is_recognized_dead_end()) {
+                elem.succ_result = std::max(elem.succ_result, DFSResult::UNRECOGNIZED);
             } else if (c_compute_recognized_neighbors) {
-                assert(succ_node.is_dead_end());
                 m_recognized_neighbors.push_back(succ_id);
             }
         } else if (succ_node.is_onstack()) {
@@ -295,7 +316,7 @@ SearchStatus TarjanSearch::step()
     if (fully_expanded) {
         m_result = in_dead_end_component
                    ? DFSResult::DEAD_END_COMPONENT
-                   : DFSResult::FAILED;
+                   : elem.succ_result;
 
         assert(elem.node.get_lowlink() <= elem.node.get_index());
         if (elem.node.get_index() == elem.node.get_lowlink()) {
@@ -307,8 +328,8 @@ SearchStatus TarjanSearch::step()
                 if (in_dead_end_component) {
                     if (!snode.is_dead_end()) {
                         /* m_progress.inc_partially_expanded_dead_ends(); */
-                        snode.mark_recognized_dead_end();
                     }
+                    snode.mark_recognized_dead_end();
                 } else {
                     assert(!snode.is_dead_end());
                     snode.mark_dead_end();
@@ -336,37 +357,41 @@ SearchStatus TarjanSearch::step()
                         rnid_it++;
                     }
 #if NDEBUG_VERIFY_RECOGNIZED_NEIGHBORS
-                    static std::vector<OperatorID> aops;
-                    StateSet component;
-                    std::deque<GlobalState>::iterator compit = m_stack.begin();
-                    while (compit != it) {
-                        component.insert(*compit);
-                        compit++;
-                    }
-                    compit = m_stack.begin();
-                    while (compit != it) {
-                        g_successor_generator->generate_applicable_ops(*compit, aops);
-                        for (unsigned i = 0; i < aops.size(); i++) {
-                            GlobalState succ = state_registry.get_successor_state(
-                                    *compit,
-                                    task_proxy.get_operators()[aops[i]]);
-                            if (!component.count(succ) && !recognized_neighbors.count(succ)) {
-                                SearchNode succnode = m_search_space[succ];
-                                std::cout << "STATE NOT FOUND! " << succ.get_id()
-                                          << ": " << succnode.is_new()
-                                          << "|" << succnode.is_closed()
-                                          << "|" << succnode.is_dead_end()
-                                          << "|" << succnode.is_onstack()
-                                          << " " << succnode.get_index()
-                                          << " " << succnode.get_lowlink()
-                                          << std::endl;
-                            }
-                            assert(component.count(succ) || recognized_neighbors.count(succ));
-                            assert(!recognized_neighbors.count(succ)
-                                || (m_search_space[succ].is_dead_end() && evaluate_dead_end_heuristic(succ)));
+                    {
+                        std::vector<OperatorID> aops;
+                        StateSet component;
+                        std::deque<GlobalState>::iterator compit = m_stack.begin();
+                        while (compit != it) {
+                            component.insert(*compit);
+                            compit++;
                         }
-                        compit++;
-                        aops.clear();
+                        compit = m_stack.begin();
+                        while (compit != it) {
+                            g_successor_generator->generate_applicable_ops(*compit, aops);
+                            for (unsigned i = 0; i < aops.size(); i++) {
+                                GlobalState succ = state_registry.get_successor_state(
+                                        *compit,
+                                        task_proxy.get_operators()[aops[i]]);
+                                if (!component.count(succ) && !recognized_neighbors.count(succ)) {
+                                    SearchNode succnode = m_search_space[succ];
+                                    std::cout << "STATE NOT FOUND! " << succ.get_id()
+                                            << ": " << succnode.is_new()
+                                            << "|" << succnode.is_closed()
+                                            << "|" << succnode.is_dead_end()
+                                            << "|" << succnode.is_onstack()
+                                            << " " << succnode.get_index()
+                                            << " " << succnode.get_lowlink()
+                                            << std::endl;
+                                }
+                                assert(component.count(succ) || recognized_neighbors.count(succ));
+                                assert(!component.count(succ) || !recognized_neighbors.count(succ));
+                                assert(!recognized_neighbors.count(succ) || m_search_space[succ].is_dead_end());
+                                assert(!recognized_neighbors.count(succ) || m_search_space[succ].is_recognized_dead_end());
+                                assert(!recognized_neighbors.count(succ) ||  evaluate_dead_end_heuristic(succ));
+                            }
+                            compit++;
+                            aops.clear();
+                        }
                     }
 #endif
                 }
@@ -428,12 +453,14 @@ void TarjanSearch::add_options_to_parser(options::OptionParser &parser)
 {
     SearchEngine::add_options_to_parser(parser);
     parser.add_option<Evaluator *>("eval", "", options::OptionParser::NONE);
+    parser.add_option<Evaluator *>("u_eval", "", options::OptionParser::NONE);
     parser.add_option<Evaluator *>("preferred", "", options::OptionParser::NONE);
     parser.add_option<std::shared_ptr<ConflictLearner>>("learn", "", options::OptionParser::NONE);
     parser.add_option<bool>("recompute_u",
                             "recompute dead-end detection heuristic after each refinement",
                             "true");
     parser.add_option<bool>("refine_initial_state", "", "false");
+    parser.add_option<bool>("prune_eval_dead_ends", "", "true");
     parser.add_option<std::shared_ptr<PruningMethod>>(
         "pruning",
         "Pruning methods can prune or reorder the set of applicable operators in "
