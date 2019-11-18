@@ -31,6 +31,7 @@ void MugsPruning::initialize(const shared_ptr<AbstractTask> &task) {
 
 MugsPruning::MugsPruning(const options::Options &opts)
     :   all_soft_goals(opts.get<bool>("all_softgoals")),
+        prune(opts.get<bool>("prune")),
         max_heuristic(opts.get<Evaluator*>("h")){
 
     }
@@ -73,12 +74,16 @@ bool MugsPruning::insert_new_subset(uint goal_subset, unordered_set<uint> &set) 
 }
 
 bool MugsPruning::insert_new_superset(uint goal_subset,  unordered_set<uint> &set) const{
+
+    //cout << "Add new superset" << endl;
+    //check if superset is already contained in set
     for(uint gs : set){
         if(is_superset(gs, goal_subset))
             return true;
     }
 
     //cout <<  "New superset:  "  << std::bitset<32>(goal_subset) << endl;
+    //remove all sets which are a subset of the new set
     std::unordered_set<uint>::iterator it=set.begin();
     while (it!=msgs.end()){
         uint gs = *it;
@@ -90,7 +95,8 @@ bool MugsPruning::insert_new_superset(uint goal_subset,  unordered_set<uint> &se
             it++;
         }
     }
-    
+
+    // add new superset
     set.insert(goal_subset);
     return false;
 }
@@ -151,43 +157,53 @@ void MugsPruning::print_set(std::unordered_set<uint> s) const{
 
 bool MugsPruning::prune_state(const State &state){
     //cout << "---------------------------------------------------------" << endl;
+    //state.dump_fdr();
     uint reachable_gs = ((max_heuristic::HSPMaxHeuristic*) max_heuristic)->compute_relaxed_reachable_goal_facts(state);
     //cout << "Reachable: " << std::bitset<32>(reachable_gs) << endl;
 
     //if a hard goal is not reachable prune the state
     if((hard_goals & reachable_gs) != hard_goals){
+        cout << "Hard goal not reachable" << endl;
         return true;
     }
 
+    // if a superset of states was already reached -> prune state
     bool prune_state = superset_contained(reachable_gs, msgs);
 
     uint current_sat_goal_facts = 0;
     TaskProxy task_proxy = TaskProxy(*task);
     GoalsProxy g_proxy = task_proxy.get_goals();
     for(uint i = 0; i < g_proxy.size(); i++){
-        //cout << "var" << i << " = " << state[g_proxy[i].get_variable().get_id()].get_value() << endl;
-       //cout << "var" << i << ": " << state[g_proxy[i].get_variable().get_id()].get_value() << " ?=? " << g_proxy[i].get_value() << endl;
        current_sat_goal_facts = (current_sat_goal_facts << 1) | (state[g_proxy[i].get_variable().get_id()].get_value() == g_proxy[i].get_value());
     }
     //cout << "Current sat goal: " << std::bitset<32>(current_sat_goal_facts) << endl;
-    
-    if((hard_goals & current_sat_goal_facts) == hard_goals){
+
+    //if all hard goals are satisfied add set
+    //if((hard_goals & current_sat_goal_facts) == hard_goals){
         //cout << "insert" << endl;
-        insert_new_superset(current_sat_goal_facts, msgs);
-    }
+        insert_new_superset(current_sat_goal_facts, msgs); // only adds set of msgs does not contain any superset
+    //}
 
     /*
     cout << "++++++++++ MUGS PRUNING +++++++++++++++" << endl;
     for(uint gs : msgs){
         cout << std::bitset<32>(gs) << endl;
     }
-    */
+     */
+
     if(prune_state){
         pruned_states++;
     }
-    //cout << "---------------------------------------------------------" << endl;
-    return prune_state;
-    //return false;
+
+    if(prune)
+        return prune_state;
+    else
+        return false;
+}
+
+
+void MugsPruning::prune_operators(const State &state, std::vector<OperatorID> &){
+    this->prune_state(state);
 }
 
 void MugsPruning::print_statistics() const{
@@ -231,6 +247,10 @@ static shared_ptr<PruningMethod> _parse(OptionParser &parser) {
         "all_softgoals",
         "TODO",
         "false");
+    parser.add_option<bool>(
+            "prune",
+            "TODO",
+            "true");
 
     Options opts = parser.parse();
 
