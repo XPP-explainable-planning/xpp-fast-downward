@@ -60,6 +60,7 @@ protected:
     const bool c_recompute_u;
     const bool c_refine_initial_state;
     const bool c_prune_eval_dead_ends;
+    const bool c_compatible_pruning_method;
     bool c_dead_end_refinement;
     bool c_compute_recognized_neighbors;
 

@@ -73,7 +73,8 @@ bool MugsPruning::insert_new_subset(uint goal_subset, unordered_set<uint> &set) 
     return false;
 }
 
-bool MugsPruning::insert_new_superset(uint goal_subset,  unordered_set<uint> &set) const{
+bool MugsPruning::insert_new_superset(uint goal_subset,  unordered_set<uint> &set, bool& inserted) const{
+    inserted = false;
 
     //cout << "Add new superset" << endl;
     //check if superset is already contained in set
@@ -95,6 +96,8 @@ bool MugsPruning::insert_new_superset(uint goal_subset,  unordered_set<uint> &se
             it++;
         }
     }
+
+    inserted = true;
 
     // add new superset
     set.insert(goal_subset);
@@ -183,9 +186,10 @@ void MugsPruning::add_goal_to_msgs(const State &state) {
     //cout << "Current sat goal: " << std::bitset<32>(current_sat_goal_facts) << endl;
 
     //if all hard goals are satisfied add set
+    msgs_changed = false;
     if((hard_goals & current_sat_goal_facts) == hard_goals){
         //cout << "insert" << endl;
-        insert_new_superset(current_sat_goal_facts, msgs); // only adds set of msgs does not contain any superset
+        insert_new_superset(current_sat_goal_facts, msgs, msgs_changed); // only adds set of msgs does not contain any superset
     }
 
     /*

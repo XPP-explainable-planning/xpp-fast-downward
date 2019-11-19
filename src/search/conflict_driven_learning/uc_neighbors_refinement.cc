@@ -77,7 +77,7 @@ bool UCNeighborsRefinement::learn_from_dead_end_component(
     m_component_size = 0;
     m_current_state_unreached.resize(m_hc->num_conjunctions(), false);
     m_fact_to_negated_component.resize(strips::num_facts());
-    auto task = m_hc->get_abstract_task();
+    const std::vector<std::pair<int, int> >& goal = m_hc->get_auxiliary_goal();
     while (!component.end()) {
         const GlobalState &state = component.current();
         if (m_component_size == 0) {
@@ -99,9 +99,9 @@ bool UCNeighborsRefinement::learn_from_dead_end_component(
         // the following code is required if goal in search is different from
         // goal in heuristic
         bool is_goal_state = true;
-        for (int i = 0; i < task->get_num_goals(); i++) {
-            FactPair g = task->get_goal_fact(i);
-            if (state[g.var] != g.value) {
+        for (int i = goal.size() - 1; i >= 0; i--) {
+            const auto& g = goal[i];
+            if (state[g.first] != g.second) {
                 is_goal_state = false;
                 break;
             }
@@ -167,7 +167,11 @@ bool UCNeighborsRefinement::learn_from_dead_end_component(
         m_chosen.resize(std::max(m_component_size, m_num_successors), UNASSIGNED);
         m_num_covered_by.resize(m_hc->num_conjunctions());
 
-        push_conflict_for(m_strips_task->get_goal());
+        std::vector<unsigned> goal_facts;
+        for (unsigned i = 0; i < goal.size(); i++) {
+            goal_facts.push_back(strips::get_fact_id(goal[i].first, goal[i].second));
+        }
+        push_conflict_for(goal_facts);
         while (!m_open.empty() && !size_limit_reached()) {
             OpenElement &elem = m_open.back();
             if (elem.i == elem.achievers.size()) {

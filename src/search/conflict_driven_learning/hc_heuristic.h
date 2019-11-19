@@ -145,18 +145,25 @@ protected:
     std::vector<unsigned> m_counter_to_action;
     //// adding new conjunctions
 
+
+    std::vector<std::pair<int, int> > auxiliary_goal_;
+
+
     void update_fact_conjunction_mapping(
         const std::vector<unsigned> &conj,
         unsigned conjid);
 
     virtual int compute_heuristic(const GlobalState &state) override;
-    int compute_heuristic_for_facts(const std::vector<unsigned>& fact_ids);
 
     void initialize(unsigned m);
 public:
     static const int DEAD_END;
 
     HCHeuristic(const options::Options &opts);
+
+    void set_auxiliary_goal(std::vector<std::pair<int, int> >&& aux);
+    void reset_auxiliary_goal();
+    const std::vector<std::pair<int, int> >& get_auxiliary_goal() const;
 
     virtual void set_abstract_task(std::shared_ptr<AbstractTask> task) override;
 
@@ -165,6 +172,7 @@ public:
     virtual int evaluate_partial_state(const PartialState& state) override;
     virtual EvaluationResult compute_result(
         EvaluationContext &eval_context) override;
+    int compute_heuristic_for_facts(const std::vector<unsigned>& fact_ids);
 
     bool set_early_termination(bool t);
     bool set_early_termination_and_nogoods(bool e);

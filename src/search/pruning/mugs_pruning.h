@@ -11,8 +11,6 @@ class GlobalState;
 namespace mugs_pruning {
 class MugsPruning : public PruningMethod {
 
-int num_goal_facts = 0;
-uint hard_goals = 0;
 bool all_soft_goals = false;
 bool prune = true;
 std::vector<std::string> goal_fact_names;
@@ -20,15 +18,18 @@ Evaluator* max_heuristic;
 int pruned_states = 0;
 
 protected:
+    bool msgs_changed = false;
+    int num_goal_facts = 0;
+    uint hard_goals = 0;
     std::unordered_set<uint> msgs;
 
     bool superset_contained(uint goal_subset, const std::unordered_set<uint> &set) const;
     bool is_superset(uint super, uint sub) const;
-    bool insert_new_superset(uint goal_subset,  std::unordered_set<uint> &set) const;
+    bool insert_new_superset(uint goal_subset,  std::unordered_set<uint> &set, bool& inserted) const;
     bool insert_new_subset(uint goal_subset,  std::unordered_set<uint> &set) const;
     std::unordered_set<uint> unsolvable_subgoals() const;
     std::unordered_set<uint> minimal_unsolvable_subgoals(std::unordered_set<uint> &ugs) const;
-    bool check_reachable(const State &state);
+    virtual bool check_reachable(const State &state);
     void add_goal_to_msgs(const State &state);
     void print_set(std::unordered_set<uint> s) const;
     void print_mugs() const;

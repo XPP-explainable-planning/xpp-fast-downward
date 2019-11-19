@@ -117,6 +117,30 @@ HCHeuristic::HCHeuristic(const options::Options &opts)
         assert(m_nogood_formula != nullptr);
     }
     initialize(opts.get<int>("m"));
+    reset_auxiliary_goal();
+}
+
+void
+HCHeuristic::set_auxiliary_goal(std::vector<std::pair<int, int> >&& aux)
+{
+    auxiliary_goal_ = std::move(aux);
+}
+
+void
+HCHeuristic::reset_auxiliary_goal()
+{
+    auxiliary_goal_.clear();
+    for (int i = 0; i < task->get_num_goals(); i++) {
+        FactPair g = task->get_goal_fact(i);
+        auxiliary_goal_.emplace_back(g.var, g.value);
+    }
+}
+
+const
+std::vector<std::pair<int, int> >&
+HCHeuristic::get_auxiliary_goal() const
+{
+    return auxiliary_goal_;
 }
 
 void HCHeuristic::initialize(unsigned m)
