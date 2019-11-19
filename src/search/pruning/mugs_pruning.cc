@@ -256,7 +256,7 @@ static shared_ptr<PruningMethod> _parse(OptionParser &parser) {
     parser.add_option<Evaluator*>(
         "h",
         "TODO",
-        "hmax()");
+        "hmax(early_term=false)");
     parser.add_option<bool>(
         "all_softgoals",
         "TODO",

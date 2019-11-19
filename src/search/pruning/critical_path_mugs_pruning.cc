@@ -7,6 +7,9 @@
 #include <cassert>
 #include <algorithm>
 
+#include <bitset>
+#include <iostream>
+
 using namespace conflict_driven_learning;
 
 namespace mugs_pruning {
@@ -24,11 +27,14 @@ CriticalPathMugsPruning::initialize(const std::shared_ptr<AbstractTask>& task)
 {
     MugsPruning::initialize(task);
     std::vector<int> goal_vars;
+    all_goals_ = 0U;
     for (int i = 0; i < task->get_num_goals(); i++) {
         FactPair g = task->get_goal_fact(i);
         goal_vars.push_back(g.var);
+        full_goal_.push_back(strips::get_fact_id(g.var, g.value));
+        all_goals_ |= (1U << i);
     }
-    std::sort(goal_vars.begin(), goal_vars.end());
+    //std::sort(goal_vars.begin(), goal_vars.end());
     goal_var_idx_.resize(task->get_num_variables(), -1);
     for (int i = goal_vars.size() - 1; i >= 0; i--) {
         goal_var_idx_[goal_vars[i]] = i;
@@ -75,37 +81,38 @@ CriticalPathMugsPruning::check_reachable(const State& state)
     for (unsigned var = 0; var < state.get_values().size(); var++) {
         fact_ids.push_back(strips::get_fact_id(var, state.get_values()[var]));
     }
+    bool _old = hc_->set_early_termination_and_nogoods(false);
     hc_->compute_heuristic_for_facts(fact_ids);
+    hc_->set_early_termination_and_nogoods(_old);
 
     if (prev_num_conjunctions_ != hc_->num_conjunctions()) {
         prev_num_conjunctions_ = hc_->num_conjunctions();
         not_in_mug_.resize(hc_->num_conjunctions());
         goal_conjunctions_.clear();
-        goal_conjunctions_.resize(num_goal_facts);
-        const std::vector<unsigned>& goal_conjs =
-            hc_->get_counter_precondition(hc_->get_goal_counter().id);
-        for (unsigned i = 0; i < goal_conjs.size(); i++) {
-            const std::vector<unsigned>& facts = hc_->get_conjunction(goal_conjs[i]);
+        hc_->get_satisfied_conjunctions(full_goal_, goal_conjunctions_);
+        references_.clear();
+        references_.resize(num_goal_facts);
+        for (unsigned i = 0; i < goal_conjunctions_.size(); i++) {
+            const std::vector<unsigned>& facts = hc_->get_conjunction(goal_conjunctions_[i]);
             for (int j = facts.size() - 1; j >= 0; j--) {
                 int var = strips::get_variable_assignment(facts[j]).first;
-                goal_conjunctions_[goal_var_idx_[var]].push_back(goal_conjs[i]);
+                references_[goal_var_idx_[var]].push_back(goal_conjunctions_[i]);
             }
         }
     } 
-
     std::fill(not_in_mug_.begin(), not_in_mug_.end(), 0);
+
     int num_unreached = 0;
-    const std::vector<unsigned>& goal_conjs =
-        hc_->get_counter_precondition(hc_->get_goal_counter().id);
-    for (int i = goal_conjs.size() - 1; i >= 0; i--) {
-        if (!hc_->get_conjunction_data(goal_conjs[i]).achieved()) {
+    for (int i = goal_conjunctions_.size() - 1; i >= 0; i--) {
+        if (!hc_->get_conjunction_data(goal_conjunctions_[i]).achieved()) {
             num_unreached++;
         }
     }
 
-    uint mug = ~0U;
+    // std::cout << num_unreached << " [" << std::bitset<32>(all_goals_) << "]" << std::endl;
+
     return num_unreached > 0
-        && !is_mug_reachable(mug, num_goal_facts - 1, num_unreached);
+        && !is_mug_reachable(all_goals_, num_goal_facts - 1, num_unreached);
 }
 
 bool
@@ -114,26 +121,27 @@ CriticalPathMugsPruning::is_mug_reachable(uint mug, int gidx, int num_unreached)
     // remove soft goals and recursively check reachability
     for (int i = gidx; i >= 0; i--) {
         // dont remove hard goals
-        if ((hard_goals >> i) & 1U) {
+        if ((hard_goals >> (num_goal_facts - i - 1)) & 1U) {
             continue;
         }
         
         // set flag to false
-        uint successor = mug & ~(1U << i);
+        uint successor = mug & ~(1U << (num_goal_facts - i - 1));
         
         // don't care about sub-goals that have already been reached
-        if (msgs.count(successor)) {
+        if (superset_contained(successor, msgs)) {
             continue;
         }
 
         // remove conjunctions that contain this fact
         int new_unreached = num_unreached;
-        const auto& gcs = goal_conjunctions_[i];
+        const auto& gcs = references_[i];
         for (int j = gcs.size() - 1; j >= 0; j--) {
             unsigned c = gcs[j];
             if (++not_in_mug_[c] == 1
                     && !hc_->get_conjunction_data(c).achieved()
                     && --new_unreached == 0) {
+                // std::cout << "reached -> " << std::bitset<32>(successor) << std::endl;
                 return true;
             }
         }
@@ -157,7 +165,7 @@ static std::shared_ptr<PruningMethod> _parse(OptionParser &parser) {
     parser.add_option<Evaluator*>(
         "h",
         "TODO",
-        "hmax()");
+        "hmax(early_term=false)");
     parser.add_option<bool>(
         "all_softgoals",
         "TODO",

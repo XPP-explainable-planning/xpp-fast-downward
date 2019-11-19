@@ -23,8 +23,11 @@ protected:
 
 private:
     conflict_driven_learning::hc_heuristic::HCHeuristic* hc_;
+    uint all_goals_;
     std::vector<int> goal_var_idx_;
-    std::vector<std::vector<unsigned> > goal_conjunctions_; 
+    std::vector<unsigned> full_goal_;
+    std::vector<unsigned> goal_conjunctions_;
+    std::vector<std::vector<unsigned> > references_; 
     unsigned prev_num_conjunctions_;
     std::vector<int> not_in_mug_;
 };
