@@ -49,6 +49,7 @@ TarjanSearch::TarjanSearch(const options::Options &opts)
     , c_recompute_u(opts.get<bool>("recompute_u"))
     , c_refine_initial_state(opts.get<bool>("refine_initial_state"))
     , c_prune_eval_dead_ends(opts.get<bool>("prune_eval_dead_ends"))
+    , c_compatible_pruning_method(opts.get<bool>("compatible_pruning_method"))
     , c_dead_end_refinement(opts.contains("learn"))
     , c_compute_recognized_neighbors(c_dead_end_refinement)
     , m_guidance(opts.contains("eval") ? opts.get<Evaluator *>("eval") : nullptr)
@@ -161,6 +162,9 @@ bool TarjanSearch::expand(const GlobalState& state)
 
     if (m_pruning_method->prune_state(state)) {
         node.mark_dead_end();
+        if (c_compatible_pruning_method) {
+            node.mark_recognized_dead_end();
+        }
         return false;
     }
 
@@ -178,7 +182,7 @@ bool TarjanSearch::expand(const GlobalState& state)
     g_successor_generator->generate_applicable_ops(state, aops);
     unsigned num_all_aops = aops.size();
     m_pruning_method->prune_operators(state, aops);
-    if (aops.size() < num_all_aops) {
+    if (aops.size() < num_all_aops && !c_compatible_pruning_method) {
         m_call_stack.back().succ_result = DFSResult::UNRECOGNIZED;
     }
 
@@ -461,6 +465,7 @@ void TarjanSearch::add_options_to_parser(options::OptionParser &parser)
                             "true");
     parser.add_option<bool>("refine_initial_state", "", "false");
     parser.add_option<bool>("prune_eval_dead_ends", "", "true");
+    parser.add_option<bool>("compatible_pruning_method", "", "false");
     parser.add_option<std::shared_ptr<PruningMethod>>(
         "pruning",
         "Pruning methods can prune or reorder the set of applicable operators in "

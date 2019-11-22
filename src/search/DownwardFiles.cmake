@@ -343,6 +343,14 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+    NAME CRITICAL_PATH_MUGS_PRUNING
+    HELP "TODO"
+    SOURCES
+        pruning/critical_path_mugs_pruning
+        DEPENDS TASK_PROPERTIES CONFLICT_DRIVEN_LEARNING
+)
+
+fast_downward_plugin(
     NAME SEARCH_COMMON
     HELP "Basic classes used for all search engines"
     SOURCES

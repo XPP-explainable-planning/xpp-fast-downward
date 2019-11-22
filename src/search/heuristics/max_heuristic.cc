@@ -23,7 +23,7 @@ namespace max_heuristic {
 
 // construction and destruction
 HSPMaxHeuristic::HSPMaxHeuristic(const Options &opts)
-    : RelaxationHeuristic(opts) {
+    : RelaxationHeuristic(opts), early_term_(opts.get<bool>("early_term")) {
     //cout << "Initializing HSP max heuristic..." << endl;
 }
 
@@ -67,7 +67,7 @@ void HSPMaxHeuristic::relaxed_exploration() {
         assert(prop_cost <= distance);
         if (prop_cost < distance)
             continue;
-        if (prop->is_goal && --unsolved_goals == 0)
+        if (early_term_ && prop->is_goal && --unsolved_goals == 0)
             return;
         const vector<UnaryOperator *> &triggered_operators =
             prop->precondition_of;
@@ -132,6 +132,7 @@ static Heuristic *_parse(OptionParser &parser) {
     parser.document_property("preferred operators", "no");
 
     Heuristic::add_options_to_parser(parser);
+    parser.add_option<bool>("early_term", "", "true");
     Options opts = parser.parse();
 
     if (parser.dry_run())
