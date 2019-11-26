@@ -44,6 +44,7 @@ public:
                 const OperatorProxy &parent_op);
     void update_parent(const SearchNode &parent_node,
                        const OperatorProxy &parent_op);
+    StateID get_parent_id();
     void close();
     void mark_as_dead_end();
 

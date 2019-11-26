@@ -25,6 +25,7 @@ class FactProxy;
 class FactsProxy;
 class GoalsProxy;
 class QuestionProxy;
+class LTLPropertiesProxy;
 class OperatorProxy;
 class OperatorsProxy;
 class PreconditionsProxy;
@@ -595,6 +596,28 @@ public:
 };
 
 
+class LTLPropertiesProxy {
+    const AbstractTask *task;
+public:
+    explicit LTLPropertiesProxy(const AbstractTask &task)
+            : task(&task) {}
+    ~LTLPropertiesProxy() = default;
+
+    std::size_t size() const {
+        return task->get_num_LTL_properties();
+    }
+
+    bool empty() const {
+        return size() == 0;
+    }
+
+    std::string operator[](std::size_t index) const {
+        assert(index < size());
+        return task->get_LTL_property(index);
+    }
+};
+
+
 bool does_fire(const EffectProxy &effect, const State &state);
 bool does_fire(const EffectProxy &effect, const GlobalState &state);
 
@@ -712,6 +735,10 @@ public:
 
     QuestionProxy get_Question() const {
         return QuestionProxy(*task);
+    }
+
+    LTLPropertiesProxy get_LTL_properties() const {
+        return LTLPropertiesProxy(*task);
     }
 
     EntailmentProxy get_entailments() const {

@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <string>
 
 namespace tasks {
 /*
@@ -50,8 +51,11 @@ public:
     virtual int get_num_goals() const override;
     virtual FactPair get_goal_fact(int index) const override;
 
-     virtual int get_num_question() const override;
+    virtual int get_num_question() const override;
     virtual FactPair get_question_fact(int index) const override;
+
+    virtual int get_num_LTL_properties() const override;
+    virtual std::string get_LTL_property(int index) const override;
 
     virtual int get_num_entailments() const override;
     virtual std::vector<FactPair> get_entailment(int index) const override;

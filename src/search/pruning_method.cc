@@ -27,6 +27,12 @@ void PruningMethod::prune_operators(const GlobalState &global_state,
     prune_operators(state, op_ids);
 }
 
+bool PruningMethod::prune_state(StateID, const GlobalState &global_state){
+    assert(task);
+    State state(*task, global_state.get_values());
+    return prune_state(state);
+}
+
 bool PruningMethod::prune_state(const GlobalState &global_state){
     assert(task);
     State state(*task, global_state.get_values());

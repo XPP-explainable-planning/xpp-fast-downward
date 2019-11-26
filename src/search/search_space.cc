@@ -94,6 +94,10 @@ void SearchNode::update_parent(const SearchNode &parent_node,
     info.creating_operator = OperatorID(parent_op.get_id());
 }
 
+StateID SearchNode::get_parent_id() {
+    return info.parent_state_id;
+}
+
 void SearchNode::close() {
     assert(info.status == SearchNodeInfo::OPEN);
     info.status = SearchNodeInfo::CLOSED;

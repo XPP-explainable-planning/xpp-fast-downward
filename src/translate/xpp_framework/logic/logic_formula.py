@@ -65,6 +65,9 @@ class Predicate:
     def addParam(self, param):
         self.params.append(param)
 
+    def SAS_repr(self):
+        return self.name + "_".join([s.name for s in self.params])
+
 class Operator:
 
     def __init__(self, left, right):
@@ -138,6 +141,11 @@ class LConstant(Operator):
     def toPrefixForm(self):
         return self.name
 
+    def SAS_repr(self, actionSets):
+        if self.name in actionSets:
+            return "used_" + actionSets[self.name].name
+        return self.name.replace("(","_").replace(")","_").replace(",","_").replace(", ","_")
+
     def __repr__(self):
         return self.name
 
@@ -206,6 +214,10 @@ class LNot(Operator):
 
     def __repr__(self):
         return " (! " + str(self.operand) + ") "
+
+    def SAS_repr(self, actionSets):
+        return " (! " + self.operand.SAS_repr(actionSets) + ") "
+
 
 class LAnd(Operator):
     @staticmethod
@@ -276,6 +288,9 @@ class LAnd(Operator):
     def __repr__(self):
         return "(" + str(self.left) + " && " + str(self.right) + ")"
 
+    def SAS_repr(self, actionSets):
+        return "(" + self.left.SAS_repr(actionSets) + " && " + self.right.SAS_repr(actionSets) + ")"
+
 class LOr(Operator):
     @staticmethod
     def parse(parts):
@@ -328,6 +343,9 @@ class LOr(Operator):
     def __repr__(self):
         return "(" + str(self.left) + " || " + str(self.right) + ")"
 
+    def SAS_repr(self, actionSets):
+        return "(" + self.left.SAS_repr(actionSets) + " || " + self.right.SAS_repr(actionSets) + ")"
+
 
 class OpSometimes(Operator):
 
@@ -347,7 +365,10 @@ class OpSometimes(Operator):
 
     
     def __repr__(self):
-        return " <> " + str(self.operand)    
+        return " <> " + str(self.operand)
+
+    def SAS_repr(self, actionSets):
+        return " <> " + self.operand.SAS_repr(actionSets)
 
 class OpAlways(Operator):
 
@@ -368,6 +389,9 @@ class OpAlways(Operator):
     def __repr__(self):
         return " [] " + str(self.operand)
 
+    def SAS_repr(self, actionSets):
+        return " [] " + self.operand.SAS_repr(actionSets)
+
     
 class OpNext(Operator):
 
@@ -387,6 +411,9 @@ class OpNext(Operator):
 
     def __repr__(self):
         return " X " + str(self.operand)
+
+    def SAS_repr(self, actionSets):
+        return " X " + self.operand.SAS_repr(actionSets)
 
 class OpUntil(Operator):
 
@@ -409,6 +436,9 @@ class OpUntil(Operator):
 
     def __repr__(self):
         return str(self.left) + " U " + str(self.right)
+
+    def SAS_repr(self, actionSets):
+        return self.left.SAS_repr(actionSets) + " U " + self.right.SAS_repr(actionSets)
 
 
 class OpWeakUntil(Operator):
@@ -433,3 +463,5 @@ class OpWeakUntil(Operator):
     def __repr__(self):
         return str(self.left) + " W " + str(self.right)
 
+    def SAS_repr(self, actionSets):
+        return self.left.SAS_repr(actionSets) + " W " + self.right.SAS_repr(actionSets)

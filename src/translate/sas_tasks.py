@@ -26,6 +26,7 @@ class SASTask:
         self.metric = metric
         self.entail = SASEntailment()
         self.question = SASQuestion()
+        self.LTLProperties = SASLTLProperty()
         if DEBUG:
             self.validate()
 
@@ -34,6 +35,9 @@ class SASTask:
 
     def addQuestionElem(self, pair):
         self.question.pairs.append(pair)
+
+    def addLTLProperty(self, prop):
+        self.LTLProperties.properties.append(prop)
 
     def validate(self):
         """Fail an assertion if the task is invalid.
@@ -88,6 +92,8 @@ class SASTask:
         self.entail.dump()
         print("question:")
         self.question.dump()
+        print("LTLProperties:")
+        self.LTLProperties.dump()
 
     def output(self, stream):
         print("begin_version", file=stream)
@@ -104,6 +110,7 @@ class SASTask:
         self.goal.output(stream)
         self.question.output(stream)
         self.entail.output(stream)
+        self.LTLProperties.output(stream)
         
         print(len(self.operators), file=stream)
         for op in self.operators:
@@ -310,6 +317,25 @@ class SASQuestion:
 
     def get_encoding_size(self):
         return len(self.pairs)
+
+class SASLTLProperty:
+
+    def __init__(self):
+        self.properties = []
+
+    def dump(self):
+        for p in self.properties:
+            print(p)
+
+    def output(self, stream):
+        print("begin_ltlproperty", file=stream)
+        print(len(self.properties), file=stream)
+        for p in self.properties:
+            print(p, file=stream)
+        print("end_ltlproperty", file=stream)
+
+    def get_encoding_size(self):
+        return len(self.properties)
 
 class SASOperator:
     def __init__(self, name, prevail, pre_post, cost):

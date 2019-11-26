@@ -14,6 +14,8 @@
 #include <set>
 #include <unordered_set>
 #include <vector>
+#include <iostream>
+#include <string>
 
 
 using namespace std;
@@ -64,6 +66,7 @@ class RootTask : public AbstractTask {
     vector<int> initial_state_values;
     vector<FactPair> goals;
     vector<FactPair> question;
+    vector<string> LTL_properties;
     vector<vector<FactPair>> entailments;
 
     const ExplicitVariable &get_variable(int var) const;
@@ -107,6 +110,9 @@ public:
 
     virtual int get_num_question() const override;
     virtual FactPair get_question_fact(int index) const override;
+
+    virtual int get_num_LTL_properties() const override;
+    virtual string get_LTL_property(int index) const override;
 
     virtual int get_num_entailments() const override;
     virtual vector<FactPair> get_entailment(int index) const override;
@@ -169,6 +175,22 @@ vector<FactPair> read_facts(istream &in) {
         conditions.push_back(condition);
     }
     return conditions;
+}
+
+vector<string> read_lines(istream &in) {
+    int count;
+    in >> count;
+    cout << "num props: " << count << endl;
+    vector<string> lines;
+    lines.reserve(count);
+    string line;
+    getline(in, line);
+    for (int i = 0; i < count; ++i) {
+        getline(in, line);
+        cout << i << " " << line << endl;
+        lines.push_back(line);
+    }
+    return lines;
 }
 
 ExplicitVariable::ExplicitVariable(istream &in) {
@@ -331,6 +353,13 @@ vector<FactPair> read_question(istream &in) {
     return question;
 }
 
+vector<string> read_LTL_properties(istream &in) {
+    check_magic(in, "begin_ltlproperty");
+    vector<string> ltlproperties = read_lines(in);
+    check_magic(in, "end_ltlproperty");
+    return ltlproperties;
+}
+
 vector<vector<FactPair>> read_entailments(istream &in) {
     vector<vector<FactPair>> entailments;
     check_magic(in, "begin_entailments");
@@ -383,6 +412,7 @@ RootTask::RootTask(std::istream &in) {
     goals = read_goal(in);
     question = read_question(in);
     entailments = read_entailments(in);
+    LTL_properties = read_LTL_properties(in);
     check_facts(goals, variables);
     operators = read_actions(in, false, use_metric, variables);
     axioms = read_actions(in, true, use_metric, variables);
@@ -523,6 +553,15 @@ int RootTask::get_num_question() const {
 FactPair RootTask::get_question_fact(int index) const {
     assert(utils::in_bounds(index, question));
     return question[index];
+}
+
+int RootTask::get_num_LTL_properties() const {
+    return LTL_properties.size();
+}
+
+string RootTask::get_LTL_property(int index) const {
+    assert(utils::in_bounds(index, LTL_properties));
+    return LTL_properties[index];
 }
 
 int RootTask::get_num_entailments() const {

@@ -13,7 +13,8 @@ class LTLProperty:
 
         self.generateAutomataRepresentation(constants)
         
-        
+    def SAS_repr(self, actionSets):
+        return self.formula.SAS_repr(actionSets)
 
     def generateAutomataRepresentation(self, constants):
         constant_name_map = {}

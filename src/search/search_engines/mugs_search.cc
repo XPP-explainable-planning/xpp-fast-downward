@@ -56,7 +56,6 @@ void MugsSearch::initialize() {
     }
     cout << "Num operators: " << task_proxy.get_operators().size() << endl;
     cout << "**************** EAGER SEARCH Goals ****************" << endl;
-    
 
     set<Evaluator *> evals;
     open_list->get_path_dependent_evaluators(evals);
@@ -117,8 +116,7 @@ void MugsSearch::initialize() {
     print_initial_evaluator_values(eval_context);
 
     pruning_method->initialize(task);
-    pruning_method->prune_state(initial_state);
-
+    //pruning_method->prune_state(initial_state);
     //cout << "Init finished" << endl;
 }
 
@@ -146,9 +144,10 @@ SearchStatus MugsSearch::step() {
     SearchNode node = n.first;
 
     GlobalState s = node.get_state();
-    if (check_goal_and_set_plan(s)){
-        return SOLVED;
-    }
+//    if (check_goal_and_set_plan(s)){
+//        cout << "*************************** GOAL *****************" << endl;
+//        //return SOLVED;
+//    }
         
 
     /*
@@ -185,14 +184,16 @@ SearchStatus MugsSearch::step() {
             //if ((node.get_real_g() + op.get_cost()) >= bound)
             //    continue;
 
-            if(pruning_method->prune_state(s)){               
-                continue;
-            }
-        
-    
             //cout << op.get_name() << endl;
     
             GlobalState succ_state = state_registry.get_successor_state(s, op);
+
+            //check_goal_and_set_plan(succ_state);
+            if(pruning_method->prune_state(s.get_id(), succ_state)){
+                //cout << "*************************** PRUNE *****************" << endl;
+                continue;
+            }
+
             statistics.inc_generated();
             bool is_preferred = preferred_operators.contains(op_id);
     

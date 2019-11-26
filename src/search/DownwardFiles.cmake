@@ -343,6 +343,14 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+        NAME MONITOR_MUGS_PRUNING
+        HELP "TODO"
+        SOURCES
+        pruning/monitor_mugs_pruning
+        DEPENDS TASK_PROPERTIES
+)
+
+fast_downward_plugin(
     NAME CRITICAL_PATH_MUGS_PRUNING
     HELP "TODO"
     SOURCES
@@ -462,6 +470,13 @@ fast_downward_plugin(
     SOURCES
         search_engines/goal_relation_search
     DEPENDS GOAL_RELATION EXTRA_TASKS
+)
+
+fast_downward_plugin(
+        NAME MONITORING
+        HELP "monitoring LTL formulas"
+        SOURCES
+        monitoring/monitor
 )
 
 fast_downward_plugin(

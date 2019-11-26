@@ -287,22 +287,30 @@ def compileLTLProperties(sas_task, properties, actionSets):
 
     new_operators = []
 
-    #each automata and the world itself have a synchronization variable to constrain the execution order
-    world_sync_var = addWorldSyncvar(sas_task, properties)
+    # compile properties into the task
+    if(False):
 
-    for i in range(len(properties)):
-        automata = properties[i].automata
-        #print(str(a))
-        addFluents(automata, i, sas_task) #also addd the sync vars
-        new_operators.append(automataTransitionOperators(automata, sas_task, actionSets))
-    
-    
-    add_sync_conditions(sas_task, new_operators, properties, world_sync_var)
-    add_reset_state_sets(new_operators[len(properties)-1], actionSets)
-    
-    for ol in new_operators:
-        for o in ol:
-            sas_task.operators.append(o)
+        #each automata and the world itself have a synchronization variable to constrain the execution order
+        world_sync_var = addWorldSyncvar(sas_task, properties)
 
-    print("Number of auxiliary variables: " + str(len(auxillary_vars)))
+        for i, p  in enumerate(properties):
+            automata = p.automata
+            #print(str(a))
+            addFluents(automata, i, sas_task) #also addd the sync vars
+            new_operators.append(automataTransitionOperators(automata, sas_task, actionSets))
+
+
+        add_sync_conditions(sas_task, new_operators, properties, world_sync_var)
+        add_reset_state_sets(new_operators[len(properties)-1], actionSets)
+
+        for ol in new_operators:
+            for o in ol:
+                sas_task.operators.append(o)
+
+        print("Number of auxiliary variables: " + str(len(auxillary_vars)))
+
+    # only compile action sets into task (is done at some other point)
+    else:
+        for i, p  in enumerate(properties):
+            sas_task.addLTLProperty(p.SAS_repr(actionSets))
 

@@ -35,6 +35,10 @@ if(WIN32)
     target_link_libraries(downward psapi)
 endif()
 
+include_directories(/home/eifler/Programs/include)
+#find_library(SPLOT_LIB spot)
+target_link_libraries(downward /home/eifler/Programs/lib/libspot.a /home/eifler/Programs/lib/libbddx.a /home/eifler/Programs/lib/libspotgen.a /home/eifler/Programs/lib/libspotltsmin.a)
+
 # If any enabled plugin requires an LP solver, compile with all
 # available LP solvers. If no solvers are installed, the planner will
 # still compile, but using heuristics that depend on an LP solver will
@@ -72,3 +76,5 @@ if(PLUGIN_LP_SOLVER_ENABLED AND USE_LP)
         )
     endif()
 endif()
+
+
