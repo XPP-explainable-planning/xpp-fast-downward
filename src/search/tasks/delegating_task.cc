@@ -103,7 +103,7 @@ int DelegatingTask::get_num_LTL_properties() const {
     return parent->get_num_LTL_properties();
 }
 
-string DelegatingTask::get_LTL_property(int index) const {
+Property DelegatingTask::get_LTL_property(int index) const {
     return parent->get_LTL_property(index);
 }
 

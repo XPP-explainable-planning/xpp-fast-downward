@@ -45,6 +45,16 @@ struct FactPair {
     static const FactPair no_fact;
 };
 
+
+struct Property {
+    std::string name;
+    std::string formula;
+
+    Property(std::string name, std::string formula)
+            : name(name), formula(formula) {
+    }
+};
+
 std::ostream &operator<<(std::ostream &os, const FactPair &fact_pair);
 
 namespace std {
@@ -94,7 +104,7 @@ public:
     virtual FactPair get_question_fact(int index) const = 0;
 
     virtual int get_num_LTL_properties() const = 0;
-    virtual std::string get_LTL_property(int index) const = 0;
+    virtual Property get_LTL_property(int index) const = 0;
 
     virtual int get_num_entailments() const = 0;
     virtual std::vector<FactPair> get_entailment(int index) const = 0;

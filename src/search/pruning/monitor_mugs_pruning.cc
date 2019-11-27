@@ -7,40 +7,42 @@
 using namespace std;
 
 namespace monitor_mugs_pruning {
+MonitorMugsPruning::MonitorMugsPruning(const options::Options &opts)
+        :   all_soft_goals(opts.get<bool>("all_softgoals")),
+            prune(opts.get<bool>("prune")),
+            max_heuristic(opts.get<Evaluator*>("h")){
+
+}
+
 void MonitorMugsPruning::initialize(const shared_ptr<AbstractTask> &task) {
     PruningMethod::initialize(task);
     TaskProxy task_proxy = TaskProxy(*task);
 
     // speparate hard and soft goals
     num_goal_facts = task_proxy.get_goals().size();
-    for(int i = 0; i < num_goal_facts; i++){
+    for (int i = 0; i < num_goal_facts; i++) {
         FactProxy gp = task_proxy.get_goals()[i];
         int id = gp.get_variable().get_id();
         int value = gp.get_value();
-        hard_goals = (hard_goals << 1) | (! (task_proxy.get_variables()[id].get_fact(value).get_name().find("soft") == 0));
+        hard_goals =
+                (hard_goals << 1) | (!(task_proxy.get_variables()[id].get_fact(value).get_name().find("soft") == 0));
         goal_fact_names.push_back(task_proxy.get_variables()[id].get_fact(value).get_name());
         //cout << "Pos " << i << ": "  << task_proxy.get_variables()[id].get_fact(value).get_name() << endl;
     }
-    
-    if(all_soft_goals){
+
+    if (all_soft_goals) {
         hard_goals = 0U;
     }
-    cout <<  "Hard goals: "  << std::bitset<32>(hard_goals) << endl;
+    cout << "Hard goals: " << std::bitset<32>(hard_goals) << endl;
     cout << "pruning method: monitor_mugs_pruning prune: " << prune << endl;
 
 
     //init monitors
-    for(uint i = 0; i < task_proxy.get_LTL_properties().size(); i++){
-        this->monitors.push_back(Monitor(task, task_proxy.get_LTL_properties()[i]));
+    for (uint i = 0; i < task_proxy.get_LTL_properties().size(); i++) {
+        this->monitors.push_back(new Monitor(task, task_proxy.get_LTL_properties()[i]));
     }
 }
 
-MonitorMugsPruning::MonitorMugsPruning(const options::Options &opts)
-    :   all_soft_goals(opts.get<bool>("all_softgoals")),
-        prune(opts.get<bool>("prune")),
-        max_heuristic(opts.get<Evaluator*>("h")){
-
-    }
 
 bool MonitorMugsPruning::is_superset(uint super, uint sub) const{
     uint diff = super ^ sub;
@@ -110,11 +112,11 @@ bool MonitorMugsPruning::insert_new_superset(uint goal_subset,  unordered_set<ui
     return false;
 }
 
-std::unordered_set<uint> MonitorMugsPruning::unsolvable_subgoals() const{
+std::unordered_set<uint> MonitorMugsPruning::unsolvable_subgoals(int number) const{
     unordered_set<uint> ugs;
     unordered_set<uint> candidates;
     //all subset with one goal fact
-    for(int i = 0; i < num_goal_facts; i++){
+    for(int i = 0; i < number; i++){
         candidates.insert(1U << i);
     }
 
@@ -130,7 +132,7 @@ std::unordered_set<uint> MonitorMugsPruning::unsolvable_subgoals() const{
             }
             else{
                 //create new candidates sets with one additional goal fact
-                for(int i = 0; i < num_goal_facts; i++){
+                for(int i = 0; i < number; i++){
                     if(((gs & (1U << i)) == 0)){
                         candidates.insert(gs | (1U << i));
                     }
@@ -217,11 +219,22 @@ bool MonitorMugsPruning::prune_state(const State &state){
         return false;
 }
 
+
+bool MonitorMugsPruning::prune_init_state(const GlobalState &state) {
+    cout << "Prune init state" << endl;
+    for(auto m : monitors){
+        m->init(state);
+    }
+    return false;
+}
+
 bool MonitorMugsPruning::prune_state(StateID parent_id, const GlobalState &global_state){
-    //cout << "-------------------------------------" << endl;
+
     State state(*task, global_state.get_values());
     if(this->prune_state(state)){
-        //cout << "Prune hard goals" << endl;
+        for (auto m : monitors) {
+            m->check_state(parent_id, global_state);
+        }
         return true;
     }
 
@@ -240,22 +253,36 @@ bool MonitorMugsPruning::prune_state(StateID parent_id, const GlobalState &globa
     if((hard_goals & current_sat_goal_facts) == hard_goals) {
         //cout << "+++++++++++++++++++++++++ HARD GOAL SAT ++++++++++++++++++" << endl;
         uint satisfiable_props = 0;
+        uint satisfied_props = 0;
         for (auto m : monitors) {
+            //cout << " ***** Monitor: " << m->get_property().name << "****************" << endl;
             satisfiable_props = satisfiable_props << 1;
-            if (m.check_state(parent_id, global_state)) {
+            satisfied_props = satisfied_props << 1;
+            pair<bool, TruthValue> tv = m->check_state(parent_id, global_state);
+            if (tv.second != TruthValue::FALSE) {
                 satisfiable_props |= 1;
+            }
+            if (tv.first) {
+                satisfied_props |= 1;
             }
         }
 
-        cout << "sat props: " << std::bitset<32>(satisfiable_props) << endl;
+//        cout << "satisfiable props: " << std::bitset<32>(satisfiable_props) << endl;
+//        cout << "satisfied props:   " << std::bitset<32>(satisfied_props) << endl;
+//        cout << "-------" << endl;
         bool prune_state = superset_contained(satisfiable_props, msgs);
 
         msgs_changed = false;
-        insert_new_superset(current_sat_goal_facts, msgs, msgs_changed);
+        insert_new_superset(satisfied_props, msgs, msgs_changed);
         if(prune_state){
-            pruned_states++;
+            pruned_states_props++;
         }
-        return prune && prune_state;
+        //return prune && prune_state;
+    }
+    else{
+        for (auto m : monitors) {
+            m->check_state(parent_id, global_state);
+        }
     }
 
     return false;
@@ -272,20 +299,22 @@ void MonitorMugsPruning::print_statistics() const{
     print_mugs();
 
     cout << "Pruned states: " << pruned_states << endl;
+    cout << "Pruned states props: " << pruned_states_props << endl;
 }
 
 void MonitorMugsPruning::print_mugs() const{
 
-    unordered_set<uint> ugs = unsolvable_subgoals();
+    unordered_set<uint> ugs = unsolvable_subgoals(task->get_num_LTL_properties());
     unordered_set<uint> mugs = minimal_unsolvable_subgoals(ugs);
     cout << "++++++++++ MUGS PRUNING +++++++++++++++" << endl;
-    //print_set(mugs);
-    //cout << "++++++++++++++++++++++++++++++++++++++++++++++++"  << endl;
+//    print_set(mugs);
+//    cout << "++++++++++++++++++++++++++++++++++++++++++++++++"  << endl;
     //cout << "num goal fact names: " << goal_fact_names.size() << endl;
+    uint num_properties = task->get_num_LTL_properties();
     for(uint gs : mugs){
-        for(int i = 0; i < num_goal_facts; i++){
-            if(((1U << (num_goal_facts - 1 - i)) & gs) >= 1){
-                cout << goal_fact_names[i] << "|";
+        for(uint i = 0; i < num_properties; i++){
+            if(((1U << (num_properties - 1 - i)) & gs) >= 1){
+                cout << task->get_LTL_property(i).name << "|";
             }
         }
         cout << endl;

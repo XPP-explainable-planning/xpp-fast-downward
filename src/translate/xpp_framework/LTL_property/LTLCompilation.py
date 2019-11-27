@@ -280,15 +280,24 @@ def add_reset_state_sets(last_ops, actionSets):
                 op.pre_post.append((s.var_id, -1, 0, []))
 
     
-def compileLTLProperties(sas_task, properties, actionSets):
+def compileLTLProperties(only_add_to_SAS, sas_task, properties, actionSets):
 
     if len(properties) == 0:
         return 
 
     new_operators = []
 
-    # compile properties into the task
-    if(False):
+
+    # only compile action sets into task (is done at some other point)
+    # adds the properties into the SAS file
+    if only_add_to_SAS:
+        print("Don't encode LTL properties into task.")
+        for i, p in enumerate(properties):
+            name, f = p.SAS_repr(actionSets)
+            sas_task.addLTLProperty(name, f)
+    else:
+        # compile properties into the task
+        print("Encode LTL properties into task.")
 
         #each automata and the world itself have a synchronization variable to constrain the execution order
         world_sync_var = addWorldSyncvar(sas_task, properties)
@@ -309,8 +318,6 @@ def compileLTLProperties(sas_task, properties, actionSets):
 
         print("Number of auxiliary variables: " + str(len(auxillary_vars)))
 
-    # only compile action sets into task (is done at some other point)
-    else:
-        for i, p  in enumerate(properties):
-            sas_task.addLTLProperty(p.SAS_repr(actionSets))
+
+
 

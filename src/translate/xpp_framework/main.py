@@ -30,7 +30,7 @@ def run(options, task, sas_task):
 
         AS_property.compileActionSetProperties(sas_task, AS_properties, actionSets)
 
-        LTL_property.compileLTLProperties(sas_task, LTL_properties, actionSets)
+        LTL_property.compileLTLProperties(options.only_add_LTL_prop_to_SAS, sas_task, LTL_properties, actionSets)
     
 
 

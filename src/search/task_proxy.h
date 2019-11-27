@@ -192,6 +192,30 @@ public:
     }
 };
 
+class PropertyProxy {
+    const AbstractTask *task;
+    Property property;
+public:
+    PropertyProxy(const AbstractTask &task, std::string name, std::string formula);
+    PropertyProxy(const AbstractTask &task, const Property &property);
+    ~PropertyProxy() = default;
+
+    VariableProxy get_variable() const;
+
+    std::string get_name() const {
+        return property.name;
+    }
+
+    Property get_property() const {
+        return property;
+    }
+
+    std::string get_formula() const {
+        return property.formula;
+    }
+
+};
+
 
 class FactsProxyIterator {
     const AbstractTask *task;
@@ -611,7 +635,7 @@ public:
         return size() == 0;
     }
 
-    std::string operator[](std::size_t index) const {
+    Property operator[](std::size_t index) const {
         assert(index < size());
         return task->get_LTL_property(index);
     }

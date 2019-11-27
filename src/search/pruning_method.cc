@@ -39,6 +39,12 @@ bool PruningMethod::prune_state(const GlobalState &global_state){
     return prune_state(state);
 }
 
+bool PruningMethod::prune_init_state(const GlobalState &global_state){
+    assert(task);
+    State state(*task, global_state.get_values());
+    return prune_state(state);
+}
+
 bool PruningMethod::prune_state(const State &){
     return false;
 }

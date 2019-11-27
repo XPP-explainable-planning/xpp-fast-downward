@@ -14,6 +14,8 @@ def parse_args():
     argparser.add_argument(
         "plan_property", help="path to plan property file")
     argparser.add_argument(
+        "--only-add-LTL-prop-to-SAS", dest="only_add_LTL_prop_to_SAS", default=False,  action='store_true')
+    argparser.add_argument(
         "--properties_folder", dest="properties_folder", type=str, help="folder to store the generated property files")
     argparser.add_argument(
         "--question", dest="question", type=str, help="path to question file")

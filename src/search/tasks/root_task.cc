@@ -66,7 +66,7 @@ class RootTask : public AbstractTask {
     vector<int> initial_state_values;
     vector<FactPair> goals;
     vector<FactPair> question;
-    vector<string> LTL_properties;
+    vector<Property> LTL_properties;
     vector<vector<FactPair>> entailments;
 
     const ExplicitVariable &get_variable(int var) const;
@@ -112,7 +112,7 @@ public:
     virtual FactPair get_question_fact(int index) const override;
 
     virtual int get_num_LTL_properties() const override;
-    virtual string get_LTL_property(int index) const override;
+    virtual Property get_LTL_property(int index) const override;
 
     virtual int get_num_entailments() const override;
     virtual vector<FactPair> get_entailment(int index) const override;
@@ -180,14 +180,17 @@ vector<FactPair> read_facts(istream &in) {
 vector<string> read_lines(istream &in) {
     int count;
     in >> count;
-    cout << "num props: " << count << endl;
     vector<string> lines;
+    if(count == 0){
+        return lines;
+    }
+    //cout << "num props: " << count << endl;
     lines.reserve(count);
     string line;
     getline(in, line);
     for (int i = 0; i < count; ++i) {
         getline(in, line);
-        cout << i << " " << line << endl;
+//        cout << i << " " << line << endl;
         lines.push_back(line);
     }
     return lines;
@@ -353,11 +356,19 @@ vector<FactPair> read_question(istream &in) {
     return question;
 }
 
-vector<string> read_LTL_properties(istream &in) {
+vector<Property> read_LTL_properties(istream &in) {
     check_magic(in, "begin_ltlproperty");
-    vector<string> ltlproperties = read_lines(in);
+    vector<string> ltlstrings = read_lines(in);
     check_magic(in, "end_ltlproperty");
-    return ltlproperties;
+    vector<Property> properties;
+    if(ltlstrings.size() == 0){
+        return  properties;
+    }
+    for(uint i = 0; i < ltlstrings.size() - 1; i += 2){
+        properties.push_back(Property(ltlstrings[i], ltlstrings[i+1]));
+    }
+    cout << "test" << endl;
+    return properties;
 }
 
 vector<vector<FactPair>> read_entailments(istream &in) {
@@ -559,7 +570,7 @@ int RootTask::get_num_LTL_properties() const {
     return LTL_properties.size();
 }
 
-string RootTask::get_LTL_property(int index) const {
+Property RootTask::get_LTL_property(int index) const {
     assert(utils::in_bounds(index, LTL_properties));
     return LTL_properties[index];
 }

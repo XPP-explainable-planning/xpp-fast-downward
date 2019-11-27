@@ -36,8 +36,8 @@ class SASTask:
     def addQuestionElem(self, pair):
         self.question.pairs.append(pair)
 
-    def addLTLProperty(self, prop):
-        self.LTLProperties.properties.append(prop)
+    def addLTLProperty(self, name, formula):
+        self.LTLProperties.properties.append((name, formula))
 
     def validate(self):
         """Fail an assertion if the task is invalid.
@@ -329,9 +329,10 @@ class SASLTLProperty:
 
     def output(self, stream):
         print("begin_ltlproperty", file=stream)
-        print(len(self.properties), file=stream)
-        for p in self.properties:
-            print(p, file=stream)
+        print(len(self.properties) * 2, file=stream)
+        for n, f in self.properties:
+            print(n, file=stream)
+            print(f, file=stream)
         print("end_ltlproperty", file=stream)
 
     def get_encoding_size(self):

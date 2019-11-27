@@ -116,7 +116,7 @@ void MugsSearch::initialize() {
     print_initial_evaluator_values(eval_context);
 
     pruning_method->initialize(task);
-    //pruning_method->prune_state(initial_state);
+    pruning_method->prune_init_state(initial_state);
     //cout << "Init finished" << endl;
 }
 
