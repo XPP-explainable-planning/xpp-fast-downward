@@ -228,12 +228,14 @@ bool MonitorMugsPruning::prune_init_state(const GlobalState &state) {
     return false;
 }
 
-bool MonitorMugsPruning::prune_state(StateID parent_id, const GlobalState &global_state){
+bool MonitorMugsPruning::prune_state(StateID parent_id, const GlobalState &global_state, bool* new_automaton_state_reached){
 
     State state(*task, global_state.get_values());
     if(this->prune_state(state)){
+        *new_automaton_state_reached = false;
         for (auto m : monitors) {
-            m->check_state(parent_id, global_state);
+            pair<bool, bool> result = m->check_state(parent_id, global_state);
+            *new_automaton_state_reached |= result.second;
         }
         return true;
     }
@@ -246,23 +248,21 @@ bool MonitorMugsPruning::prune_state(StateID parent_id, const GlobalState &globa
     for(uint i = 0; i < g_proxy.size(); i++){
         current_sat_goal_facts = (current_sat_goal_facts << 1) | (state[g_proxy[i].get_variable().get_id()].get_value() == g_proxy[i].get_value());
     }
-//    if(current_sat_goal_facts > 0)
-//       cout << "Current sat goal: " << std::bitset<32>(current_sat_goal_facts) << endl;
 
     //if all hard goals are satisfied check which properties can still be satisfied
+    *new_automaton_state_reached = false;
     if((hard_goals & current_sat_goal_facts) == hard_goals) {
         //cout << "+++++++++++++++++++++++++ HARD GOAL SAT ++++++++++++++++++" << endl;
-        uint satisfiable_props = 0;
+        //uint satisfiable_props = 0; //TODO is this still somehow possible
         uint satisfied_props = 0;
         for (auto m : monitors) {
             //cout << " ***** Monitor: " << m->get_property().name << "****************" << endl;
-            satisfiable_props = satisfiable_props << 1;
+            //satisfiable_props = satisfiable_props << 1;
             satisfied_props = satisfied_props << 1;
-            pair<bool, TruthValue> tv = m->check_state(parent_id, global_state);
-            if (tv.second != TruthValue::FALSE) {
-                satisfiable_props |= 1;
-            }
-            if (tv.first) {
+            pair<bool,bool>  result = m->check_state(parent_id, global_state);
+            bool satisfied = result.first;
+            *new_automaton_state_reached |= result.second;
+            if (satisfied) {
                 satisfied_props |= 1;
             }
         }
@@ -270,7 +270,8 @@ bool MonitorMugsPruning::prune_state(StateID parent_id, const GlobalState &globa
 //        cout << "satisfiable props: " << std::bitset<32>(satisfiable_props) << endl;
 //        cout << "satisfied props:   " << std::bitset<32>(satisfied_props) << endl;
 //        cout << "-------" << endl;
-        bool prune_state = superset_contained(satisfiable_props, msgs);
+        //bool prune_state = superset_contained(satisfiable_props, msgs);
+        bool prune_state = false; //TODO implement
 
         msgs_changed = false;
         insert_new_superset(satisfied_props, msgs, msgs_changed);
@@ -281,8 +282,10 @@ bool MonitorMugsPruning::prune_state(StateID parent_id, const GlobalState &globa
     }
     else{
         for (auto m : monitors) {
-            m->check_state(parent_id, global_state);
+            pair<bool, bool> result = m->check_state(parent_id, global_state);
+            *new_automaton_state_reached |= result.second;
         }
+        return false;
     }
 
     return false;

@@ -34,18 +34,13 @@ Monitor::Monitor(const std::shared_ptr<AbstractTask> &task_, Property LTL_proper
     spot::parsed_formula pf = spot::parse_infix_psl(property.formula);
     if (pf.format_errors(std::cerr))
         throw invalid_argument("LTL formula is not valid");
-//    spot::translator trans;
-//    trans.set_type(spot::postprocessor::Monitor);
-//    trans.set_pref(spot::postprocessor::Deterministic);
-//    this->automaton = trans.run(pf.f);
+
     spot::translator trans;
     trans.set_type(spot::postprocessor::BA);
     trans.set_pref(spot::postprocessor::Small);
     spot::twa_graph_ptr aut = trans.run(spot::from_ltlf(pf.f));
-//    cout << "----------------------------------------------------------" << endl;
-//    print_hoa(std::cout, aut) << '\n';
-//    cout << "----------------------------------------------------------" << endl;
 
+    // remove ap "alive" and simplify the automaton
     spot::remove_ap rem;
     rem.add_ap("alive");
     aut = rem.strip(aut);
@@ -61,6 +56,8 @@ Monitor::Monitor(const std::shared_ptr<AbstractTask> &task_, Property LTL_proper
 //    print_hoa(std::cout, this->automaton) << '\n';
 //    cout << "----------------------------------------------------------" << endl;
 
+
+    //Find which variable id in the BDDs correponds to which fact
     //cout << "Dict Mapping: " << endl;
     const spot::bdd_dict_ptr& dict = this->automaton->get_dict();
     //cout << "Atomic propositions:";
@@ -87,14 +84,23 @@ Monitor::Monitor(const std::shared_ptr<AbstractTask> &task_, Property LTL_proper
 
 }
 
+void Monitor::init_reached_automaton_states(StateID id) {
+    vector<bool> reached_automaton_states;
+    for(uint i = 0; i < automaton->num_states(); i++){
+        reached_automaton_states.push_back(false);
+    }
+    this->reachable_automaton_state[id] = reached_automaton_states;
+}
+
 void Monitor::init(const GlobalState &global_state) {
 
-    //cout << "----- Init Monitor ---------" << endl;
+    //initialise the monitor with the goal state
     int initial_node_id = this->automaton->get_init_state_number();
-    this->current_state[global_state.get_id()] = initial_node_id;
+    this->init_reached_automaton_states(global_state.get_id());
+    reachable_automaton_state[global_state.get_id()][initial_node_id] = true;
+
     this->truth_values[global_state.get_id()] = TruthValue::UNKNOWN;
-    //cout << global_state.get_id() << " -> " << initial_node_id << endl;
-    //cout << "----- Init Monitor ---------" << endl;
+
 }
 
 bool Monitor::is_accepting_loop(uint s) {
@@ -127,58 +133,76 @@ bool Monitor::is_accepting(uint s) {
     return false;
 }
 
-pair<bool, TruthValue> Monitor::check_state(StateID parent_id, const GlobalState &global_state) {
+pair<bool, bool> Monitor::check_state(StateID parent_id, const GlobalState &global_state) {
 
 //    cout << "----- Check State ---------" << endl;
 //    cout << "State: "  << global_state.get_id() << " parent: "  << parent_id << endl;
     //cout << "Parent truth value: " << this->truth_values[parent_id] << endl;
 
-    this->truth_values[global_state.get_id()] = this->truth_values[parent_id];
+//    this->truth_values[global_state.get_id()] = this->truth_values[parent_id];
+//
+//    if(this->truth_values[parent_id] == TruthValue ::TRUE){
+////        cout << "PARENT TRUE" << endl;
+//        return make_pair(true, TruthValue::TRUE);
+//    }
+//    if(this->truth_values[parent_id] == TruthValue ::FALSE){
+////        cout << "PARENT FALSE" << endl;
+//        return make_pair(false, TruthValue ::FALSE);
+//    }
+    bool new_automaton_state_reached = false;
 
-    if(this->truth_values[parent_id] == TruthValue ::TRUE){
-//        cout << "PARENT TRUE" << endl;
-        return make_pair(true, TruthValue::TRUE);
+    //if state is visited for the first time init reach automaton states
+    if(! reachable_automaton_state.count(global_state.get_id())){
+        init_reached_automaton_states(global_state.get_id());
+        new_automaton_state_reached = true;
     }
-    if(this->truth_values[parent_id] == TruthValue ::FALSE){
-//        cout << "PARENT FALSE" << endl;
-        return make_pair(false, TruthValue ::FALSE);
-    }
 
-    //const spot::bdd_dict_ptr& dict = this->automaton->get_dict();
-    int current_automaton_state = this->current_state[parent_id];
-//    cout << "Current state: " << current_automaton_state << endl;
-    for (auto& t: this->automaton->out(current_automaton_state)) {
+    bool satisfied = false;
+    vector<bool> current_automaton_state_flags = this->reachable_automaton_state[parent_id];
+//    for(uint i = 0; i < automaton->num_states(); i++){
+//        if(this->reachable_automaton_state[global_state.get_id()][i]){
+//            cout << i << " ";
+//        }
+//    }
+//    cout << endl;
+    for(uint current_automaton_state = 0; current_automaton_state < automaton->num_states(); current_automaton_state++) {
+        if(current_automaton_state_flags[current_automaton_state]) {
+//          cout << "Current state: " << current_automaton_state << endl;
+            for (auto &t: this->automaton->out(current_automaton_state)) {
 
-        //spot::bdd_print_formula(cout, dict, t.cond);
-        //cout << endl;
-        //check transition applicable
-        if(this->sat_bdd(t.cond, global_state)){
-//            cout << "SAT" << endl;
-            this-> current_state[global_state.get_id()] = t.dst;
+                //check transition applicable
+                if (this->sat_bdd(t.cond, global_state)) {
 
-//            cout << "dest state: " << t.dst << endl;
+                    new_automaton_state_reached = ! this->reachable_automaton_state[global_state.get_id()][t.dst];
+                    this->reachable_automaton_state[global_state.get_id()][t.dst] = true;
 
-            if(this->is_accepting_loop(t.dst)){
-//                cout << "Accdepting loop" << endl;
-                this->truth_values[global_state.get_id()] = TruthValue::TRUE;
-                return make_pair(true, TruthValue::TRUE);
+                    //cout << "dest state: " << t.dst << endl;
+
+                    if (this->is_accepting_loop(t.dst)) {
+                        satisfied = true;
+                        this->truth_values[global_state.get_id()] = TruthValue::TRUE;
+                    }
+                    else if(this->is_accepting(t.dst)){
+                        satisfied = true;
+                    }
+                    //else if (this->is_not_accepting_loop(t.dst)) {
+                    //    satisfied = satisfied | false;
+                    //}
+
+                    //satisfied = satisfied | false;
+                }
             }
-            if(this->is_not_accepting_loop(t.dst)){
-//                cout << "NOT Accdepting loop" << endl;
-                this->truth_values[global_state.get_id()] = TruthValue::FALSE;
-                return make_pair(false, TruthValue ::FALSE);
-            }
-
-            this->truth_values[global_state.get_id()] = TruthValue::UNKNOWN;
-//            cout << "UNKNOWN: dest state " << t.dst << endl;
-            return make_pair(this->is_accepting(t.dst), TruthValue ::UNKNOWN);
+            //if there is no matching outgoing transition the trace does not satisfy the formula
+            //satisfied = satisfied | false;
         }
     }
-
-//    cout << "UNSAT" << endl;
-    //if there is no matching outgoing transition the trace does not satisfy the formula
-    this->truth_values[global_state.get_id()] = TruthValue::FALSE;
-    return make_pair(false, TruthValue ::FALSE);
+//    for(uint i = 0; i < automaton->num_states(); i++){
+//        if(this->reachable_automaton_state[global_state.get_id()][i]){
+//            cout << i << " ";
+//        }
+//    }
+//    cout << endl;
+    return make_pair(satisfied, new_automaton_state_reached);
 }
 
 bool Monitor::sat_bdd(bdd bdd_, const GlobalState &global_state) {

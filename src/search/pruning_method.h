@@ -31,7 +31,7 @@ public:
     virtual bool prune_state(const State &state);
     virtual bool prune_state(const GlobalState &state);
     virtual bool prune_init_state(const GlobalState &state);
-    virtual bool prune_state(StateID parent_id, const GlobalState &state);
+    virtual bool prune_state(StateID parent_id, const GlobalState &state, bool* new_automaton_state_reached);
 
     virtual void print_statistics() const = 0;
 };

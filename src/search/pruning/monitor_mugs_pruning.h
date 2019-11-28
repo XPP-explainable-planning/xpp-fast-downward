@@ -43,7 +43,7 @@ public:
 
     virtual void initialize(const std::shared_ptr<AbstractTask> &) override;
     virtual void prune_operators(const State &state, std::vector<OperatorID> &ops) override;
-    virtual bool prune_state(StateID parent_id, const GlobalState &state) override;
+    virtual bool prune_state(StateID parent_id, const GlobalState &state, bool* new_automaton_state_reached) override;
     virtual bool prune_init_state(const GlobalState &state) override;
     virtual bool prune_state(const State &state) override;
     virtual void print_statistics() const override;
