@@ -386,6 +386,15 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+        NAME MONITOR_SEARCH
+        HELP "monitor search"
+        SOURCES
+        search_engines/monitor_search
+        DEPENDS NULL_PRUNING_METHOD ORDERED_SET SUCCESSOR_GENERATOR
+        DEPENDENCY_ONLY
+)
+
+fast_downward_plugin(
     NAME PLUGIN_ASTAR
     HELP "A* search"
     SOURCES
@@ -407,6 +416,14 @@ fast_downward_plugin(
     SOURCES
         search_engines/plugin_mugs_greedy
     DEPENDS MUGS_SEARCH SEARCH_COMMON
+)
+
+fast_downward_plugin(
+        NAME MONITOR_ATAR_SEARCH
+        HELP "monitor search"
+        SOURCES
+        search_engines/plugin_monitor_astar
+        DEPENDS MONITOR_SEARCH SEARCH_COMMON
 )
 
 fast_downward_plugin(

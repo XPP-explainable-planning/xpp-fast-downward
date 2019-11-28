@@ -189,7 +189,7 @@ SearchStatus MugsSearch::step() {
             GlobalState succ_state = state_registry.get_successor_state(s, op);
 
             //check_goal_and_set_plan(succ_state);
-            if(pruning_method->prune_state(s.get_id(), succ_state)){
+            if(pruning_method->prune_state(succ_state)){
                 //cout << "*************************** PRUNE *****************" << endl;
                 continue;
             }
