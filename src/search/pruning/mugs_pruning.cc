@@ -153,6 +153,7 @@ std::unordered_set<uint> MugsPruning::minimal_unsolvable_subgoals(std::unordered
 
 
 void MugsPruning::print_set(std::unordered_set<uint> s) const{
+    cout << "Size: "  << s.size() << endl;
     for(uint gs : s){
         cout << std::bitset<32>(gs) << endl;
     }
@@ -202,9 +203,8 @@ void MugsPruning::add_goal_to_msgs(const State &state) {
 
 bool MugsPruning::prune_state(const State &state){
 
-    add_goal_to_msgs(state);
-
     bool prune_state = check_reachable(state);
+    add_goal_to_msgs(state);
 
     if(prune) {
         if (prune_state) {
