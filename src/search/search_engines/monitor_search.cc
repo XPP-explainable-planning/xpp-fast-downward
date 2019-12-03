@@ -1,4 +1,4 @@
-#include "mugs_search.h"
+#include "monitor_search.h"
 
 #include "../evaluation_context.h"
 #include "../evaluator.h"
@@ -21,8 +21,8 @@
 
 using namespace std;
 
-namespace mugs_search {
-MugsSearch::MugsSearch(const Options &opts)
+namespace monitor_search {
+MonitorSearch::MonitorSearch(const Options &opts)
     : SearchEngine(opts),
       reopen_closed_nodes(opts.get<bool>("reopen_closed")),
       prune_by_f(opts.get<bool>("prune_by_f")),
@@ -39,7 +39,7 @@ MugsSearch::MugsSearch(const Options &opts)
 
 }
 
-void MugsSearch::initialize() {
+void MonitorSearch::initialize() {
     /*
     cout << "Conducting best first search"
          << (reopen_closed_nodes ? " with" : " without")
@@ -116,11 +116,11 @@ void MugsSearch::initialize() {
     print_initial_evaluator_values(eval_context);
 
     pruning_method->initialize(task);
-    pruning_method->prune_state(initial_state);
+    pruning_method->prune_init_state(initial_state);
     //cout << "Init finished" << endl;
 }
 
-void MugsSearch::print_checkpoint_line(int ) const { //g) const {
+void MonitorSearch::print_checkpoint_line(int ) const { //g) const {
     /*
     cout << "[g=" << g << ", ";
     statistics.print_basic_statistics();
@@ -128,7 +128,7 @@ void MugsSearch::print_checkpoint_line(int ) const { //g) const {
     */
 }
 
-void MugsSearch::print_statistics() const {
+void MonitorSearch::print_statistics() const {
     
     statistics.print_detailed_statistics();
     search_space.print_statistics();
@@ -136,7 +136,7 @@ void MugsSearch::print_statistics() const {
     
 }
 
-SearchStatus MugsSearch::step() {
+SearchStatus MonitorSearch::step() {
     pair<SearchNode, bool> n = fetch_next_node();
     if (!n.second) {
         return FAILED;
@@ -144,9 +144,10 @@ SearchStatus MugsSearch::step() {
     SearchNode node = n.first;
 
     GlobalState s = node.get_state();
-    if (check_goal_and_set_plan(s)){
-        return SOLVED;
-    }
+//    if (check_goal_and_set_plan(s)){
+//        cout << "*************************** GOAL *****************" << endl;
+//        //return SOLVED;
+//    }
         
 
     /*
@@ -187,8 +188,9 @@ SearchStatus MugsSearch::step() {
     
             GlobalState succ_state = state_registry.get_successor_state(s, op);
 
-            //check_goal_and_set_plan(succ_state);
-            if(pruning_method->prune_state(succ_state)){
+            bool new_automaton_state_reached;
+            //cout << succ_state.get_id() << ": new automaton state reached: " << new_automaton_state_reached << endl;
+            if(pruning_method->prune_state(s.get_id(), succ_state, &new_automaton_state_reached)){
                 //cout << "*************************** PRUNE *****************" << endl;
                 continue;
             }
@@ -205,8 +207,10 @@ SearchStatus MugsSearch::step() {
             // Previously encountered dead end. Don't re-evaluate.
             //if (succ_node.is_dead_end())
             //    continue;
-    
+
+            //cout << (! succ_node.is_new() & new_automaton_state_reached) << " " << (succ_node.get_g() > node.get_g() + get_adjusted_cost(op)) << endl;
             if (succ_node.is_new()) {
+                //cout << "-----------------> New State" << endl;
                 // We have not seen this state before.
                 // Evaluate and create a new node.
     
@@ -233,9 +237,10 @@ SearchStatus MugsSearch::step() {
                     print_checkpoint_line(succ_node.get_g());
                     reward_progress();
                 }
-            } else if (succ_node.get_g() > node.get_g() + get_adjusted_cost(op)) {
+            } else if (new_automaton_state_reached){ //(succ_node.get_g() > node.get_g() + get_adjusted_cost(op)) {
+            //} else if (succ_node.get_g() > node.get_g() + get_adjusted_cost(op)) {
                 // We found a new cheapest path to an open or closed state.
-                if (reopen_closed_nodes) {
+                if (new_automaton_state_reached) {
                     if (succ_node.is_closed()) {
                         /*
                           TODO: It would be nice if we had a way to test
@@ -282,7 +287,7 @@ SearchStatus MugsSearch::step() {
     return IN_PROGRESS;
 }
 
-pair<SearchNode, bool> MugsSearch::fetch_next_node() {
+pair<SearchNode, bool> MonitorSearch::fetch_next_node() {
     /* TODO: The bulk of this code deals with multi-path dependence,
        which is a bit unfortunate since that is a special case that
        makes the common case look more complicated than it would need
@@ -321,17 +326,17 @@ pair<SearchNode, bool> MugsSearch::fetch_next_node() {
     }
 }
 
-void MugsSearch::reward_progress() {
+void MonitorSearch::reward_progress() {
     // Boost the "preferred operator" open lists somewhat whenever
     // one of the heuristics finds a state with a new best h value.
     open_list->boost_preferred();
 }
 
-void MugsSearch::dump_search_space() const {
+void MonitorSearch::dump_search_space() const {
     search_space.dump(task_proxy);
 }
 
-void MugsSearch::start_f_value_statistics(EvaluationContext &eval_context) {
+void MonitorSearch::start_f_value_statistics(EvaluationContext &eval_context) {
     if (f_evaluator) {
         int f_value = eval_context.get_evaluator_value(f_evaluator);
         statistics.report_f_value_progress(f_value);
@@ -340,7 +345,7 @@ void MugsSearch::start_f_value_statistics(EvaluationContext &eval_context) {
 
 /* TODO: HACK! This is very inefficient for simply looking up an h value.
    Also, if h values are not saved it would recompute h for each and every state. */
-void MugsSearch::update_f_value_statistics(const SearchNode &node) {
+void MonitorSearch::update_f_value_statistics(const SearchNode &node) {
     if (f_evaluator) {
         /*
           TODO: This code doesn't fit the idea of supporting

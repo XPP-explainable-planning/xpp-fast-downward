@@ -709,17 +709,18 @@ def main():
                 if effect.literal.negated:
                     del action.effects[index]
 
-    #print("----------- PDDL-------------")
-    #task.dump()
-    #print("----------- PDDL-------------")
+    # print("----------- PDDL-------------")
+    # task.dump()
+    # print("----------- PDDL-------------")
 
 
     #predicate_dict_generator.generateDictFromTask(task)
 
     sas_task = pddl_to_sas(task)
 
-    #for v in sas_task.variables.value_names:
-        #print(v)
+    # print("--------------------  Variables --------------------")
+    # for v in sas_task.variables.value_names:
+    #     print(v)
 
     #print("Operators:")
     #for o in sas_task.operators:
