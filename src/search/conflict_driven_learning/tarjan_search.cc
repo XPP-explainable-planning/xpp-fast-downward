@@ -294,6 +294,7 @@ SearchStatus TarjanSearch::step()
             }
         } else if (!succ_node.is_closed()) {
             if (task_properties::is_goal_state(task_proxy, succ)) {
+                m_pruning_method->prune_state(succ);
                 std::vector<OperatorID> plan;
                 m_search_space.trace_path(succ_node, plan);
                 set_plan(plan);
