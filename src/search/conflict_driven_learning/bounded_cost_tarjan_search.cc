@@ -321,6 +321,7 @@ BoundedCostTarjanSearch::step()
             if (succ_status == UNDEFINED) {
                 succ_status = 0;
                 if (task_properties::is_goal_state(m_task_proxy, succ_state)) {
+                    evaluate(succ_state, m_pruning_evaluator, m_current_g); //mugs
                     m_solved = true;
                     return SearchStatus::IN_PROGRESS;
                 }
@@ -509,7 +510,9 @@ void BoundedCostTarjanSearch::print_statistics() const
     if (m_refiner != nullptr) {
         m_refiner->print_statistics();
     }
-    
+    if (m_pruning_evaluator != nullptr) {
+        m_pruning_evaluator->print_evaluator_statistics();
+    }
 #ifndef NDEBUG
     hc_heuristic::HCHeuristic* h = dynamic_cast<hc_heuristic::HCHeuristic*>(m_pruning_evaluator);
     if (h != NULL) {

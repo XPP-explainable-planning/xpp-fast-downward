@@ -123,7 +123,12 @@ HCHeuristic::HCHeuristic(const options::Options &opts)
 void
 HCHeuristic::set_auxiliary_goal(std::vector<std::pair<int, int> >&& aux)
 {
+    auxiliary_goal_conjunctions_.clear();
     auxiliary_goal_ = std::move(aux);
+    assert(std::is_sorted(auxiliary_goal_.begin(), auxiliary_goal_.end()));
+    std::vector<unsigned> facts;
+    strips::get_fact_ids(facts, auxiliary_goal_);
+    get_satisfied_conjunctions(facts, auxiliary_goal_conjunctions_);
 }
 
 void
@@ -134,13 +139,19 @@ HCHeuristic::reset_auxiliary_goal()
         FactPair g = task->get_goal_fact(i);
         auxiliary_goal_.emplace_back(g.var, g.value);
     }
+    auxiliary_goal_conjunctions_ = get_counter_precondition(m_goal_counter);
 }
 
-const
-std::vector<std::pair<int, int> >&
+const std::vector<std::pair<int, int> >&
 HCHeuristic::get_auxiliary_goal() const
 {
     return auxiliary_goal_;
+}
+
+const std::vector<unsigned>&
+HCHeuristic::get_auxiliary_goal_conjunctions() const
+{
+    return auxiliary_goal_conjunctions_;
 }
 
 void HCHeuristic::initialize(unsigned m)
