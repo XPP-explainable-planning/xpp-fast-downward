@@ -113,7 +113,7 @@ MugsHeuristic::print_evaluator_statistics() const
 {
     auto mugs =
         max_achieved_subgoals_.get_minimal_extensions(goal_assignment_.size());
-    std::cout << "++++++++++ MSGS HEURISTIC +++++++++++++++" << std::endl;
+    std::cout << "++++++++++ MUGS HEURISTIC +++++++++++++++" << std::endl;
     std::cout << "Size: " << max_achieved_subgoals_.size() << std::endl;
     print_set(max_achieved_subgoals_.begin(), max_achieved_subgoals_.end());
     std::cout << "++++++++++ MUGS HEURISTIC +++++++++++++++" << std::endl;

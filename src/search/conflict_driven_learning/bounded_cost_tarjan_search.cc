@@ -80,6 +80,7 @@ BoundedCostTarjanSearch::PerLayerData::PerLayerData()
 
 BoundedCostTarjanSearch::BoundedCostTarjanSearch(const options::Options& opts)
     : SearchEngine(opts)
+    , c_ignore_eval_dead_ends(opts.get<bool>("ignore_eval_dead_ends"))
     , c_refinement_toggle(false)
     , c_compute_neighbors(false)
     , c_make_neighbors_unique(opts.get<bool>("unique_neighbors"))
@@ -99,7 +100,7 @@ BoundedCostTarjanSearch::BoundedCostTarjanSearch(const options::Options& opts)
           opts.contains("preferred") ? opts.get<Evaluator*>("preferred")
                                      : nullptr)
     , m_pruning_evaluator(
-            opts.contains("u_eval") ? opts.get<Evaluator*>("u_eval") : nullptr)
+          opts.contains("u_eval") ? opts.get<Evaluator*>("u_eval") : nullptr)
     , m_refiner(
           opts.contains("learn")
               ? opts.get<std::shared_ptr<HeuristicRefiner>>("learn")
@@ -170,7 +171,9 @@ BoundedCostTarjanSearch::initialize()
         m_solved = true;
     } else {
         m_pruning_method->initialize(task);
-        if (!evaluate(istate, m_expansion_evaluator, 0) || !expand(istate)) {
+        if ((!c_ignore_eval_dead_ends
+             && !evaluate(istate, m_expansion_evaluator, 0))
+            || !expand(istate)) {
             // || !increment_bound_and_push_initial_state()) {
             std::cout << "Initial state is dead-end!" << std::endl;
         }
@@ -256,8 +259,9 @@ BoundedCostTarjanSearch::expand(const GlobalState& state, PerLayerData* layer)
             pde->notify_state_transition(state, aops[i], succ);
         }
         if (_get_bound(succ_info) != INF
-            && evaluate(
-                succ, m_expansion_evaluator, m_current_g + op.get_cost())) {
+            && (evaluate(
+                    succ, m_expansion_evaluator, m_current_g + op.get_cost())
+                || c_ignore_eval_dead_ends)) {
             has_zero_cost = has_zero_cost || op.get_cost() == 0;
             std::pair<bool, int> key(
                 !preferred.contains(aops[i]),
@@ -627,6 +631,7 @@ BoundedCostTarjanSearch::add_options_to_parser(options::OptionParser& parser)
     parser.add_option<Evaluator*>("u_eval", "", options::OptionParser::NONE);
     parser.add_option<std::shared_ptr<HeuristicRefiner>>(
         "learn", "", options::OptionParser::NONE);
+    parser.add_option<bool>("ignore_eval_dead_ends", "", "false");
     parser.add_option<bool>("unique_neighbors", "", "true");
     parser.add_option<int>("max_bound", "", options::OptionParser::NONE);
     parser.add_option<double>("step", "", "2.0");
