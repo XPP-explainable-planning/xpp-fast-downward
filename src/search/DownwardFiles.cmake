@@ -867,6 +867,7 @@ fast_downward_plugin(
         conflict_driven_learning/mugs_heuristic
         conflict_driven_learning/mugs_hc_heuristic
         conflict_driven_learning/mugs_uc_refiner
+        conflict_driven_learning/mugs_hc_refiner
     )
 
 fast_downward_add_plugin_sources(PLANNER_SOURCES)

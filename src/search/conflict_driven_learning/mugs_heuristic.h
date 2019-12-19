@@ -58,6 +58,8 @@ protected:
     virtual void on_removed_subgoal(const subgoal_t&) {}
     virtual void on_added_subgoal(const subgoal_t&) {}
 
+    const int cost_bound_;
+    const bool is_cost_bounded_;
 private:
     const bool mugs_based_pruning_;
 

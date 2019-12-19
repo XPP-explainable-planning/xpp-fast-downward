@@ -12,17 +12,9 @@ namespace mugs {
 MugsCriticalPathHeuristic::MugsCriticalPathHeuristic(
     const options::Options& opts)
     : MugsHeuristic(opts)
-    , cost_bound_(opts.get<int>("cost_bound"))
-    , is_cost_bounded_(cost_bound_ > 0)
     , hc_(dynamic_cast<hc_heuristic::HCHeuristic*>(opts.get<Evaluator*>("hc")))
 {
     std::cout << "Initializing MugsCriticalPathHeuristic ..." << std::endl;
-    std::cout << "Using cost-bound: ";
-    if (is_cost_bounded_) {
-        std::cout << cost_bound_ << std::endl;
-    } else {
-        std::cout << "infinity" << std::endl;
-    }
     all_goals_ = 0U;
     var_to_goal_idx_.resize(task->get_num_variables(), -1);
     const auto& goal = get_goal_facts();
@@ -39,7 +31,6 @@ void
 MugsCriticalPathHeuristic::add_options_to_parser(options::OptionParser& parser)
 {
     parser.add_option<Evaluator*>("hc", "", "hc(nogoods=false)");
-    parser.add_option<int>("cost_bound", "", "-1");
     MugsHeuristic::add_options_to_parser(parser);
 }
 
@@ -82,7 +73,8 @@ MugsCriticalPathHeuristic::sync()
 }
 
 bool
-MugsCriticalPathHeuristic::check_for_reachable_mug_enumerative() const
+MugsCriticalPathHeuristic::check_for_reachable_mug_enumerative(
+    int remaining_budget) const
 {
     std::vector<std::pair<int, int>> f;
     std::vector<unsigned> fids;
@@ -94,7 +86,9 @@ MugsCriticalPathHeuristic::check_for_reachable_mug_enumerative() const
         hc_->get_satisfied_conjunctions(fids, cids);
         bool reached = true;
         for (const unsigned& x : cids) {
-            if (!hc_->get_conjunction_data(x).achieved()) {
+            const auto& info = hc_->get_conjunction_data(x);
+            if (!info.achieved()
+                || (is_cost_bounded_ && info.cost >= remaining_budget)) {
                 reached = false;
                 break;
             }
@@ -123,9 +117,9 @@ MugsCriticalPathHeuristic::is_any_mug_reachable(
     for (unsigned i = 0; i < goal_conjunctions_.size(); i++) {
         const auto& info = hc_->get_conjunction_data(goal_conjunctions_[i]);
         if (!info.achieved()
-            || (is_cost_bounded_ && info.cost > remaining_budget)) {
+            || (is_cost_bounded_ && info.cost >= remaining_budget)) {
             if (in_hard_goal_[i]) {
-                assert(!check_for_reachable_mug_enumerative());
+                assert(!check_for_reachable_mug_enumerative(remaining_budget));
                 return false;
             }
             tobeprocessed.push_back(i);
@@ -134,7 +128,7 @@ MugsCriticalPathHeuristic::is_any_mug_reachable(
     std::vector<unsigned> disabled(get_goal_facts().size(), 0);
     bool result = check_for_reachable_mug_top_down(
         all_goals_, tobeprocessed, 0, disabled);
-    assert(result == check_for_reachable_mug_enumerative());
+    assert(result == check_for_reachable_mug_enumerative(remaining_budget));
     return result;
 }
 

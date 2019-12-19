@@ -14,10 +14,18 @@ namespace mugs {
 
 MugsHeuristic::MugsHeuristic(const options::Options& opts)
     : Heuristic(opts)
+    , cost_bound_(opts.get<int>("cost_bound"))
+    , is_cost_bounded_(cost_bound_ > 0)
     , mugs_based_pruning_(opts.get<bool>("prune"))
     , on_removed_([this](const subgoal_t& s) { on_removed_subgoal(s); })
 {
     std::cout << "Initializing MugsHeuristic ..." << std::endl;
+    std::cout << "Using cost-bound: ";
+    if (is_cost_bounded_) {
+        std::cout << cost_bound_ << std::endl;
+    } else {
+        std::cout << "infinity" << std::endl;
+    }
 
     // two passes over goal to make sure goal_assignment is sorted
 
@@ -50,6 +58,7 @@ MugsHeuristic::add_options_to_parser(options::OptionParser& parser)
 {
     parser.add_option<bool>("all_softgoals", "TODO", "false");
     parser.add_option<bool>("prune", "TODO", "true");
+    parser.add_option<int>("cost_bound", "", "-1");
     Heuristic::add_options_to_parser(parser);
 }
 
@@ -90,7 +99,9 @@ MugsHeuristic::compute_result(EvaluationContext& context)
     EvaluationResult result;
     result.set_count_evaluation(mugs_based_pruning_);
     if (mugs_based_pruning_ && !is_any_mug_reachable(context)) {
-        result.set_evaluator_value(EvaluationResult::INFTY);
+        result.set_evaluator_value(
+            is_cost_bounded_ ? cost_bound_ - context.get_g_value()
+                             : EvaluationResult::INFTY);
     } else {
         result.set_evaluator_value(0);
     }

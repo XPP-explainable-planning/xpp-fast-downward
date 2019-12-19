@@ -23,7 +23,7 @@ protected:
     virtual void on_added_subgoal(const subgoal_t&) override;
     virtual void on_removed_subgoal(const subgoal_t&) override;
 
-    bool check_for_reachable_mug_enumerative() const;
+    bool check_for_reachable_mug_enumerative(int remaining_budget) const;
 
     bool check_for_reachable_mug_top_down(
         subgoal_t subgoal,
@@ -32,8 +32,6 @@ protected:
         std::vector<unsigned>& disabled) const;
 
 private:
-    const int cost_bound_;
-    const bool is_cost_bounded_;
     hc_heuristic::HCHeuristic* hc_;
 
     std::vector<bool> in_hard_goal_;

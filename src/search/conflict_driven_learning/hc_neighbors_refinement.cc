@@ -58,7 +58,7 @@ int HCNeighborsRefinement::get_conjunction_value(unsigned id)
     return data.achieved() ? data.cost : INF;
 }
 
-bool HCNeighborsRefinement::requires_neighbors()
+bool HCNeighborsRefinement::requires_neighbors() const
 {
     return true;
 }
@@ -94,6 +94,8 @@ bool HCNeighborsRefinement::refine_heuristic(
     m_component_size = 0;
     m_current_state_cost.resize(m_hc->num_conjunctions(), 0);
     m_fact_to_negated_component.resize(strips::num_facts());
+    const std::vector<std::pair<int, int> >& goal = m_hc->get_auxiliary_goal();
+    const std::vector<unsigned>& goal_conjs = m_hc->get_auxiliary_goal_conjunctions();
     while (!component.end()) {
         const GlobalState &state = component.current();
         if (m_component_size == 0) {
@@ -106,10 +108,16 @@ bool HCNeighborsRefinement::refine_heuristic(
             }
             std::cout << ", bound=" << bound << ")" << std::endl;
 #endif
-            int res = m_hc->evaluate(state, std::max(0, m_hc->get_cost_bound() - bound));
-            if (res == HCHeuristic::DEAD_END || res >= bound) {
-                terminate = true;
-                result = true;
+            m_hc->evaluate(state, std::max(0, m_hc->get_cost_bound() - bound));
+            for (int i = goal_conjs.size() - 1; i >= 0; i--) {
+                const auto& info = m_hc->get_conjunction_data(goal_conjs[i]);
+                if (!info.achieved() || info.cost >= bound) {
+                    terminate = true;
+                    result = true;
+                    break;
+                }
+            }
+            if (terminate) {
                 break;
             }
             for (unsigned i = 0; i < m_hc->num_conjunctions(); i++) {
@@ -173,7 +181,11 @@ bool HCNeighborsRefinement::refine_heuristic(
         m_chosen.resize(std::max(m_component_size, m_num_successors), UNASSIGNED);
         m_num_covered_by.resize(m_hc->num_conjunctions());
 
-        push_conflict_for(m_strips_task->get_goal(), bound);
+        std::vector<unsigned> goal_facts;
+        for (unsigned i = 0; i < goal.size(); i++) {
+            goal_facts.push_back(strips::get_fact_id(goal[i].first, goal[i].second));
+        }
+        push_conflict_for(goal_facts, bound);
         while (!m_open.empty() && !size_limit_reached()) {
             OpenElement &elem = m_open.back();
             if (elem.i == elem.achievers.size()) {
