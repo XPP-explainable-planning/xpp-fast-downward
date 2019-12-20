@@ -19,6 +19,7 @@
 #include <cstdio>
 #include <algorithm>
 #include <limits>
+#include <fstream>
 
 namespace conflict_driven_learning {
 
@@ -103,10 +104,12 @@ HCHeuristic::HCHeuristic(const options::Options &opts)
       c_nogood_evaluation_enabled(false),
       m_hc_evaluations(0),
       cost_bound_(opts.get<int>("cost_bound")),
-      m_nogood_formula(nullptr)
+      m_nogood_formula(nullptr),
+      store_conjunctions_("")
       // m_nogood_formula(opts.contains("nogoods") ?
       //                  opts.get<NoGoodFormula * >("nogoods") : NULL)
 {
+    utils::Timer timer_init;
     if (opts.get<bool>("nogoods")) {
         c_nogood_evaluation_enabled = true;
         if (cost_bound_ >= 0) {
@@ -117,13 +120,58 @@ HCHeuristic::HCHeuristic(const options::Options &opts)
         assert(m_nogood_formula != nullptr);
     }
     initialize(opts.get<int>("m"));
+    if (opts.contains("conjs_in")) {
+        std::unordered_map<std::string, std::pair<int, int> > lookup;
+        for (int var = 0; var < task->get_num_variables(); var++) {
+            for (int val = 0; val < task->get_variable_domain_size(var); val++) {
+                lookup[task->get_fact_name(FactPair(var, val))] = std::make_pair(var, val);
+            }
+        }
+
+        std::ifstream infile(opts.get<std::string>("conjs_in"));
+        std::string line;
+        std::vector<unsigned> conj;
+        while (std::getline(infile, line)){
+            while (true) {
+                size_t j = line.find(" | ");
+                if (j == std::string::npos) {
+                    conj.push_back(strips::get_fact_id(lookup[line]));
+                    break;
+                } else {
+                    conj.push_back(strips::get_fact_id(lookup[line.substr(0, j)]));
+                    line = line.substr(j+3);
+                }
+            }
+            std::sort(conj.begin(), conj.end());
+            insert_conjunction_and_update_data_structures(conj);
+            conj.clear();
+        }
+        infile.close();
+    }
+    if (opts.contains("conjs_out")) {
+        store_conjunctions_ = opts.get<std::string>("conjs_out");
+    }
+    std::cout << "Initialized hC after "
+        << timer_init
+        << ", generated "
+        << m_conjunction_data.size() << " conjunctions and "
+        << m_counters.size() << " counters (ratio "
+           << (((double) m_counters.size()) / m_num_atomic_counters)
+           << ")"
+           << std::endl;
+
     reset_auxiliary_goal();
 }
 
 void
 HCHeuristic::set_auxiliary_goal(std::vector<std::pair<int, int> >&& aux)
 {
+    auxiliary_goal_conjunctions_.clear();
     auxiliary_goal_ = std::move(aux);
+    assert(std::is_sorted(auxiliary_goal_.begin(), auxiliary_goal_.end()));
+    std::vector<unsigned> facts;
+    strips::get_fact_ids(facts, auxiliary_goal_);
+    get_satisfied_conjunctions(facts, auxiliary_goal_conjunctions_);
 }
 
 void
@@ -134,13 +182,19 @@ HCHeuristic::reset_auxiliary_goal()
         FactPair g = task->get_goal_fact(i);
         auxiliary_goal_.emplace_back(g.var, g.value);
     }
+    auxiliary_goal_conjunctions_ = get_counter_precondition(m_goal_counter);
 }
 
-const
-std::vector<std::pair<int, int> >&
+const std::vector<std::pair<int, int> >&
 HCHeuristic::get_auxiliary_goal() const
 {
     return auxiliary_goal_;
+}
+
+const std::vector<unsigned>&
+HCHeuristic::get_auxiliary_goal_conjunctions() const
+{
+    return auxiliary_goal_conjunctions_;
 }
 
 void HCHeuristic::initialize(unsigned m)
@@ -148,7 +202,6 @@ void HCHeuristic::initialize(unsigned m)
     std::cout << "Initializing hC heuristic ..." << std::endl;
     strips::initialize(*task);
 
-    utils::Timer timer_init;
 
     const strips::Task &strips_task = strips::get_task();
     std::vector<std::vector<unsigned> > temp_precondition;
@@ -252,15 +305,6 @@ void HCHeuristic::initialize(unsigned m)
     // } else {
     //     std::cout << "all unit conjunctions" << std::endl;
     // }
-
-    std::cout << "Initialized hC after "
-        << timer_init
-        << ", generated "
-        << m_conjunction_data.size() << " conjunctions and "
-        << m_counters.size() << " counters (ratio "
-           << (((double) m_counters.size()) / m_num_atomic_counters)
-           << ")"
-           << std::endl;
 
     if (m_nogood_formula != nullptr) {
         m_nogood_formula->initialize();
@@ -821,6 +865,23 @@ void HCHeuristic::print_statistics() const
     if (m_nogood_formula != nullptr) {
         m_nogood_formula->print_statistics();
     }
+    if (store_conjunctions_ != "") {
+        std::ofstream out;
+        out.open(store_conjunctions_);
+        for (unsigned i = 0; i < m_conjunctions.size(); i++) {
+            if (m_conjunctions[i].size() > 1) {
+                bool isfirst = true;
+                for (const auto& fid : m_conjunctions[i]) {
+                    const auto f = strips::get_variable_assignment(fid);
+                    out << (isfirst ? "" : " | ") <<
+                        task->get_fact_name(FactPair(f.first, f.second));
+                    isfirst = false;
+                }
+                out << std::endl;
+            }
+        }
+        out.close();
+    }
 }
 
 void HCHeuristic::print_options() const
@@ -960,6 +1021,8 @@ void HCHeuristic::add_options_to_parser(options::OptionParser &parser)
     parser.add_option<bool>("nogoods", "", "true");
     parser.add_option<int>("m", "", "0");
     parser.add_option<int>("cost_bound", "", "-1");
+    parser.add_option<std::string>("conjs_in", "", options::OptionParser::NONE);
+    parser.add_option<std::string>("conjs_out", "", options::OptionParser::NONE);
     // parser.add_option<NoGoodFormula *>("nogoods", "", options::OptionParser::NONE);
 }
 

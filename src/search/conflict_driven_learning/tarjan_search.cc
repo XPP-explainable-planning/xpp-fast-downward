@@ -294,6 +294,7 @@ SearchStatus TarjanSearch::step()
             }
         } else if (!succ_node.is_closed()) {
             if (task_properties::is_goal_state(task_proxy, succ)) {
+                evaluate_dead_end_heuristic(succ); // mugs
                 m_pruning_method->prune_state(succ);
                 std::vector<OperatorID> plan;
                 m_search_space.trace_path(succ_node, plan);
@@ -444,6 +445,9 @@ void TarjanSearch::print_statistics() const
     statistics.print_detailed_statistics();
     if (m_learner != nullptr) {
         m_learner->print_statistics();
+    }
+    if (m_dead_end_identifier != nullptr) {
+        m_dead_end_identifier->print_evaluator_statistics();
     }
     m_pruning_method->print_statistics();
 }

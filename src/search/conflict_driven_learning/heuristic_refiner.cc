@@ -16,7 +16,7 @@ void HeuristicRefiner::initialize()
 {
 }
 
-bool HeuristicRefiner::requires_neighbors()
+bool HeuristicRefiner::requires_neighbors() const
 {
     return false;
 }
