@@ -275,6 +275,8 @@ public:
             }
         }
     }
+private:
+    std::string store_conjunctions_;
 };
 
 class HCHeuristicUnitCost : public HCHeuristic

@@ -107,18 +107,22 @@ bool
 MugsCriticalPathHeuristic::is_any_mug_reachable(
     const EvaluationContext& context)
 {
+    int remaining_budget = cost_bound_ - context.get_g_value();
     std::vector<unsigned> state_fact_ids;
     strips::get_fact_ids(state_fact_ids, context.get_state());
-    if (hc_->compute_heuristic_for_facts(state_fact_ids) != DEAD_END) {
+    int hval = hc_->compute_heuristic_for_facts(state_fact_ids);
+    // NOTE: for the following check to make sense, the heuristic must consider
+    // the entire goal (including all soft-goals)
+    if (hval != DEAD_END && (!is_cost_bounded_ || hval < remaining_budget)) {
         return true;
     }
-    int remaining_budget = cost_bound_ - context.get_g_value();
     std::vector<unsigned> tobeprocessed;
     for (unsigned i = 0; i < goal_conjunctions_.size(); i++) {
         const auto& info = hc_->get_conjunction_data(goal_conjunctions_[i]);
         if (!info.achieved()
             || (is_cost_bounded_ && info.cost >= remaining_budget)) {
             if (in_hard_goal_[i]) {
+                // hard goals cannot be removed
                 assert(!check_for_reachable_mug_enumerative(remaining_budget));
                 return false;
             }
@@ -173,6 +177,13 @@ MugsCriticalPathHeuristic::check_for_reachable_mug_top_down(
         disabled[x]--;
     }
     return false;
+}
+
+void 
+MugsCriticalPathHeuristic::print_evaluator_statistics() const
+{
+    hc_->print_statistics();
+    MugsHeuristic::print_evaluator_statistics();
 }
 
 static Evaluator*
