@@ -3,19 +3,12 @@
 //
 
 #include <regex>
+#include <cstdio>
+#include <cstdlib>
 
 #include "monitor.h"
-#include <spot/tl/parse.hh>
-#include <spot/twaalgos/translate.hh>
+#include <spot/parseaut/public.hh>
 #include <spot/twaalgos/hoa.hh>
-#include <spot/twa/bddprint.hh>
-#include <spot/twaalgos/ltl2tgba_fm.hh>
-#include <spot/twaalgos/sccfilter.hh>
-#include <spot/twaalgos/stripacc.hh>
-#include <spot/twaalgos/minimize.hh>
-#include <spot/twa/bdddict.hh>
-#include <spot/twaalgos/remprop.hh>
-#include <spot/tl/ltlf.hh>
 #include <utility>
 #include <bddx.h>
 
@@ -31,26 +24,31 @@ Monitor::Monitor(const std::shared_ptr<AbstractTask> &task_, Property LTL_proper
     //spot::parsed_formula pf = spot::parse_infix_psl("!F(red & X(yellow))");
     cout << "Name: " << property.name << endl;
     cout << "formula: " << property.formula << endl;
-    spot::parsed_formula pf = spot::parse_infix_psl(property.formula);
-    if (pf.format_errors(std::cerr))
-        throw invalid_argument("LTL formula is not valid");
 
-    spot::translator trans;
-    trans.set_type(spot::postprocessor::BA);
-    trans.set_pref(spot::postprocessor::Small);
-    spot::twa_graph_ptr aut = trans.run(spot::from_ltlf(pf.f));
+    string ltl2hoa_path = getenv("LTL2HAO_PATH");
+    string cmd = "python3 " + ltl2hoa_path + "ltlf2hoa.py '" + property.formula + "' > aut_temp.hoa";
+    int res = system(cmd.c_str()); //TODO check return
+    if(res != 0){
+        return;
+    }
 
-    // remove ap "alive" and simplify the automaton
-    spot::remove_ap rem;
-    rem.add_ap("alive");
-    aut = rem.strip(aut);
-
+    cout << "Automaton generation successful" << endl;
+    spot::parsed_aut_ptr pa = parse_aut("aut_temp.hoa", spot::make_bdd_dict());
+    if (pa->format_errors(std::cerr))
+        return;
+    if (pa->aborted)
+    {
+        std::cerr << "--ABORT-- read\n";
+        return;
+    }
     spot::postprocessor post;
     post.set_type(spot::postprocessor::BA);
-    post.set_pref(spot::postprocessor::Deterministic); // or ::Deterministic
-    aut = post.run(aut);
+    post.set_pref(spot::postprocessor::Deterministic);
+    post.set_pref(spot::postprocessor::SBAcc);
+    auto aut = post.run(pa->aut);
 
     this->automaton = aut;
+    cout << "Num states: "  << aut->num_states() << endl;
 
 //    cout << "----------------------------------------------------------" << endl;
 //    print_hoa(std::cout, this->automaton) << '\n';
