@@ -32,6 +32,8 @@ void MugsPruning::initialize(const shared_ptr<AbstractTask> &task) {
 MugsPruning::MugsPruning(const options::Options &opts)
     :   all_soft_goals(opts.get<bool>("all_softgoals")),
         prune(opts.get<bool>("prune")),
+        use_cost_bound_reachable(opts.get<bool>("use_cost_bound_reachable")),
+        cost_bound(opts.get<int>("cost_bound")),
         max_heuristic(opts.get<Evaluator*>("h")){
 
     }
