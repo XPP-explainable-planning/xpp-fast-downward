@@ -170,8 +170,7 @@ bool MugsPruning::check_reachable(const State &state) {
                 state, cost_bound);
     }
     else {
-        reachable_gs = ((max_heuristic::HSPMaxHeuristic *) max_heuristic)->compute_relaxed_reachable_goal_facts(
-                state, cost_bound);
+        reachable_gs = ((max_heuristic::HSPMaxHeuristic *) max_heuristic)->compute_relaxed_reachable_goal_facts(state);
     }
     //cout << "Reachable: " << std::bitset<32>(reachable_gs) << endl;
 
