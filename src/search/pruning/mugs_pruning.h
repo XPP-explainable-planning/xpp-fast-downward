@@ -13,6 +13,8 @@ class MugsPruning : public PruningMethod {
 
 bool all_soft_goals = false;
 bool prune = true;
+bool use_cost_bound_reachable = false;
+int cost_bound;
 std::vector<std::string> goal_fact_names;
 Evaluator* max_heuristic;
 int pruned_states = 0;

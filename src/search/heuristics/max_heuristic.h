@@ -34,6 +34,7 @@ public:
     HSPMaxHeuristic(const options::Options &options);
     ~HSPMaxHeuristic();
     virtual uint compute_relaxed_reachable_goal_facts(const State &state);
+    virtual uint compute_relaxed_reachable_goal_facts(const State &state, int cost_bound);
 
 };
 }

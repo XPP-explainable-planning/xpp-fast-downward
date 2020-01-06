@@ -162,7 +162,15 @@ void MugsPruning::print_set(std::unordered_set<uint> s) const{
 bool MugsPruning::check_reachable(const State &state) {
     //cout << "---------------------------------------------------------" << endl;
     //state.dump_fdr();
-    uint reachable_gs = ((max_heuristic::HSPMaxHeuristic*) max_heuristic)->compute_relaxed_reachable_goal_facts(state);
+    uint reachable_gs = 0;
+    if(use_cost_bound_reachable) {
+        reachable_gs = ((max_heuristic::HSPMaxHeuristic *) max_heuristic)->compute_relaxed_reachable_goal_facts(
+                state, cost_bound);
+    }
+    else {
+        reachable_gs = ((max_heuristic::HSPMaxHeuristic *) max_heuristic)->compute_relaxed_reachable_goal_facts(
+                state, cost_bound);
+    }
     //cout << "Reachable: " << std::bitset<32>(reachable_gs) << endl;
 
     //if a hard goal is not reachable prune the state
@@ -266,6 +274,14 @@ static shared_ptr<PruningMethod> _parse(OptionParser &parser) {
             "prune",
             "TODO",
             "true");
+    parser.add_option<bool>(
+            "use_cost_bound_reachable",
+            "TODO",
+            "false");
+    parser.add_option<int>(
+            "cost_bound",
+            "TODO",
+            "infinity");
 
     Options opts = parser.parse();
 

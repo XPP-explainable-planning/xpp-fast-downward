@@ -35,14 +35,20 @@ if(WIN32)
     target_link_libraries(downward psapi)
 endif()
 
-##find_package(spot REQUIRED)
-#include_directories(/mnt/data_server/eifler/LTL2BA/install/include)
-##include_directories(SYSTEM {spot}_INCLUDE_DIRS)
-#target_link_libraries(downward /mnt/data_server/eifler/LTL2BA/install/lib/libspot.a /mnt/data_server/eifler/LTL2BA/install/lib/libbddx.a /mnt/data_server/eifler/LTL2BA/install/lib/libspotgen.a /mnt/data_server/eifler/LTL2BA/install/lib/libspotltsmin.a)
-
+# SPOT
 find_package(Spot REQUIRED)
 include_directories(${SPOT_INCLUDE_DIRS})
 target_link_libraries(downward ${SPOT_LIBRARIES})
+
+#server
+#include_directories(/mnt/data_server/eifler/LTL2BA/install/include)
+#target_link_libraries(downward /mnt/data_server/eifler/LTL2BA/install/lib/libspot.a /mnt/data_server/eifler/LTL2BA/install/lib/libbddx.a /mnt/data_server/eifler/LTL2BA/install/lib/libspotgen.a /mnt/data_server/eifler/LTL2BA/install/lib/libspotltsmin.a)
+
+#local
+#include_directories(/home/eifler/Programs/include)
+#target_link_libraries(downward /home/eifler/Programs/lib/libspot.a /home/eifler/Programs/lib/libbddx.a /home/eifler/Programs/lib/libspotgen.a /home/eifler/Programs/lib/libspotltsmin.a)
+
+
 
 # If any enabled plugin requires an LP solver, compile with all
 # available LP solvers. If no solvers are installed, the planner will
