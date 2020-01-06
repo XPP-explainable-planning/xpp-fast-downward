@@ -147,6 +147,7 @@ protected:
 
 
     std::vector<std::pair<int, int> > auxiliary_goal_;
+    std::vector<unsigned> auxiliary_goal_conjunctions_;
 
 
     void update_fact_conjunction_mapping(
@@ -164,6 +165,7 @@ public:
     void set_auxiliary_goal(std::vector<std::pair<int, int> >&& aux);
     void reset_auxiliary_goal();
     const std::vector<std::pair<int, int> >& get_auxiliary_goal() const;
+    const std::vector<unsigned>& get_auxiliary_goal_conjunctions() const;
 
     virtual void set_abstract_task(std::shared_ptr<AbstractTask> task) override;
 
@@ -273,6 +275,8 @@ public:
             }
         }
     }
+private:
+    std::string store_conjunctions_;
 };
 
 class HCHeuristicUnitCost : public HCHeuristic

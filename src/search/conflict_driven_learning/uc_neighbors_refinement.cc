@@ -78,13 +78,19 @@ bool UCNeighborsRefinement::learn_from_dead_end_component(
     m_current_state_unreached.resize(m_hc->num_conjunctions(), false);
     m_fact_to_negated_component.resize(strips::num_facts());
     const std::vector<std::pair<int, int> >& goal = m_hc->get_auxiliary_goal();
+    const std::vector<unsigned>& goal_conjs = m_hc->get_auxiliary_goal_conjunctions();
     while (!component.end()) {
         const GlobalState &state = component.current();
         if (m_component_size == 0) {
-            int res = m_hc->evaluate(state, 0);
-            if (res == HCHeuristic::DEAD_END) {
-                terminate = true;
-                result = true;
+            m_hc->evaluate(state, 0);
+            for (int i = goal_conjs.size() - 1; i >= 0; i--) {
+                if (!m_hc->get_conjunction_data(goal_conjs[i]).achieved()) {
+                    terminate = true;
+                    result = true;
+                    break;
+                }
+            }
+            if (terminate) {
                 break;
             }
             for (unsigned i = 0; i < m_hc->num_conjunctions(); i++) {
@@ -94,7 +100,6 @@ bool UCNeighborsRefinement::learn_from_dead_end_component(
             //     root_state[var] = state[var];
             // }
         }
-
 
         // the following code is required if goal in search is different from
         // goal in heuristic

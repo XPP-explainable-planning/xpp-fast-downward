@@ -2,6 +2,7 @@
 #include "strips_compilation.h"
 #include "../task_proxy.h"
 #include "../task_utils/task_properties.h"
+#include "../global_state.h"
 
 #include <utility>
 #include <algorithm>
@@ -18,6 +19,20 @@ static size_t _num_facts = -1;
 static Task strips_task;
 static std::vector<unsigned> variable_offset;
 static const AbstractTask* abstract_task_ref = NULL;
+
+void get_fact_ids(std::vector<unsigned>& fact_ids, const GlobalState& state)
+{
+    for (unsigned var = 0; var < variable_offset.size(); var++) {
+        fact_ids.push_back(variable_offset[var] + state[var]);
+    }
+}
+
+void get_fact_ids(std::vector<unsigned>& fact_ids, const std::vector<std::pair<int, int> >& state)
+{
+    for (unsigned i = 0; i < state.size(); i++) {
+        fact_ids.push_back(variable_offset[state[i].first] + state[i].second);
+    }
+}
 
 std::pair<int, int> get_variable_assignment(const unsigned& fact_id)
 {

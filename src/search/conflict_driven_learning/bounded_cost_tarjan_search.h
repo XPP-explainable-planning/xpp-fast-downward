@@ -37,7 +37,7 @@ protected:
     bool expand(const GlobalState& state);
     bool expand(const GlobalState& state,
                 PerLayerData* layer);
-    bool increment_bound_and_push_initial_state();
+    // bool increment_bound_and_push_initial_state();
 
     struct Locals {
         GlobalState state;
@@ -69,6 +69,7 @@ protected:
         PerLayerData();
     };
 
+    const bool c_ignore_eval_dead_ends;
     // const bool c_recompute_h;
     bool c_refinement_toggle;
     bool c_compute_neighbors;
