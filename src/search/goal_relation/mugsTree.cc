@@ -74,10 +74,10 @@ std::vector<FactPair> MUGSTree::get_goals(const MUGSNode* node) const
 }
 
 void  MUGSTree::next_node(){
-//     current_node = get_next_node();
+      current_node = get_next_node();
 //    cout << "Current node: " << endl;
 //    current_node->print(soft_goal_list);
-    cout << endl;
+//    cout << endl;
 }
 
 std::vector<FactPair> MUGSTree::get_next_goals()
