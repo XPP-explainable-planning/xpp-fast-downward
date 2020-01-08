@@ -153,7 +153,7 @@ SearchStatus GoalRelationSearch::step() {
     //stop search in this branch
     if (last_phase_found_solution) {
         
-        //cout << "++++++++ SOLUTION +++++++"  << endl;
+//        cout << "++++++++ SOLUTION +++++++"  << endl;
         /*
         for(OperatorID id : current_search->get_plan()){
             cout << task_proxy.get_operators()[id.get_index()].get_name() << "  ";
@@ -167,7 +167,7 @@ SearchStatus GoalRelationSearch::step() {
        
     }
     else{
-        //cout << "-------- FAILS ----------"  << endl;
+//        cout << "-------- FAILS ----------"  << endl;
         metasearchtree->current_goals_not_solved();
         metasearchtree->expand(false);
         

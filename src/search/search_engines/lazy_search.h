@@ -9,7 +9,6 @@
 #include "../search_engine.h"
 #include "../search_progress.h"
 #include "../search_space.h"
-#include "../pruning_method.h"
 
 #include "../utils/rng.h"
 
@@ -33,7 +32,6 @@ protected:
 
     std::vector<Evaluator *> path_dependent_evaluators;
     std::vector<Evaluator *> preferred_operator_evaluators;
-    std::shared_ptr<PruningMethod> pruning_method;
 
     GlobalState current_state;
     StateID current_predecessor_id;

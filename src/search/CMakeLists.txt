@@ -36,7 +36,7 @@ if(WIN32)
 endif()
 
 # SPOT
-find_package(Spot REQUIRED)
+#find_package(Spot REQUIRED)
 include_directories(${SPOT_INCLUDE_DIRS})
 target_link_libraries(downward ${SPOT_LIBRARIES})
 

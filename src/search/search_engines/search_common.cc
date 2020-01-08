@@ -65,7 +65,7 @@ static shared_ptr<OpenListFactory> create_alternation_open_list_factory_aux(
 
 shared_ptr<OpenListFactory> create_greedy_open_list_factory(
     const Options &options) {
-    cout << "Greedy open list factory: insert deadends: "  << options.get<bool>("insert_deadends") << endl;
+    //cout << "Greedy open list factory: insert deadends: "  << options.get<bool>("insert_deadends") << endl;
     return create_alternation_open_list_factory_aux(
         options.get_list<Evaluator *>("evals"),
         options.get_list<Evaluator *>("preferred"),
