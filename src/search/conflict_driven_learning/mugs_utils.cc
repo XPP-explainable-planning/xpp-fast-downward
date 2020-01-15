@@ -4,6 +4,7 @@
 
 #include <bitset>
 #include <cassert>
+#include <deque>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -71,6 +72,29 @@ bool
 SubgoalSet::contains_superset(const subgoal_t& sg) const
 {
     return contains_superset2(sg).second;
+}
+
+bool
+SubgoalSet::contains_subset(const subgoal_t& sg) const
+{
+    unsigned sgsize = num_satisfied_goals(sg);
+    if (sgsize == 0) {
+        return false;
+    }
+    for (unsigned i = 0; i < subgoals_.size(); i++) {
+        const unsigned& size = subgoals_[i].first;
+        const auto& subgoals = subgoals_[i].second;
+        if (size >= sgsize) {
+            return false;
+        } else {
+            for (auto it = subgoals.begin(); it != subgoals.end(); it++) {
+                if (is_superset(sg, *it)) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
 }
 
 std::pair<int, bool>
@@ -155,6 +179,41 @@ std::unordered_set<subgoal_t>
 SubgoalSet::get_minimal_extensions(unsigned width, const subgoal_t& filter)
     const
 {
+#if 1
+    std::unordered_set<subgoal_t> ugs;
+    std::deque<std::pair<unsigned, subgoal_t>> queue;
+    for (unsigned i = 0; i < width; i++) {
+        subgoal_t sg = 1U << i;
+        if (contains_superset(sg)) {
+            queue.emplace_back(i + 1, sg);
+        } else if ((filter & sg) == filter) {
+            ugs.insert(sg);
+        }
+    }
+    while (!queue.empty()) {
+        auto elem = queue.front();
+        queue.pop_front();
+        for (unsigned i = elem.first; i < width; i++) {
+            subgoal_t sg = elem.second | (1U << i);
+            if (sg != elem.second) {
+                if (contains_superset(sg)) {
+                    queue.emplace_back(i + 1, sg);
+                } else if ((filter & sg) == filter) {
+                    bool dominated = false;
+                    for (auto it = ugs.begin(); it != ugs.end(); it++) {
+                        if (is_superset(sg, *it)) {
+                            dominated = true;
+                            break;
+                        }
+                    }
+                    if (!dominated)
+                        ugs.insert(sg);
+                }
+            }
+        }
+    }
+    return ugs;
+#else
 #if 0
     std::unordered_set<subgoal_t> ugs;
     std::unordered_set<subgoal_t> candidates;
@@ -169,16 +228,16 @@ SubgoalSet::get_minimal_extensions(unsigned width, const subgoal_t& filter)
         while( it != candidates.end()){
             subgoal_t gs = *it;
             it = candidates.erase(it);
-            if(! contains_superset(gs)){
-                ugs.insert(gs);               
-            }
-            else{
+            if(contains_superset(gs)){
                 //create new candidates sets with one additional goal fact
                 for(unsigned i = 0; i < width; i++){
                     if(((gs & (1U << i)) == 0)){
                         candidates.insert(gs | (1U << i));
                     }
                 }
+            }
+            else if ((gs & filter) == filter) {
+                ugs.insert(gs);               
             }
         }
     }
@@ -229,6 +288,7 @@ SubgoalSet::get_minimal_extensions(unsigned width, const subgoal_t& filter)
     }
 
     return ugs;
+#endif
 #endif
 }
 
