@@ -3,6 +3,7 @@
 
 #include "conflict_learner.h"
 #include "mugs_hc_heuristic.h"
+#include "hc_heuristic_refiner.h"
 
 #include <memory>
 
@@ -30,7 +31,7 @@ protected:
     virtual void initialize() override;
 
     MugsCriticalPathHeuristic* mugs_hc_;
-    std::shared_ptr<ConflictLearner> hc_refiner_;
+    std::shared_ptr<hc_heuristic::HCHeuristicRefiner> hc_refiner_;
 };
 
 } // namespace mugs

@@ -85,15 +85,15 @@ bool
 HCNeighborsRefinement::prepare_current_state_cost(int bound, const GlobalState& state)
 {
 #if DEBUG_VERBOSE_PRINT_OUTS
-    std::cout << "refine(" << state.get_id() << "[";
+    std::cout << "refine(" << state.get_id() << "[" << std::flush;
     for (int var = 0; var < m_task->get_num_variables(); var++) {
         std::cout 
             << (var > 0 ? ", " : "")
-            << m_task->get_fact_name(FactPair(var, state[var]));
+            << m_task->get_fact_name(FactPair(var, state[var])) << std::flush;
     }
     std::cout << ", bound=" << bound << ")" << std::endl;
 #endif
-    m_hc->evaluate(state, std::max(0, m_hc->get_cost_bound() - bound));
+    m_hc->evaluate(state, bound == INF ? 0 : std::max(0, m_hc->get_cost_bound() - bound));
     for (int i = goal_conjunctions_.size() - 1; i >= 0; i--) {
         const auto& info = m_hc->get_conjunction_data(goal_conjunctions_[i]);
         if (!info.achieved() || info.cost >= bound) {
@@ -150,7 +150,8 @@ HCNeighborsRefinement::prepare_successor_data(
 #ifndef NDEBUG
         int res =
 #endif
-        m_hc->evaluate(succ.second, std::max(0, m_hc->get_cost_bound() - bound + succ.first));
+        m_hc->evaluate(succ.second,
+                bound == INF ? 0 : std::max(0, m_hc->get_cost_bound() - bound + succ.first));
         assert(res == HCHeuristic::DEAD_END || res + succ.first >= bound);
         m_successor_to_conjunctions.emplace_back();
         for (unsigned cid = 0; cid < m_conjunction_to_successors.size(); cid++) {
@@ -259,7 +260,7 @@ HCNeighborsRefinement::run_refinement(int bound)
                 }
                 std::cout << "]" << std::endl;
 #endif
-                if (elem.bound - action.cost >= 0) {
+                if (elem.bound == INF || elem.bound - action.cost >= 0) {
                     assert(m_regression.empty());
                     assert(set_utils::intersects(elem.conj, action.add));
                     assert(!set_utils::intersects(elem.conj, action.del));
@@ -277,7 +278,7 @@ HCNeighborsRefinement::run_refinement(int bound)
                     m_hc->dump_conjunction(m_regression);
                     std::cout << ">" << std::endl;
 #endif
-                    push_conflict_for(m_regression, elem.bound - action.cost);
+                    push_conflict_for(m_regression, elem.bound == INF ? INF : elem.bound - action.cost);
                     m_regression.clear();
                 }
             }
