@@ -19,7 +19,7 @@ namespace mugs {
 MugsHCRefiner::MugsHCRefiner(const options::Options& opts)
     : mugs_hc_(dynamic_cast<MugsCriticalPathHeuristic*>(
         opts.get<Evaluator*>("mugs_hc")))
-    , hc_refiner_(opts.get<std::shared_ptr<HeuristicRefiner>>("hc_refiner"))
+    , hc_refiner_(std::dynamic_pointer_cast<conflict_driven_learning::hc_heuristic::HCHeuristicRefiner>(opts.get<std::shared_ptr<HeuristicRefiner>>("hc_refiner")))
 {
 }
 
@@ -62,19 +62,27 @@ MugsHCRefiner::refine_heuristic(
     std::unordered_set<subgoal_t> mugs = mugs_hc_->get_mugs();
     assert(!mugs.empty());
 
+    hc_refiner_->mugs_start_refinement(bound, states, neighbors);
+
     bool res = true;
     for (auto it = mugs.begin(); res && it != mugs.end(); it++) {
         subgoal_t mug = mugs_hc_->get_hard_goal() | *it;
 
         std::vector<std::pair<int, int>> facts;
         mugs_hc_->get_goal_facts(mug, facts);
-        mugs_hc_->get_underlying_heuristic()->set_auxiliary_goal(
-            std::move(facts));
-        res = hc_refiner_->notify(bound, states, neighbors);
+        // mugs_hc_->get_underlying_heuristic()->set_auxiliary_goal(
+        //     std::move(facts));
+        // res = hc_refiner_->notify(bound, states, neighbors);
+    
+        hc_refiner_->mugs_refine(bound, facts, states, neighbors);
+
         states.reset();
         neighbors.reset();
     }
     mugs_hc_->sync();
+
+    hc_refiner_->mugs_cleanup_after_refinement();
+
     return res;
 }
 

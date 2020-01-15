@@ -47,7 +47,8 @@ constexpr const unsigned HCNeighborsRefinement::UNASSIGNED = -1;
 
 HCNeighborsRefinement::HCNeighborsRefinement(const Options &opts)
     : HCHeuristicRefiner(opts)
-    // , m_task(tasks::g_root_task)
+      , recompute_state_costs_(opts.get<bool>("recompute_state_costs"))
+    , m_task(nullptr)
 {
     m_num_refinements = 0;
 }
@@ -69,61 +70,55 @@ void HCNeighborsRefinement::initialize()
     m_strips_task = &strips::get_task();
 }
 
-bool HCNeighborsRefinement::refine_heuristic(
-        int bound,
-    StateComponent &component,
-    SuccessorComponent& neighbors)
+void
+HCNeighborsRefinement::set_goal(const std::vector<std::pair<int, int>>& goal_facts)
 {
-    std::shared_ptr<AbstractTask> m_task = tasks::g_root_task;
+    goal_facts_.clear();
+    goal_conjunctions_.clear();
+    for (unsigned i = 0; i < goal_facts.size(); i++) {
+        goal_facts_.push_back(strips::get_fact_id(goal_facts[i].first, goal_facts[i].second));
+    }
+    m_hc->get_satisfied_conjunctions(goal_facts_, goal_conjunctions_);
+}
 
-    m_hc->set_early_termination_and_nogoods(false);
-
-    m_num_conjunctions_before_refinement = m_hc->num_conjunctions();
-
+bool
+HCNeighborsRefinement::prepare_current_state_cost(int bound, const GlobalState& state)
+{
+#if DEBUG_VERBOSE_PRINT_OUTS
+    std::cout << "refine(" << state.get_id() << "[";
+    for (int var = 0; var < m_task->get_num_variables(); var++) {
+        std::cout 
+            << (var > 0 ? ", " : "")
+            << m_task->get_fact_name(FactPair(var, state[var]));
+    }
+    std::cout << ", bound=" << bound << ")" << std::endl;
+#endif
+    m_hc->evaluate(state, std::max(0, m_hc->get_cost_bound() - bound));
+    for (int i = goal_conjunctions_.size() - 1; i >= 0; i--) {
+        const auto& info = m_hc->get_conjunction_data(goal_conjunctions_[i]);
+        if (!info.achieved() || info.cost >= bound) {
+            return false;
+        }
+    }
     m_current_state_cost.clear();
-    m_fact_to_negated_component.clear();
-    m_negated_component_to_facts.clear();
-    m_conjunction_to_successors.clear();
-    m_successor_to_conjunctions.clear();
+    m_current_state_cost.resize(m_hc->num_conjunctions());
+    for (unsigned i = 0; i < m_hc->num_conjunctions(); i++) {
+        m_current_state_cost[i] =
+            get_conjunction_value(i);
+            // m_hc->get_conjunction_data(i).cost; 
+    }
+    return true;
+}
 
-    m_chosen.clear();
-
-    // PartialState root_state(g_variable_domain.size());
-    bool terminate = false;
-    bool result = false;
+void
+HCNeighborsRefinement::prepare_component_data(StateComponent& component)
+{
     m_component_size = 0;
-    m_current_state_cost.resize(m_hc->num_conjunctions(), 0);
+    m_fact_to_negated_component.clear();
     m_fact_to_negated_component.resize(strips::num_facts());
-    const std::vector<std::pair<int, int> >& goal = m_hc->get_auxiliary_goal();
-    const std::vector<unsigned>& goal_conjs = m_hc->get_auxiliary_goal_conjunctions();
+    m_negated_component_to_facts.clear();
     while (!component.end()) {
         const GlobalState &state = component.current();
-        if (m_component_size == 0) {
-#if DEBUG_VERBOSE_PRINT_OUTS
-            std::cout << "refine(" << state.get_id() << "[";
-            for (int var = 0; var < m_task->get_num_variables(); var++) {
-                std::cout 
-                    << (var > 0 ? ", " : "")
-                    << m_task->get_fact_name(FactPair(var, state[var]));
-            }
-            std::cout << ", bound=" << bound << ")" << std::endl;
-#endif
-            m_hc->evaluate(state, std::max(0, m_hc->get_cost_bound() - bound));
-            for (int i = goal_conjs.size() - 1; i >= 0; i--) {
-                const auto& info = m_hc->get_conjunction_data(goal_conjs[i]);
-                if (!info.achieved() || info.cost >= bound) {
-                    terminate = true;
-                    result = true;
-                    break;
-                }
-            }
-            if (terminate) {
-                break;
-            }
-            for (unsigned i = 0; i < m_hc->num_conjunctions(); i++) {
-                m_current_state_cost[i] = m_hc->get_conjunction_data(i).cost;
-            }
-        }
         m_negated_component_to_facts.emplace_back();
         unsigned p = 0;
         for (int var = 0; var < m_task->get_num_variables(); var++) {
@@ -139,125 +134,176 @@ bool HCNeighborsRefinement::refine_heuristic(
         component.next();
         ++m_component_size;
     }
+}
 
-    if (!terminate) {
-        m_num_successors = 0;
-        m_conjunction_to_successors.resize(m_hc->num_conjunctions());
-        while (!neighbors.end()) {
-            const auto& succ = neighbors.current();
+void
+HCNeighborsRefinement::prepare_successor_data(
+        int bound,
+        SuccessorComponent& neighbors)
+{
+    m_num_successors = 0;
+    m_conjunction_to_successors.clear();
+    m_successor_to_conjunctions.clear();
+    m_conjunction_to_successors.resize(m_hc->num_conjunctions());
+    while (!neighbors.end()) {
+        const auto& succ = neighbors.current();
 #ifndef NDEBUG
-            int res =
+        int res =
 #endif
-            m_hc->evaluate(succ.second, std::max(0, m_hc->get_cost_bound() - bound + succ.first));
-            assert(res == HCHeuristic::DEAD_END || res + succ.first >= bound);
-            m_successor_to_conjunctions.emplace_back();
-            for (unsigned cid = 0; cid < m_conjunction_to_successors.size(); cid++) {
-                int value = get_conjunction_value(cid);
-                if (value != INF) {
-                    value += succ.first;
-                }
-                m_conjunction_to_successors[cid][value].push_back(m_num_successors);
-                m_successor_to_conjunctions[m_num_successors][value].push_back(cid);
+        m_hc->evaluate(succ.second, std::max(0, m_hc->get_cost_bound() - bound + succ.first));
+        assert(res == HCHeuristic::DEAD_END || res + succ.first >= bound);
+        m_successor_to_conjunctions.emplace_back();
+        for (unsigned cid = 0; cid < m_conjunction_to_successors.size(); cid++) {
+            int value = get_conjunction_value(cid);
+            if (value != INF) {
+                value += succ.first;
             }
-            m_num_successors++;
-            neighbors.next();
+            m_conjunction_to_successors[cid][value].push_back(m_num_successors);
+            m_successor_to_conjunctions[m_num_successors][value].push_back(cid);
         }
-
-        m_num_refinements++;
-
-        for (unsigned x = 0; x < m_hc->num_counters(); x++) {
-            m_hc->get_counter(x).unsat = 0;
-        }
-        for (unsigned cid = 0; cid < m_hc->num_conjunctions(); cid++) {
-            ConjunctionData &data = m_hc->get_conjunction_data(cid);
-            data.cost = m_current_state_cost[cid] == INF ? ConjunctionData::UNACHIEVED : m_current_state_cost[cid]; 
-            if (!data.achieved()) {
-                for (Counter *c : data.pre_of) {
-                    c->unsat++;
-                }
-            }
-        }
-
-        m_chosen.resize(std::max(m_component_size, m_num_successors), UNASSIGNED);
-        m_num_covered_by.resize(m_hc->num_conjunctions());
-
-        std::vector<unsigned> goal_facts;
-        for (unsigned i = 0; i < goal.size(); i++) {
-            goal_facts.push_back(strips::get_fact_id(goal[i].first, goal[i].second));
-        }
-        push_conflict_for(goal_facts, bound);
-        while (!m_open.empty() && !size_limit_reached()) {
-            OpenElement &elem = m_open.back();
-            if (elem.i == elem.achievers.size()) {
-#if DEBUG_VERBOSE_PRINT_OUTS
-                std::cout << "  <-<" << m_open.size() << ", " << elem.i << "/" << elem.achievers.size() << ">" << std::endl;
-#endif
-                m_open.pop_back();
-            } else {
-#if DEBUG_VERBOSE_PRINT_OUTS
-                std::cout << "  <" << m_open.size() << ", " << elem.i << "/" << elem.achievers.size() << ">->" << std::endl;
-#endif
-                unsigned counter = elem.achievers[elem.i++];
-                assert(counter < m_hc->num_counters());
-                if (m_hc->get_counter(counter).unsat == 0) {
-                    unsigned op = m_hc->get_action_id(counter);
-                    const strips::Action &action =
-                        m_strips_task->get_action(op);
-#if DEBUG_VERBOSE_PRINT_OUTS
-                    std::cout << "   regressing by " << m_task->get_operator_name(op, 0) << std::endl;
-                    std::cout << "       pre = [";
-                    for (int op_i = 0; op_i < m_task->get_num_operator_preconditions(op, false); op_i++) {
-                        std::cout << (op_i > 0 ? ", " : "")
-                                  << m_task->get_fact_name(m_task->get_operator_precondition(op, op_i, false));
-                    }
-                    std::cout << "]" << std::endl;
-                    std::cout << "       add = [";
-                    for (int op_i = 0; op_i < m_task->get_num_operator_effects(op, false); op_i++) {
-                        std::cout << (op_i > 0 ? ", " : "")
-                                  << m_task->get_fact_name(m_task->get_operator_effect(op, op_i, false));
-                    }
-                    std::cout << "]" << std::endl;
-                    std::cout << "       del = [";
-                    for (int op_i = 0; op_i < m_task->get_num_operator_preconditions(op, false); op_i++) {
-                        FactPair p = m_task->get_operator_precondition(op, op_i, false);
-                        bool deleted = false;
-                        for (int op_i = 0;!deleted&& op_i < m_task->get_num_operator_effects(op, false); op_i++) {
-                            FactPair q = m_task->get_operator_effect(op, op_i, false);
-                            deleted = p.var == q.var && p.value != q.value;
-                        }
-                        if (deleted)
-                        std::cout << (op_i > 0 ? ", " : "")
-                                  << m_task->get_fact_name(p);
-                    }
-                    std::cout << "]" << std::endl;
-#endif
-                    if (elem.bound - action.cost >= 0) {
-                        assert(m_regression.empty());
-                        assert(set_utils::intersects(elem.conj, action.add));
-                        assert(!set_utils::intersects(elem.conj, action.del));
-                        std::set_union(elem.conj.begin(), elem.conj.end(),
-                                    action.pre.begin(), action.pre.end(),
-                                    std::back_inserter(m_regression));
-                        set_utils::inplace_difference(m_regression, action.add);
-                        assert(!m_strips_task->contains_mutex(m_regression));
-#if DEBUG_VERBOSE_PRINT_OUTS
-                        std::cout << "<regression of conflict=";
-                        m_hc->dump_conjunction(elem.conj);
-                        std::cout << " through action "
-                                << m_task->get_operator_name(op, false) << std::endl
-                                << "<regression = ";
-                        m_hc->dump_conjunction(m_regression);
-                        std::cout << ">" << std::endl;
-#endif
-                        push_conflict_for(m_regression, elem.bound - action.cost);
-                        m_regression.clear();
-                    }
-                }
-            }
-        }
-        result = m_open.empty();
-        m_open.clear();
+        m_num_successors++;
+        neighbors.next();
     }
+}
+
+void
+HCNeighborsRefinement::update_successor_data(SuccessorComponent& neighbors)
+{
+    neighbors.reset();
+    unsigned succ_id = 0;
+    unsigned prev = m_conjunction_to_successors.size();
+    m_conjunction_to_successors.resize(m_num_conjunctions_before_refinement);
+    while (!neighbors.end()) {
+        const auto& succ = neighbors.current();
+        for (unsigned cid = prev; cid < m_conjunction_to_successors.size(); cid++) {
+            int value = m_current_state_cost[cid];
+            if (value != INF) {
+                value += succ.first;
+            }
+            m_conjunction_to_successors[cid][value].push_back(succ_id);
+            m_successor_to_conjunctions[succ_id][value].push_back(cid);
+        }
+        succ_id++;
+        neighbors.next();
+    }
+}
+
+void
+HCNeighborsRefinement::synchronize_stored_state_costs()
+{
+    for (unsigned x = 0; x < m_hc->num_counters(); x++) {
+        m_hc->get_counter(x).unsat = 0;
+    }
+    for (unsigned cid = 0; cid < m_hc->num_conjunctions(); cid++) {
+        ConjunctionData &data = m_hc->get_conjunction_data(cid);
+        data.cost = m_current_state_cost[cid] == INF ? ConjunctionData::UNACHIEVED : m_current_state_cost[cid]; 
+        if (!data.achieved()) {
+            for (Counter *c : data.pre_of) {
+                c->unsat++;
+            }
+        }
+    }
+}
+
+bool
+HCNeighborsRefinement::run_refinement(int bound)
+{
+    m_chosen.clear();
+    m_chosen.resize(std::max(m_component_size, m_num_successors), UNASSIGNED);
+    m_num_covered_by.resize(m_hc->num_conjunctions());
+
+    m_open.clear();
+    push_conflict_for(goal_facts_, bound);
+    while (!m_open.empty() && !size_limit_reached()) {
+        OpenElement &elem = m_open.back();
+        if (elem.i == elem.achievers.size()) {
+#if DEBUG_VERBOSE_PRINT_OUTS
+            std::cout << "  <-<" << m_open.size() << ", " << elem.i << "/" << elem.achievers.size() << ">" << std::endl;
+#endif
+            m_open.pop_back();
+        } else {
+#if DEBUG_VERBOSE_PRINT_OUTS
+            std::cout << "  <" << m_open.size() << ", " << elem.i << "/" << elem.achievers.size() << ">->" << std::endl;
+#endif
+            unsigned counter = elem.achievers[elem.i++];
+            assert(counter < m_hc->num_counters());
+            if (m_hc->get_counter(counter).unsat == 0) {
+                unsigned op = m_hc->get_action_id(counter);
+                const strips::Action &action =
+                    m_strips_task->get_action(op);
+#if DEBUG_VERBOSE_PRINT_OUTS
+                std::cout << "   regressing by " << m_task->get_operator_name(op, 0) << std::endl;
+                std::cout << "       pre = [";
+                for (int op_i = 0; op_i < m_task->get_num_operator_preconditions(op, false); op_i++) {
+                    std::cout << (op_i > 0 ? ", " : "")
+                                << m_task->get_fact_name(m_task->get_operator_precondition(op, op_i, false));
+                }
+                std::cout << "]" << std::endl;
+                std::cout << "       add = [";
+                for (int op_i = 0; op_i < m_task->get_num_operator_effects(op, false); op_i++) {
+                    std::cout << (op_i > 0 ? ", " : "")
+                                << m_task->get_fact_name(m_task->get_operator_effect(op, op_i, false));
+                }
+                std::cout << "]" << std::endl;
+                std::cout << "       del = [";
+                for (int op_i = 0; op_i < m_task->get_num_operator_preconditions(op, false); op_i++) {
+                    FactPair p = m_task->get_operator_precondition(op, op_i, false);
+                    bool deleted = false;
+                    for (int op_i = 0;!deleted&& op_i < m_task->get_num_operator_effects(op, false); op_i++) {
+                        FactPair q = m_task->get_operator_effect(op, op_i, false);
+                        deleted = p.var == q.var && p.value != q.value;
+                    }
+                    if (deleted)
+                    std::cout << (op_i > 0 ? ", " : "")
+                                << m_task->get_fact_name(p);
+                }
+                std::cout << "]" << std::endl;
+#endif
+                if (elem.bound - action.cost >= 0) {
+                    assert(m_regression.empty());
+                    assert(set_utils::intersects(elem.conj, action.add));
+                    assert(!set_utils::intersects(elem.conj, action.del));
+                    std::set_union(elem.conj.begin(), elem.conj.end(),
+                                action.pre.begin(), action.pre.end(),
+                                std::back_inserter(m_regression));
+                    set_utils::inplace_difference(m_regression, action.add);
+                    assert(!m_strips_task->contains_mutex(m_regression));
+#if DEBUG_VERBOSE_PRINT_OUTS
+                    std::cout << "<regression of conflict=";
+                    m_hc->dump_conjunction(elem.conj);
+                    std::cout << " through action "
+                            << m_task->get_operator_name(op, false) << std::endl
+                            << "<regression = ";
+                    m_hc->dump_conjunction(m_regression);
+                    std::cout << ">" << std::endl;
+#endif
+                    push_conflict_for(m_regression, elem.bound - action.cost);
+                    m_regression.clear();
+                }
+            }
+        }
+    }
+    return m_open.empty();
+}
+
+bool HCNeighborsRefinement::refine_heuristic(
+    int bound,
+    StateComponent &component,
+    SuccessorComponent& neighbors)
+{
+    m_task = tasks::g_root_task;
+    m_num_conjunctions_before_refinement = m_hc->num_conjunctions();
+    m_hc->set_early_termination_and_nogoods(false);
+    set_goal(m_hc->get_auxiliary_goal());
+    if (!prepare_current_state_cost(bound, component.current())) {
+        return true;
+    }
+    prepare_component_data(component);
+    prepare_successor_data(bound, neighbors);
+    synchronize_stored_state_costs();
+
+    m_num_refinements++;
+    bool result = run_refinement(bound);
 
     m_hc->set_early_termination_and_nogoods(true);
 
@@ -594,6 +640,82 @@ void HCNeighborsRefinement::compute_conflict(
     // assert(!is_contained_in_component(conflict));
 }
 
+#if 0
+void
+HCNeighborsRefinement::mugs_start_refinement(
+    int ,//bound,
+    StateComponent&,// component,
+    SuccessorComponent&)// neighbors)
+{
+    //start_refinement();
+    //m_task = tasks::g_root_task;
+    //m_hc->set_early_termination_and_nogoods(false);
+    //goal_facts_.clear();
+    //goal_conjunctions_.clear();
+    //prepare_successor_data(bound, neighbors);
+    //prepare_component_data(component);
+    //if (!recompute_state_costs_) {
+    //    prepare_current_state_cost(bound, component.current());
+    //}
+}
+#else
+void
+HCNeighborsRefinement::mugs_start_refinement(
+    int bound,
+    StateComponent& component,
+    SuccessorComponent& neighbors)
+{
+    start_refinement();
+    m_task = tasks::g_root_task;
+    m_hc->set_early_termination_and_nogoods(false);
+    goal_facts_.clear();
+    goal_conjunctions_.clear();
+    prepare_successor_data(bound, neighbors);
+    prepare_component_data(component);
+    if (!recompute_state_costs_) {
+        prepare_current_state_cost(bound, component.current());
+    }
+    m_num_conjunctions_before_refinement = m_hc->num_conjunctions();
+}
+#endif
+
+bool
+HCNeighborsRefinement::mugs_refine(
+    int bound,
+    const std::vector<std::pair<int, int>>& mugs,
+    StateComponent& component,
+    SuccessorComponent& )
+{
+#if 1
+    //m_num_conjunctions_before_refinement = m_hc->num_conjunctions();
+    set_goal(mugs);
+    if (recompute_state_costs_) {
+        if (!prepare_current_state_cost(bound, component.current())) {
+            return true;
+        }
+    } else {
+        for (int i = goal_conjunctions_.size() - 1; i >= 0; i--) {
+            if (m_current_state_cost[goal_conjunctions_[i]] >= bound) {
+                return true;
+            }
+        }
+    }
+    //update_successor_data(neighbors);
+    m_num_refinements++;
+    return run_refinement(bound);
+#else
+    set_goal(mugs);
+    return notify(bound, component, neighbors);
+#endif
+}
+
+void
+HCNeighborsRefinement::mugs_cleanup_after_refinement()
+{
+    m_hc->set_early_termination_and_nogoods(true);
+    stop_refinement();
+}
+
 void HCNeighborsRefinement::print_statistics() const
 {
     std::cout << "Total time spent on hC neighbors refinement: "
@@ -604,6 +726,7 @@ void HCNeighborsRefinement::print_statistics() const
 void HCNeighborsRefinement::add_options_to_parser(OptionParser &parser)
 {
     HCHeuristicRefiner::add_options_to_parser(parser);
+    parser.add_option<bool>("recompute_state_costs", "", "true");
 }
 
 }

@@ -19,6 +19,8 @@ protected:
                                   StateComponent& component,
                                   SuccessorComponent& neighbors) = 0;
     virtual void initialize();
+    void start_refinement();
+    void stop_refinement();
 public:
     HeuristicRefiner();
     virtual ~HeuristicRefiner() = default;
