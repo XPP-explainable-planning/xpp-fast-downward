@@ -120,7 +120,7 @@ MugsHeuristic::print_evaluator_statistics() const
     std::cout << "Size: " << max_achieved_subgoals_.size() << std::endl;
     print_set(max_achieved_subgoals_.begin(), max_achieved_subgoals_.end());
     std::cout << "++++++++++ MUGS HEURISTIC +++++++++++++++" << std::endl;
-    // print_set(mugs.begin(), mugs.end(), goal_fact_names_, hard_goal_);
+    print_set(mugs.begin(), mugs.end(), goal_fact_names_, hard_goal_);
     std::cout << "++++++++++++++++++++++++++++++++++++++++++++++++"
               << std::endl;
     std::cout << "Number of minimal unsolvable goal subsets: " << mugs.size()
