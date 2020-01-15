@@ -126,8 +126,8 @@ uint HSPMaxHeuristic::compute_relaxed_reachable_goal_facts(const State &state, i
     for (Proposition *prop : goal_propositions) {
         int prop_cost = prop->cost;
         //cout << prop->id << endl;
-        //cout << "prop_cost: "  << prop->id << ": " << prop_cost << " " << (prop_cost != -1) << " " << (prop_cost <= cost_bound) << endl;
-        reachable = (reachable << 1) | ((prop_cost != -1) && (prop_cost <= cost_bound));
+        //cout << "prop_cost: "  << prop->id << ": " << prop_cost << " " << (prop_cost != -1) << " " << (prop_cost < cost_bound) << endl;
+        reachable = (reachable << 1) | ((prop_cost != -1) && (prop_cost < cost_bound));
     }
     return reachable;
 }
