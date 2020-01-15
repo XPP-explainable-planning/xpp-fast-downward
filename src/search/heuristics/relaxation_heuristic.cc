@@ -21,6 +21,7 @@ RelaxationHeuristic::RelaxationHeuristic(const options::Options &opts)
     VariablesProxy variables = task_proxy.get_variables();
     propositions.resize(variables.size());
     for (FactProxy fact : variables.get_facts()) {
+        //cout << prop_id << ": " << task_proxy.get_variables()[fact.get_variable().get_id()].get_fact(fact.get_value()).get_name() << endl;
         propositions[fact.get_variable().get_id()].push_back(Proposition(prop_id++));
     }
 

@@ -18,7 +18,7 @@ void MugsPruning::initialize(const shared_ptr<AbstractTask> &task) {
         int value = gp.get_value();
         hard_goals = (hard_goals << 1) | (! (task_proxy.get_variables()[id].get_fact(value).get_name().find("soft") == 0));
         goal_fact_names.push_back(task_proxy.get_variables()[id].get_fact(value).get_name());
-        //cout << "Pos " << i << ": "  << task_proxy.get_variables()[id].get_fact(value).get_name() << endl;
+        cout << "Pos " << i << ": "  << task_proxy.get_variables()[id].get_fact(value).get_name() << " " << id << endl;
     }
     
     if(all_soft_goals){
@@ -44,9 +44,11 @@ bool MugsPruning::is_superset(uint super, uint sub) const{
 }
 
 bool MugsPruning::superset_contained(uint goal_subset, const unordered_set<uint> &set) const{
+
     for(uint gs : set){
         if(is_superset(gs, goal_subset)){
-            //cout <<  "Superset: "  << std::bitset<32>(gs) << endl;
+//            cout << "subset?: "  << std::bitset<32>(goal_subset) << endl;
+//            cout <<  "Superset: "  << std::bitset<32>(gs) << endl;
             return true;
         }
     }
@@ -207,7 +209,7 @@ void MugsPruning::add_goal_to_msgs(const State &state) {
     for(uint gs : msgs){
         cout << std::bitset<32>(gs) << endl;
     }
-     */
+    */
 }
 
 bool MugsPruning::prune_state(const State &state){
@@ -226,8 +228,10 @@ bool MugsPruning::prune_state(const State &state){
 }
 
 
-void MugsPruning::prune_operators(const State &state, std::vector<OperatorID> &){
-    this->prune_state(state);
+void MugsPruning::prune_operators(const State &state, std::vector<OperatorID> &ops){
+    if(this->prune_state(state)){
+        ops.clear();
+    }
 }
 
 void MugsPruning::print_statistics() const{

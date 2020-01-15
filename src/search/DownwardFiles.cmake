@@ -539,6 +539,14 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+        NAME MUGS_HMAX_HEURISTIC
+        HELP "mugs hmax (pruning) heuristic"
+        SOURCES
+        heuristics/mugs_hmax_heuristic
+        DEPENDS ADDITIVE_HEURISTIC RELAXATION_HEURISTIC TASK_PROPERTIES
+)
+
+fast_downward_plugin(
     NAME CONTEXT_ENHANCED_ADDITIVE_HEURISTIC
     HELP "The context-enhanced additive heuristic"
     SOURCES
