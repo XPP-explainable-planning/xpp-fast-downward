@@ -299,7 +299,7 @@ bool HCNeighborsRefinement::refine_heuristic(
     if (!prepare_current_state_cost(bound, component.current())) {
         return true;
     }
-    prepare_component_data(component);
+    prepare_component_data(component); component.reset();
     prepare_successor_data(bound, neighbors);
     synchronize_stored_state_costs();
 
@@ -672,7 +672,7 @@ HCNeighborsRefinement::mugs_start_refinement(
     goal_facts_.clear();
     goal_conjunctions_.clear();
     prepare_successor_data(bound, neighbors);
-    prepare_component_data(component);
+    prepare_component_data(component); component.reset();
     if (!recompute_state_costs_) {
         prepare_current_state_cost(bound, component.current());
     }
