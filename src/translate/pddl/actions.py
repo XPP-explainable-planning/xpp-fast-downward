@@ -38,6 +38,22 @@ class Action(object):
         else:
             print("  None")
 
+    def to_json(self):
+        s = "{\n"
+        s += "\"name\": " + self.name + "\n"
+        s += "\"parameters\": [\n"
+        for ob in self.parameters:
+            s += "\t{\n"
+            s += "\t\t\"name\": \"" + ob.name + "\",\n"
+            s += "\t\t\"type\": \"" + ob.type_name + "\"\n"
+            s += "\t},\n"
+        s += "]\n"
+        #s += "\"precondition\": [" + ", ".join(self.precondition) + "]"
+        #s += "\"effects\": [" + ", ".join([e.to_json() for e in self.effects]) + "]"
+        s += "}"
+        return s
+
+
     def uniquify_variables(self):
         self.type_map = dict([(par.name, par.type_name)
                               for par in self.parameters])

@@ -34,6 +34,11 @@ class Effect(object):
             print("%sthen" % indent)
             indent += "  "
         print("%s%s" % (indent, self.literal))
+
+    def to_json(self):
+        return "[" + ", ".join(self.parameters) + "]"
+
+
     def copy(self):
         return Effect(self.parameters, self.condition, self.literal)
     def uniquify_variables(self, type_map):

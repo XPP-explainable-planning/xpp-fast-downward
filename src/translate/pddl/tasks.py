@@ -58,6 +58,39 @@ class Task(object):
             for axiom in self.axioms:
                 axiom.dump()
 
+    def to_json(self, stream):
+        print("{", file=stream)
+        print("\"types\": [\t", file=stream)
+        print("\t" + ", ".join(["\"" + t.name + "\"" for t in self.types]), file=stream)
+        print("]", file=stream)
+
+        print("\"objects\": [", file=stream)
+        for ob in self.objects:
+            print("\t{", file=stream)
+            print("\t\t\"name\": \"" + ob.name + "\",", file=stream)
+            print("\t\t\"type\": \"" + ob.type_name +"\"", file=stream)
+            print("\t},", file=stream)
+        print("]", file=stream)
+
+        print("\"predicates\": [", file=stream)
+        for pred in self.predicates:
+            print(pred.to_json() + ",\n", file=stream)
+        print("]", file=stream)
+
+        #print("\"init\": [", file=stream)
+        #print(",".join(self.init), file=stream)
+        #print("]", file=stream)
+
+        #print("\"goal\": [", file=stream)
+        #print(self.goal.dump(), file=stream)
+        #print("]", file=stream)
+
+        print("\"actions\": [", file=stream)
+        for action in self.actions:
+            print(action.to_json() + ",", file=stream)
+        print("]", file=stream)
+        print("}", file=stream)
+
 class Requirements(object):
     def __init__(self, requirements):
         self.requirements = requirements

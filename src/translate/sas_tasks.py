@@ -95,6 +95,11 @@ class SASTask:
         print("LTLProperties:")
         self.LTLProperties.dump()
 
+    def to_JSON(self, stream):
+        print("{", file=stream)
+
+        print("}", file=stream)
+
     def output(self, stream):
         print("begin_version", file=stream)
         print(SAS_FILE_VERSION, file=stream)
@@ -182,6 +187,18 @@ class SASVariables:
                 axiom_str = ""
             print("v%d in {%s}%s" % (var, list(range(rang)), axiom_str))
 
+    def to_JSON(self, stream):
+        for var, (rang, axiom_layer, values) in enumerate(zip(self.ranges, self.axiom_layers, self.value_names)):
+            print("{", file=stream)
+            print("\"name\": \"var%d\"," % var, file=stream)
+            print("\"range\":" + rang + ",", file=stream)
+            assert rang == len(values), (rang, values)
+            print("\"values\": [", file=stream)
+            for value in values:
+                print(value + ",", file=stream)
+            print("]", file=stream)
+            print("}", file=stream)
+
     def output(self, stream):
         print(len(self.ranges), file=stream)
         for var, (rang, axiom_layer, values) in enumerate(zip(
@@ -246,6 +263,12 @@ class SASInit:
         for var, val in enumerate(self.values):
             print("v%d: %d" % (var, val))
 
+    def to_JSON(self, stream):
+        print("\"init\": [", file=stream)
+        for val in self.values:
+            print(val + ",", file=stream)
+        print("]", file=stream)
+
     def output(self, stream):
         print("begin_state", file=stream)
         for val in self.values:
@@ -265,6 +288,15 @@ class SASGoal:
     def dump(self):
         for var, val in self.pairs:
             print("v%d: %d" % (var, val))
+
+    def output(self, stream):
+        print("\"goal\": [", file=stream)
+        for var, val in self.pairs:
+            print("{", file=stream)
+            print("\"var\":" + var, file=stream)
+            print("\"val\":" + val, file=stream)
+            print("}", file=stream)
+        print("]", file=stream)
 
     def output(self, stream):
         print("begin_goal", file=stream)
@@ -443,6 +475,20 @@ class SASOperator:
             else:
                 cond_str = ""
             print("  v%d: %d -> %d%s" % (var, pre, post, cond_str))
+
+    def to_JSON(self, stream):
+        print("{", file=stream)
+        print("\"name\":" + self.name[1:-1], file=stream)
+        print("\"condition\": [", file=stream)
+        for var, pre, post, cond in self.pre_post:
+            print("{", file=stream)
+            print("\"var\":" + var + ",", file=stream)
+            print("\"pre\":" + pre + ",", file=stream)
+            print("\"post\":" + post + ",", file=stream)
+            print("]", file=stream)
+        print("]", file=stream)
+        print("\"cost\":" + self.cost, file=stream)
+        print("}", file=stream)
 
     def output(self, stream):
         print("begin_operator", file=stream)
