@@ -20,14 +20,17 @@ class MUGSNode;
 class MUGSTree : public mst::MetaSearchTree {
 
 protected:
+    // internal openlist of meta search
     std::deque<MUGSNode*> open_list;
 
+    // root node of the meta search tree
     MUGSNode* root;
     MUGSNode* current_node;
 
     std::vector<FactPair> soft_goal_list;
     std::vector<FactPair> hard_goal_list;
 
+    // all nodes of the meta search tree
     std::vector<MUGSNode*> nodes;
 
 public:
@@ -36,6 +39,10 @@ public:
         return ! open_list.empty();
     }
 
+    /**
+     * removes the first node from the openlist and returns it
+     * @return the first node in the openlist
+     */
     MUGSNode* get_next_node(){
         MUGSNode* next_node = open_list.front();
         open_list.pop_front();
@@ -54,14 +61,28 @@ public:
         return hard_goal_list;
     }
 
+    /**
+     * Get the goal facts which are in the node @node
+     * @param node
+     * @return
+     */
     std::vector<FactPair> get_goals(const MUGSNode* node) const;
-    virtual void next_node() override;
+
+    /**
+     * updates the current_node with the node returned by get_next_node
+     */
+    void next_node() override;
+
+    /**
+     * TODO
+     * @return
+     */
     std::vector<FactPair> get_next_goals() override;
     std::vector<FactPair> get_next_init() override;
-    virtual void current_goals_solved() override;
-    virtual void current_goals_not_solved() override;
+    void current_goals_solved() override;
+    void current_goals_not_solved() override;
     virtual int print_relation() = 0;
-    virtual void print() override;
+    void print() override;
      
 };
 

@@ -335,6 +335,13 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+        NAME PROPERTY_HANDLING
+        HELP "TODO"
+        SOURCES
+        plan_properties/MUGS
+)
+
+fast_downward_plugin(
     NAME MUGS_PRUNING
     HELP "TODO"
     SOURCES

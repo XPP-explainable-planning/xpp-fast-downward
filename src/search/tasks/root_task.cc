@@ -65,6 +65,8 @@ class RootTask : public AbstractTask {
     vector<ExplicitOperator> axioms;
     vector<int> initial_state_values;
     vector<FactPair> goals;
+    vector<FactPair> hard_goals;
+    vector<FactPair> soft_goals;
     vector<FactPair> question;
     vector<Property> LTL_properties;
     vector<vector<FactPair>> entailments;
@@ -107,6 +109,12 @@ public:
 
     virtual int get_num_goals() const override;
     virtual FactPair get_goal_fact(int index) const override;
+
+    virtual int get_num_hard_goals() const override;
+    virtual FactPair get_hard_goal_fact(int index) const override;
+
+    virtual int get_num_soft_goals() const override;
+    virtual FactPair get_soft_goal_fact(int index) const override;
 
     virtual int get_num_question() const override;
     virtual FactPair get_question_fact(int index) const override;
@@ -345,6 +353,20 @@ vector<FactPair> read_goal(istream &in) {
     return goals;
 }
 
+vector<FactPair> read_hard_goal(istream &in) {
+    check_magic(in, "begin_hard_goal");
+    vector<FactPair> goals = read_facts(in);
+    check_magic(in, "end_hard_goal");
+    return goals;
+}
+
+vector<FactPair> read_soft_goal(istream &in) {
+    check_magic(in, "begin_soft_goal");
+    vector<FactPair> goals = read_facts(in);
+    check_magic(in, "end_soft_goal");
+    return goals;
+}
+
 vector<FactPair> read_question(istream &in) {
     check_magic(in, "begin_question");
     vector<FactPair> question = read_facts(in);
@@ -421,6 +443,8 @@ RootTask::RootTask(std::istream &in) {
     }
 
     goals = read_goal(in);
+    hard_goals = read_hard_goal(in);
+    soft_goals = read_soft_goal(in);
     question = read_question(in);
     entailments = read_entailments(in);
     LTL_properties = read_LTL_properties(in);
@@ -555,6 +579,25 @@ int RootTask::get_num_goals() const {
 FactPair RootTask::get_goal_fact(int index) const {
     assert(utils::in_bounds(index, goals));
     return goals[index];
+}
+
+int RootTask::get_num_hard_goals() const {
+    return hard_goals.size();
+}
+
+FactPair RootTask::get_hard_goal_fact(int index) const {
+    assert(utils::in_bounds(index, hard_goals));
+    return hard_goals[index];
+}
+
+
+int RootTask::get_num_soft_goals() const {
+    return soft_goals.size();
+}
+
+FactPair RootTask::get_soft_goal_fact(int index) const {
+    assert(utils::in_bounds(index, soft_goals));
+    return soft_goals[index];
 }
 
 int RootTask::get_num_question() const {

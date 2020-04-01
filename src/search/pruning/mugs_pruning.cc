@@ -3,22 +3,25 @@
 #include "bitset"
 #include "../option_parser.h"
 #include "../plugin.h"
+#include "../plan_properties/MUGS.h"
 
 using namespace std;
 
 namespace mugs_pruning {
 void MugsPruning::initialize(const shared_ptr<AbstractTask> &task) {
+
     PruningMethod::initialize(task);
     TaskProxy task_proxy = TaskProxy(*task);
     num_goal_facts = task_proxy.get_goals().size();
-        
+
+    // check which of the goal facts are hard goals
     for(int i = 0; i < num_goal_facts; i++){
         FactProxy gp = task_proxy.get_goals()[i];
         int id = gp.get_variable().get_id();
         int value = gp.get_value();
-        hard_goals = (hard_goals << 1) | (! (task_proxy.get_variables()[id].get_fact(value).get_name().find("soft") == 0));
+        hard_goals = (hard_goals << 1) | (task_proxy.get_variables()[id].get_fact(value).get_name().find("soft") != 0);
         goal_fact_names.push_back(task_proxy.get_variables()[id].get_fact(value).get_name());
-        cout << "Pos " << i << ": "  << task_proxy.get_variables()[id].get_fact(value).get_name() << " " << id << endl;
+        // cout << "Pos " << i << ": "  << task_proxy.get_variables()[id].get_fact(value).get_name() << " " << id << endl;
     }
     
     if(all_soft_goals){
@@ -47,32 +50,33 @@ bool MugsPruning::superset_contained(uint goal_subset, const unordered_set<uint>
 
     for(uint gs : set){
         if(is_superset(gs, goal_subset)){
-//            cout << "subset?: "  << std::bitset<32>(goal_subset) << endl;
-//            cout <<  "Superset: "  << std::bitset<32>(gs) << endl;
             return true;
         }
     }
-    //msgs.insert(goal_subset);
+
     return false;
 }
 
 bool MugsPruning::insert_new_subset(uint goal_subset, unordered_set<uint> &set) const{
+    // check if a subset in already contained
     for(uint gs : set){
         if(is_superset(goal_subset, gs))
             return true;
     }
 
-    std::unordered_set<uint>::iterator it=set.begin();
+    // remove all supersets of goal_subset
+    auto it=set.begin();
     while (it!=msgs.end()){
         uint gs = *it;
         if(is_superset(gs, goal_subset)){
-            //cout <<  "Subset: "  << std::bitset<32>(gs) << endl;
             it = set.erase(it);
         }
         else{
             it++;
         }
     }
+
+    // insert goal_subset
     set.insert(goal_subset);
     return false;
 }
@@ -80,7 +84,6 @@ bool MugsPruning::insert_new_subset(uint goal_subset, unordered_set<uint> &set) 
 bool MugsPruning::insert_new_superset(uint goal_subset,  unordered_set<uint> &set, bool& inserted) const{
     inserted = false;
 
-    //cout << "Add new superset" << endl;
     //check if superset is already contained in set
     for(uint gs : set){
         if(is_superset(gs, goal_subset))
@@ -89,9 +92,10 @@ bool MugsPruning::insert_new_superset(uint goal_subset,  unordered_set<uint> &se
 
     //cout <<  "New superset:  "  << std::bitset<32>(goal_subset) << endl;
     //remove all sets which are a subset of the new set
-    std::unordered_set<uint>::iterator it=set.begin();
+    auto it=set.begin();
     while (it!=msgs.end()){
         uint gs = *it;
+        // remove all sets which are subsets of goal_subset
         if(is_superset(goal_subset, gs)){
             //cout <<  "\tdelete "  << std::bitset<32>(gs) << endl;
             it = set.erase(it);
@@ -109,25 +113,27 @@ bool MugsPruning::insert_new_superset(uint goal_subset,  unordered_set<uint> &se
 }
 
 std::unordered_set<uint> MugsPruning::unsolvable_subgoals() const{
+
     unordered_set<uint> ugs;
     unordered_set<uint> candidates;
-    //all subset with one goal fact
+
+    //start with all subsets with one goal fact
     for(int i = 0; i < num_goal_facts; i++){
         candidates.insert(1U << i);
     }
 
-    while(candidates.size() > 0){
+    while(!candidates.empty()){
         unordered_set<uint> new_ugs;
         //add goal facts until set is not solvable anymore
         auto it = candidates.begin();
         while( it != candidates.end()){
             uint gs = *it;
             it = candidates.erase(it);
-            if(! superset_contained(gs, msgs)){
+            if(! superset_contained(gs, msgs)){ // check if solvable
                 ugs.insert(gs);               
             }
             else{
-                //create new candidates sets with one additional goal fact
+                //create new candidate sets with one additional goal fact
                 for(int i = 0; i < num_goal_facts; i++){
                     if(((gs & (1U << i)) == 0)){
                         candidates.insert(gs | (1U << i));
@@ -137,11 +143,6 @@ std::unordered_set<uint> MugsPruning::unsolvable_subgoals() const{
         }
     }
 
-    /*
-    cout << "----------------------------------"  << endl;
-    cout << "Unsolvable goal subsets: " << endl;
-    print_set(ugs);
-    */
     return ugs;
 }
 
@@ -164,8 +165,7 @@ void MugsPruning::print_set(std::unordered_set<uint> s) const{
 }
 
 bool MugsPruning::check_reachable(const State &state) {
-    //cout << "---------------------------------------------------------" << endl;
-    //state.dump_fdr();
+    // compute relaxed reachable goal facts according to h_max
     uint reachable_gs = 0;
     if(use_cost_bound_reachable) {
         reachable_gs = ((max_heuristic::HSPMaxHeuristic *) max_heuristic)->compute_relaxed_reachable_goal_facts(
@@ -174,11 +174,9 @@ bool MugsPruning::check_reachable(const State &state) {
     else {
         reachable_gs = ((max_heuristic::HSPMaxHeuristic *) max_heuristic)->compute_relaxed_reachable_goal_facts(state);
     }
-    //cout << "Reachable: " << std::bitset<32>(reachable_gs) << endl;
 
     //if a hard goal is not reachable prune the state
     if((hard_goals & reachable_gs) != hard_goals){
-        //cout << "Hard goal not reachable" << endl;
         return true;
     }
 
@@ -192,24 +190,21 @@ void MugsPruning::add_goal_to_msgs(const State &state) {
     uint current_sat_goal_facts = 0;
     TaskProxy task_proxy = TaskProxy(*task);
     GoalsProxy g_proxy = task_proxy.get_goals();
+
+    // compute uint representation of goals satisfied in state
     for(uint i = 0; i < g_proxy.size(); i++){
-        current_sat_goal_facts = (current_sat_goal_facts << 1) | (state[g_proxy[i].get_variable().get_id()].get_value() == g_proxy[i].get_value());
+        current_sat_goal_facts = (current_sat_goal_facts << 1) |
+                (state[g_proxy[i].get_variable().get_id()].get_value() == g_proxy[i].get_value());
     }
-    //cout << "Current sat goal: " << std::bitset<32>(current_sat_goal_facts) << endl;
 
     //if all hard goals are satisfied add set
     msgs_changed = false;
     if((hard_goals & current_sat_goal_facts) == hard_goals){
-        //cout << "insert" << endl;
-        insert_new_superset(current_sat_goal_facts, msgs, msgs_changed); // only adds set of msgs does not contain any superset
+        // only adds set of msgs does not contain any superset
+        insert_new_superset(current_sat_goal_facts, msgs, msgs_changed);
     }
 
-    /*
-    cout << "++++++++++ MUGS PRUNING +++++++++++++++" << endl;
-    for(uint gs : msgs){
-        cout << std::bitset<32>(gs) << endl;
-    }
-    */
+
 }
 
 bool MugsPruning::prune_state(const State &state){
@@ -246,6 +241,12 @@ void MugsPruning::print_mugs() const{
 
     unordered_set<uint> ugs = unsolvable_subgoals();
     unordered_set<uint> mugs = minimal_unsolvable_subgoals(ugs);
+
+    //print mugs to file
+    MUGS mugs_store =  MUGS(mugs, goal_fact_names);
+    mugs_store.output_mugs();
+
+    cout << "Test" << endl;
     cout << "++++++++++ MUGS PRUNING +++++++++++++++" << endl;
     //print_set(mugs);
     //cout << "++++++++++++++++++++++++++++++++++++++++++++++++"  << endl;

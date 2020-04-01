@@ -4,10 +4,13 @@
 #include "../evaluation_context.h"
 #include "../global_state.h"
 #include "../option_parser.h"
+#include "../plan_properties/MUGS.h"
 
 #include <algorithm>
 #include <iostream>
 #include <unordered_set>
+#include <bitset>
+
 
 namespace conflict_driven_learning {
 namespace mugs {
@@ -28,22 +31,36 @@ MugsHeuristic::MugsHeuristic(const options::Options& opts)
     }
 
     // two passes over goal to make sure goal_assignment is sorted
-
+    std::cout << "***************************************" << std::endl;
+    std::cout << "Goals:" << std::endl;
     goal_assignment_.reserve(task->get_num_goals());
     for (int i = 0; i < task->get_num_goals(); i++) {
         FactPair g = task->get_goal_fact(i);
         goal_assignment_.emplace_back(g.var, g.value);
+        std::cout << "\t" << task->get_fact_name(g) << std::endl;
     }
     std::sort(goal_assignment_.begin(), goal_assignment_.end());
 
+
     hard_goal_ = 0U;
     goal_fact_names_.reserve(task->get_num_goals());
+    std::cout << "Hard goals: " << std::endl;
     for (unsigned i = 0; i < goal_assignment_.size(); i++) {
         FactPair g(goal_assignment_[i].first, goal_assignment_[i].second);
         goal_fact_names_.push_back(task->get_fact_name(g));
-        if (goal_fact_names_.back().find("soft") != 0) {
-            hard_goal_ = hard_goal_ | (1U << i);
+        bool found = false;
+        for(uint j = 0; j < task_proxy.get_hard_goals().size(); j++) {
+            FactPair hg = task_proxy.get_hard_goals()[j].get_pair();
+            found = found | (hg.var == g.var);
         }
+        if (found){
+            hard_goal_ = hard_goal_ | (1U << i);
+            std::cout << "\t" << task->get_fact_name(g) << std::endl;
+        }
+
+//        if (goal_fact_names_.back().find("soft") != 0) {
+//            hard_goal_ = hard_goal_ | (1U << i);
+//        }
     }
 
     if (opts.get<bool>("all_softgoals")) {
@@ -51,6 +68,7 @@ MugsHeuristic::MugsHeuristic(const options::Options& opts)
     }
 
     std::cout << "Hard goals: " << to_string(hard_goal_) << std::endl;
+    std::cout << "***************************************" << std::endl;
 }
 
 void
@@ -113,6 +131,11 @@ MugsHeuristic::print_evaluator_statistics() const
 {
     auto mugs =
         max_achieved_subgoals_.get_minimal_extensions(goal_assignment_.size());
+
+    //print mugs to file
+    MUGS mugs_store =  MUGS(mugs, goal_fact_names_);
+    mugs_store.output_mugs();
+
     std::cout << "++++++++++ MUGS HEURISTIC +++++++++++++++" << std::endl;
     std::cout << "Size: " << max_achieved_subgoals_.size() << std::endl;
     print_set(max_achieved_subgoals_.begin(), max_achieved_subgoals_.end());

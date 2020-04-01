@@ -6,6 +6,7 @@
 
 #include "../task_utils/task_properties.h"
 #include "../evaluation_context.h"
+#include "../plan_properties/MUGS.h"
 
 #include <cstddef>
 #include <limits>
@@ -22,22 +23,29 @@ namespace mugs_hmax_heuristic {
       use_cost_bound_reachable(opts.get<bool>("use_cost_bound_reachable")),
       cost_bound(opts.get<int>("cost_bound")),
       max_heuristic(opts.get<Evaluator*>("h")){
+
         num_goal_facts = task_proxy.get_goals().size();
 
         for(int i = 0; i < num_goal_facts; i++){
             FactProxy gp = task_proxy.get_goals()[i];
             int id = gp.get_variable().get_id();
             int value = gp.get_value();
-            hard_goals = (hard_goals << 1) | (! (task_proxy.get_variables()[id].get_fact(value).get_name().find("soft") == 0));
+            // old way to check if softgoal
+            //hard_goals = (hard_goals << 1) |(task_proxy.get_variables()[id].get_fact(value).get_name().find("soft") != 0);
+            bool found = false;
+            for(uint j = 0; task_proxy.get_hard_goals().size(); j++) {
+                found = found | (task_proxy.get_hard_goals()[j].get_variable().get_id() == id);
+            }
+            hard_goals = (hard_goals << 1) | found;
             goal_fact_names.push_back(task_proxy.get_variables()[id].get_fact(value).get_name());
-            cout << "Pos " << i << ": "  << task_proxy.get_variables()[id].get_fact(value).get_name() << " " << id << endl;
         }
 
         if(all_soft_goals){
             hard_goals = 0U;
         }
+
         cout <<  "Hard goals: "  << std::bitset<32>(hard_goals) << endl;
-    cout << "Initializing mugs hmax heuristic..." << endl;
+        cout << "Initializing mugs hmax heuristic..." << endl;
 }
 
     MugsHmaxHeuristic::~MugsHmaxHeuristic() {
@@ -52,12 +60,9 @@ namespace mugs_hmax_heuristic {
 
         for(uint gs : set){
             if(is_superset(gs, goal_subset)){
-//            cout << "subset?: "  << std::bitset<32>(goal_subset) << endl;
-//            cout <<  "Superset: "  << std::bitset<32>(gs) << endl;
                 return true;
             }
         }
-        //msgs.insert(goal_subset);
         return false;
     }
 
@@ -85,16 +90,14 @@ namespace mugs_hmax_heuristic {
     bool MugsHmaxHeuristic::insert_new_superset(uint goal_subset,  unordered_set<uint> &set, bool& inserted) const{
         inserted = false;
 
-        //cout << "Add new superset" << endl;
         //check if superset is already contained in set
         for(uint gs : set){
             if(is_superset(gs, goal_subset))
                 return true;
         }
 
-        //cout <<  "New superset:  "  << std::bitset<32>(goal_subset) << endl;
         //remove all sets which are a subset of the new set
-        std::unordered_set<uint>::iterator it=set.begin();
+        auto it=set.begin();
         while (it!=msgs.end()){
             uint gs = *it;
             if(is_superset(goal_subset, gs)){
@@ -121,7 +124,7 @@ namespace mugs_hmax_heuristic {
             candidates.insert(1U << i);
         }
 
-        while(candidates.size() > 0){
+        while(!candidates.empty()){
             unordered_set<uint> new_ugs;
             //add goal facts until set is not solvable anymore
             auto it = candidates.begin();
@@ -142,11 +145,6 @@ namespace mugs_hmax_heuristic {
             }
         }
 
-        /*
-        cout << "----------------------------------"  << endl;
-        cout << "Unsolvable goal subsets: " << endl;
-        print_set(ugs);
-        */
         return ugs;
     }
 
@@ -169,8 +167,6 @@ namespace mugs_hmax_heuristic {
     }
 
     bool MugsHmaxHeuristic::check_reachable(const State &state, int remaining_cost) {
-        //cout << "---------------------------------------------------------" << endl;
-        //state.dump_fdr();
         uint reachable_gs = 0;
         if(use_cost_bound_reachable) {
             reachable_gs = ((max_heuristic::HSPMaxHeuristic *) max_heuristic)->compute_relaxed_reachable_goal_facts(
@@ -179,7 +175,6 @@ namespace mugs_hmax_heuristic {
         else {
             reachable_gs = ((max_heuristic::HSPMaxHeuristic *) max_heuristic)->compute_relaxed_reachable_goal_facts(state);
         }
-        //cout << "Reachable: " << std::bitset<32>(reachable_gs) << endl;
 
         //if a hard goal is not reachable prune the state
         if((hard_goals & reachable_gs) != hard_goals){
@@ -197,24 +192,18 @@ namespace mugs_hmax_heuristic {
         uint current_sat_goal_facts = 0;
         TaskProxy task_proxy = TaskProxy(*task);
         GoalsProxy g_proxy = task_proxy.get_goals();
+
         for(uint i = 0; i < g_proxy.size(); i++){
-            current_sat_goal_facts = (current_sat_goal_facts << 1) | (state[g_proxy[i].get_variable().get_id()].get_value() == g_proxy[i].get_value());
+            current_sat_goal_facts = (current_sat_goal_facts << 1) |
+                    (state[g_proxy[i].get_variable().get_id()].get_value() == g_proxy[i].get_value());
         }
-        //cout << "Current sat goal: " << std::bitset<32>(current_sat_goal_facts) << endl;
 
         //if all hard goals are satisfied add set
         msgs_changed = false;
         if((hard_goals & current_sat_goal_facts) == hard_goals){
-            //cout << "insert" << endl;
-            insert_new_superset(current_sat_goal_facts, msgs, msgs_changed); // only adds set of msgs does not contain any superset
+            // only adds set of msgs does not contain any superset
+            insert_new_superset(current_sat_goal_facts, msgs, msgs_changed);
         }
-
-        /*
-        cout << "++++++++++ MUGS PRUNING +++++++++++++++" << endl;
-        for(uint gs : msgs){
-            cout << std::bitset<32>(gs) << endl;
-        }
-         */
 
     }
 
@@ -242,7 +231,7 @@ namespace mugs_hmax_heuristic {
     }
 
     void MugsHmaxHeuristic::print_statistics() const{
-        cout << "++++++++++ MSGS PRUNING +++++++++++++++" << endl;
+        cout << "++++++++++ MSGS HEURISTIC +++++++++++++++" << endl;
         print_set(msgs);
         print_mugs();
 
@@ -257,7 +246,12 @@ namespace mugs_hmax_heuristic {
 
         unordered_set<uint> ugs = unsolvable_subgoals();
         unordered_set<uint> mugs = minimal_unsolvable_subgoals(ugs);
-        cout << "++++++++++ MUGS PRUNING +++++++++++++++" << endl;
+
+        //print mugs to file
+        MUGS mugs_store =  MUGS(mugs, goal_fact_names);
+        mugs_store.output_mugs();
+
+        cout << "++++++++++ MUGS HEURISTIC +++++++++++++++" << endl;
         //print_set(mugs);
         //cout << "++++++++++++++++++++++++++++++++++++++++++++++++"  << endl;
         //cout << "num goal fact names: " << goal_fact_names.size() << endl;

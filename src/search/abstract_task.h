@@ -100,6 +100,12 @@ public:
     virtual int get_num_goals() const = 0;
     virtual FactPair get_goal_fact(int index) const = 0;
 
+    virtual int get_num_hard_goals() const = 0;
+    virtual FactPair get_hard_goal_fact(int index) const = 0;
+
+    virtual int get_num_soft_goals() const = 0;
+    virtual FactPair get_soft_goal_fact(int index) const = 0;
+
     virtual int get_num_question() const = 0;
     virtual FactPair get_question_fact(int index) const = 0;
 

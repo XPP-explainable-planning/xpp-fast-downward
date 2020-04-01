@@ -34,14 +34,14 @@ protected:
     void print_set(std::unordered_set<uint> s) const;
     void print_mugs() const;
 
-    virtual int compute_heuristic(const GlobalState &global_state);
-    virtual EvaluationResult compute_result(EvaluationContext &eval_context);
+    int compute_heuristic(const GlobalState &global_state) override ;
+    EvaluationResult compute_result(EvaluationContext &eval_context) override ;
 
 public:
-    MugsHmaxHeuristic(const options::Options &options);
-    ~MugsHmaxHeuristic();
+    explicit MugsHmaxHeuristic(const options::Options &options);
+    ~MugsHmaxHeuristic() override;
     virtual void print_statistics() const;
-    virtual void print_evaluator_statistics() const override;
+    void print_evaluator_statistics() const override;
 
 };
 }

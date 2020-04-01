@@ -96,7 +96,7 @@ void QuantitativeStateMinimizationNoGoods::refine_quantitative(
         for (int var = 0; var < m_task->get_num_variables(); var++) {
             facts.push_back(strips::get_fact_id(var, state[var]));
         }
-        int finalh;
+        int finalh = 0;
         std::map<unsigned, int> goal_cost;
         for (unsigned j = 0; j < order.size(); j++) {
             int var = order[j];
