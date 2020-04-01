@@ -217,7 +217,7 @@ namespace mugs_hmax_heuristic {
         EvaluationResult result;
         if(prune && prune_state) {
                 pruned_states++;
-                result.set_evaluator_value(remaining_cost + 1);
+                result.set_evaluator_value(remaining_cost);
                 return result;
         }
 

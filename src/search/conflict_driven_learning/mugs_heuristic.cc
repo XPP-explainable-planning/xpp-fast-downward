@@ -5,6 +5,8 @@
 #include "../global_state.h"
 #include "../option_parser.h"
 #include "../plan_properties/MUGS.h"
+#include "../utils/timer.h"
+
 
 #include <algorithm>
 #include <iostream>
@@ -129,8 +131,12 @@ MugsHeuristic::compute_result(EvaluationContext& context)
 void
 MugsHeuristic::print_evaluator_statistics() const
 {
+    utils::Timer t;
+
     auto mugs =
         max_achieved_subgoals_.get_minimal_extensions(goal_assignment_.size());
+
+    t.stop();
 
     //print mugs to file
     MUGS mugs_store =  MUGS(mugs, goal_fact_names_);
@@ -145,6 +151,7 @@ MugsHeuristic::print_evaluator_statistics() const
               << std::endl;
     std::cout << "Number of minimal unsolvable goal subsets: " << mugs.size()
               << std::endl;
+    std::cout << "MUGS reconstruction time: " << t << std::endl;
 }
 
 } // namespace mugs

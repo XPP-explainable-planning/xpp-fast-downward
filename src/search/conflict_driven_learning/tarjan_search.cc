@@ -328,6 +328,7 @@ SearchStatus TarjanSearch::step()
         if (elem.node.get_index() == elem.node.get_lowlink()) {
             std::deque<GlobalState>::iterator it = m_stack.begin();
             std::deque<unsigned>::iterator rnoff_it = m_rn_offset.begin();
+            unsigned scc_size = 0;
             while (true) {
                 SearchNode snode = m_search_space[*it];
                 snode.popped_from_stack();
@@ -341,6 +342,7 @@ SearchStatus TarjanSearch::step()
                     snode.mark_dead_end();
                     /* m_progress.inc_expanded_dead_ends(); */
                 }
+                scc_size++;
                 if ((it++)->get_id() == elem.node.get_state_id()) {
                     break;
                 }
@@ -351,7 +353,7 @@ SearchStatus TarjanSearch::step()
             bool entered_refinement = false;
             if (c_dead_end_refinement
                 && !in_dead_end_component
-                && (m_open_states > 0 || c_refine_initial_state)
+                && (scc_size != m_stack.size() || c_refine_initial_state)
                 && (elem.succ_result != DFSResult::UNRECOGNIZED || !c_compute_recognized_neighbors)) {
                 entered_refinement = true;
                 /* m_progress.inc_dead_end_refinements(); */
@@ -401,6 +403,13 @@ SearchStatus TarjanSearch::step()
                     }
 #endif
                 }
+                // std::cout << "NEW DEAD END COMPONENT: " << std::flush;
+                // for (auto cit = m_stack.begin(); cit != it; cit++) {
+                //     std::cout << cit->get_id() << " " << std::flush;
+                // }
+                // std::cout << std::endl << "States on stack: " << m_stack.size() << std::endl;
+            
+
                 c_dead_end_refinement = m_learner->notify_dead_end_component(
                         StateComponentIterator<std::deque<GlobalState>::iterator>(m_stack.begin(), it),
                         StateComponentIterator<StateSet::iterator>(recognized_neighbors.begin(), recognized_neighbors.end()));

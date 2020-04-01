@@ -125,6 +125,7 @@ public:
     SubgoalSet& operator=(const SubgoalSet&) = default;
     SubgoalSet& operator=(SubgoalSet&&) = default;
 
+    bool contains_subset(const subgoal_t& sg) const;
     bool contains_superset(const subgoal_t& sg) const;
     bool insert(
         const subgoal_t& sg,
