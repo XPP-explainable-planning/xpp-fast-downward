@@ -249,9 +249,10 @@ namespace mugs_hmax_heuristic {
 
         //print mugs to file
         MUGS mugs_store =  MUGS(mugs, goal_fact_names);
+        mugs_store.generate_mugs_string();
         mugs_store.output_mugs();
 
-        cout << "++++++++++ MUGS HEURISTIC +++++++++++++++" << endl;
+        cout << "++++++++++ MUGS HMAX HEURISTIC +++++++++++++++" << endl;
         //print_set(mugs);
         //cout << "++++++++++++++++++++++++++++++++++++++++++++++++"  << endl;
         //cout << "num goal fact names: " << goal_fact_names.size() << endl;

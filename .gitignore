@@ -10,3 +10,12 @@ src/CMakeLists.txt.user
 .vscode
 experiments/
 output.sas
+
+.idea/
+aut_temp.hoa
+c0
+fdr.json
+mugs.json
+output
+src/cmake-build-debug/
+

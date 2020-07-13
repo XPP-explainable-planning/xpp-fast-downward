@@ -140,6 +140,7 @@ MugsHeuristic::print_evaluator_statistics() const
 
     //print mugs to file
     MUGS mugs_store =  MUGS(mugs, goal_fact_names_);
+    mugs_store.generate_mugs_string_reverse(hard_goal_);
     mugs_store.output_mugs();
 
     std::cout << "++++++++++ MUGS HEURISTIC +++++++++++++++" << std::endl;

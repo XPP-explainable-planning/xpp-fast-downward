@@ -28,6 +28,7 @@ enum SearchStatus {IN_PROGRESS, TIMEOUT, FAILED, SOLVED};
 class SearchEngine {
     SearchStatus status;
     bool solution_found;
+
     Plan plan;
 protected:
     // Hold a reference to the task implementation and pass it to objects that need it.
@@ -52,6 +53,7 @@ protected:
     bool check_goal_and_set_plan(const GlobalState &state);
     int get_adjusted_cost(const OperatorProxy &op) const;
 public:
+    bool run_finished_successfully; // mugs search finished successfully
     SearchEngine(const options::Options &opts);
     SearchEngine(const options::Options &opts, std::shared_ptr<AbstractTask> t);
     virtual ~SearchEngine();

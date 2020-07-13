@@ -235,10 +235,12 @@ SearchStatus TarjanSearch::step()
     static StateSet recognized_neighbors;
 
     if (m_result == DFSResult::SOLVED) {
+        this->run_finished_successfully = true;
         return SearchStatus::SOLVED;
     }
 
     if (m_call_stack.empty()) {
+        this->run_finished_successfully = true;
         return SearchStatus::FAILED;
     }
 
