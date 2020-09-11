@@ -53,7 +53,7 @@ MugsHeuristic::MugsHeuristic(const options::Options& opts)
         bool found = false;
         for(uint j = 0; j < task_proxy.get_hard_goals().size(); j++) {
             FactPair hg = task_proxy.get_hard_goals()[j].get_pair();
-            found = found | (hg.var == g.var);
+            found = found | ((hg.var == g.var) && (hg.value == g.value));
         }
         if (found){
             hard_goal_ = hard_goal_ | (1U << i);
