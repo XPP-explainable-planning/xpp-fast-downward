@@ -24,7 +24,10 @@ namespace mugs_hmax_heuristic {
       cost_bound(opts.get<int>("cost_bound")),
       max_heuristic(opts.get<Evaluator*>("h")){
 
+        cout << "Initializing mugs hmax heuristic start ..." << endl;
+
         num_goal_facts = task_proxy.get_goals().size();
+        cout << "Num goal facts: " << num_goal_facts << endl;
 
         for(int i = 0; i < num_goal_facts; i++){
             FactProxy gp = task_proxy.get_goals()[i];
@@ -33,7 +36,7 @@ namespace mugs_hmax_heuristic {
             // old way to check if softgoal
             //hard_goals = (hard_goals << 1) |(task_proxy.get_variables()[id].get_fact(value).get_name().find("soft") != 0);
             bool found = false;
-            for(uint j = 0; task_proxy.get_hard_goals().size(); j++) {
+            for(uint j = 0; j < task_proxy.get_hard_goals().size(); j++) {
                 found = found | (task_proxy.get_hard_goals()[j].get_variable().get_id() == id);
             }
             hard_goals = (hard_goals << 1) | found;
@@ -45,7 +48,7 @@ namespace mugs_hmax_heuristic {
         }
 
         cout <<  "Hard goals: "  << std::bitset<32>(hard_goals) << endl;
-        cout << "Initializing mugs hmax heuristic..." << endl;
+        cout << "Initializing mugs hmax heuristic end ..." << endl;
 }
 
     MugsHmaxHeuristic::~MugsHmaxHeuristic() {
@@ -249,7 +252,7 @@ namespace mugs_hmax_heuristic {
 
         //print mugs to file
         MUGS mugs_store =  MUGS(mugs, goal_fact_names);
-        mugs_store.generate_mugs_string();
+        //mugs_store.generate_mugs_string();
         mugs_store.output_mugs();
 
         cout << "++++++++++ MUGS HMAX HEURISTIC +++++++++++++++" << endl;

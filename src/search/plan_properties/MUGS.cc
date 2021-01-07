@@ -24,6 +24,7 @@ void MUGS::generate_mugs_string() {
     auto it = mugss.begin();
     while(it != mugss.end()) {
         uint gs = *it;
+        it++;
 
         // get names of all facts contained in the MUGS
         vector<string> fact_names;
