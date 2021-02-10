@@ -50,7 +50,7 @@ int main(int argc, const char **argv) {
     cout << "Search time: " << search_timer << endl;
     cout << "Total time: " << utils::g_timer << endl;
 
-    if (engine->found_solution() || engine->run_finished_successfully) {
+    if (engine->found_solution()) { // || engine->run_finished_successfully) { TODO find constraint that works for MUGSsearch and a star
         utils::exit_with(ExitCode::SUCCESS);
     } else {
         utils::exit_with(ExitCode::SEARCH_UNSOLVED_INCOMPLETE);
