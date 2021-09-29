@@ -1,3 +1,7 @@
+## Setup
+
+* replace the submodule URL with: `git@github.com:XPP-explainable-planning/xpp-translator.git`
+
 ## Extentions
 
 - TODO
